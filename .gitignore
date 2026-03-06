@@ -9,9 +9,12 @@ lerna-debug.log*
 
 # Dependencias y Build
 node_modules
+web-cliente/node_modules
 dist
 dist-ssr
 *.local
+package-lock.json
+web-cliente/package-lock.json
 
 # Editor directories and files
 .vscode/*
