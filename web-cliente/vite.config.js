@@ -14,9 +14,9 @@ export default defineConfig({
         clientsClaim: true,
       },
       manifest: {
-        name: "Comida Rápida — Pide en línea",
-        short_name: "Nuestra Comida",
-        description: "Pedido rápido y seguro en nuestro restaurante de comida rápida.",
+        name: "Precios Al Día — Pide en línea",
+        short_name: "Precios Al Día",
+        description: "Pedido rápido y seguro en nuestro sistema actualizado donde vayas.",
         theme_color: "#dc2626", // Red 600
         background_color: "#f8fafc",
         display: "standalone",

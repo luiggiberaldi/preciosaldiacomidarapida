@@ -11,15 +11,16 @@ export default function ProductCard({ product, onAdd }) {
   };
 
   return (
-    <div className="group bg-white dark:bg-slate-900 rounded-[24px] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-red-500/10 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
+    <div className="animate-reveal group bg-white dark:bg-slate-900 rounded-[24px] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-red-500/10 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
       {/* Image Section */}
-      <div className="relative h-44 sm:h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden w-full shrink-0">
+      <div className="relative h-44 sm:h-48 lg:h-52 bg-slate-100 dark:bg-slate-800 overflow-hidden w-full shrink-0">
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
             className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             onLoad={() => setImageLoaded(true)}
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
@@ -48,8 +49,7 @@ export default function ProductCard({ product, onAdd }) {
         )}
       </div>
 
-      {/* Content Section */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col">
+      <div className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         <div className="mb-2">
           <h3 className="font-bold text-slate-800 dark:text-white text-lg leading-tight line-clamp-2">
             {product.name}
