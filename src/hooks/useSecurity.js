@@ -101,7 +101,7 @@ export function useSecurity() {
           hash |= 0;
         }
         const hex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
-        return `PDA-${hex}`;
+        return `CRP-${hex}`;
       }
 
       // Mismo hardware = mismo hash SHA-256
@@ -114,7 +114,7 @@ export function useSecurity() {
         .join("")
         .toUpperCase()
         .substring(0, 8);
-      return `PDA-${hex}`;
+      return `CRP-${hex}`;
     };
 
     const initDeviceId = async () => {
