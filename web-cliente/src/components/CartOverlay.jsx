@@ -36,8 +36,7 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
       const orderPayload = {
         customer_name: name.trim(),
         customer_phone: phone.trim(),
-        customer_notes: notes.trim(),
-        delivery_type: deliveryType,
+        customer_notes: `${deliveryType === 'LLEVAR' ? '[PARA LLEVAR]' : '[EN EL LOCAL]'} ${notes.trim()}`.trim(),
         items: cart,
         total_usd: cartTotal,
         status: "pending",
@@ -262,8 +261,8 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
                       type="button"
                       onClick={() => setDeliveryType("LLEVAR")}
                       className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${deliveryType === "LLEVAR"
-                          ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                          : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                        : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
                         }`}
                     >
                       <Car
@@ -278,8 +277,8 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
                       type="button"
                       onClick={() => setDeliveryType("LOCAL")}
                       className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${deliveryType === "LOCAL"
-                          ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                          : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                        : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
                         }`}
                     >
                       <UtensilsCrossed size={24} />
