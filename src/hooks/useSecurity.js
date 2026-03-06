@@ -187,19 +187,19 @@ export function useSecurity() {
     const sendHeartbeat = async () => {
       verifyStatus(); // Chequeo constante
       try {
-        // Actualizar last_seen
-        await supabase
-          .from("licenses")
-          .update({ last_seen_at: new Date().toISOString() })
-          .eq("device_id", deviceId)
-          .eq("product_id", PRODUCT_ID);
-
-        // Registrar heartbeat record
-        await supabase.from("heartbeats").insert({
-          device_id: deviceId,
-          product_id: PRODUCT_ID,
-          app_version: APP_VERSION,
-        });
+        // Llamar a la Edge Function que captura la IP real del servidor
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-heartbeat`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id: deviceId,
+              product_id: PRODUCT_ID,
+              app_version: APP_VERSION,
+            }),
+          }
+        );
       } catch (e) { }
     };
 
