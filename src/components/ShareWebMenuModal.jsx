@@ -104,7 +104,7 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
     };
 
     const handleShareWhatsApp = () => {
-        const text = `¡Hola! 👋 Mira nuestro menú y haz tu pedido aquí:\n${url}`;
+        const text = `Hola, te comparto el menu de ${businessName}. Puedes ver los productos y hacer tu pedido directamente desde aqui:\n\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     };
 
