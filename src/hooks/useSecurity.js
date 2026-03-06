@@ -195,12 +195,11 @@ export function useSecurity() {
           .eq("product_id", PRODUCT_ID);
 
         // Registrar heartbeat record
-        await supabase.from("heartbeats").upsert({
+        await supabase.from("heartbeats").insert({
           device_id: deviceId,
           product_id: PRODUCT_ID,
           app_version: APP_VERSION,
-          last_seen: new Date().toISOString()
-        }, { onConflict: "device_id,product_id" });
+        });
       } catch (e) { }
     };
 
