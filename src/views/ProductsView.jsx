@@ -293,24 +293,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         ? parseFloat(costUsd) * effectiveRate
         : 0;
 
-    // Map packagingType → unit legacy
-    let legacyUnit = "unidad";
-    if (packagingType === "lote") legacyUnit = "paquete";
-    else if (packagingType === "granel") legacyUnit = granelUnit;
+    // Legacy packaging removed for Comida Rapida
 
-    const isLote = packagingType === "lote";
-    const parsedUnitsPerPkg =
-      isLote && unitsPerPackage ? parseInt(unitsPerPackage) : 1;
-    const autoUnitPrice =
-      parsedUnitsPerPkg > 1 ? finalPriceUsd / parsedUnitsPerPkg : finalPriceUsd;
-    const finalUnitPrice =
-      sellByUnit && unitPriceUsd ? parseFloat(unitPriceUsd) : autoUnitPrice;
-
-    // Stock: for lote, convert lotes → units
-    let finalStock = stock ? parseInt(stock) : 0;
-    if (isLote && stockInLotes && parsedUnitsPerPkg > 0) {
-      finalStock = parseInt(stockInLotes) * parsedUnitsPerPkg;
-    }
 
     const productData = {
       name: formattedName,
@@ -631,11 +615,10 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
                   handleSetActiveCategory(cat.id);
                   triggerHaptic && triggerHaptic();
                 }}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all snap-start border ${
-                  activeCategory === cat.id
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all snap-start border ${activeCategory === cat.id
                     ? "bg-red-500 text-white shadow-sm shadow-red-500/20 border-red-500"
                     : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 active:scale-95"
-                }`}
+                  }`}
               >
                 {cat.label}
               </button>
