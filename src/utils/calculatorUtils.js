@@ -2,23 +2,30 @@
 // La tasa de efectivo ahora depende exclusivamente de la calibración manual del usuario
 
 // Formateadores
-export const formatBs = (val) => new Intl.NumberFormat('es-VE', { maximumFractionDigits: 0 }).format(Math.ceil(val));
-export const formatUsd = (val) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+export const formatBs = (val) =>
+  new Intl.NumberFormat("es-VE", { maximumFractionDigits: 0 }).format(
+    Math.ceil(val),
+  );
+export const formatUsd = (val) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(val);
 
 // [REDONDEO INTELIGENTE PARA EFECTIVO]
 // Regla: Si decimal <= 0.20 -> Redondeo abajo (Floor)
 //        Si decimal > 0.20  -> Redondeo arriba (Ceil)
 export const smartCashRounding = (amount) => {
-    const integer = Math.floor(amount);
-    const decimal = amount - integer;
-    return decimal <= 0.2001 ? integer : integer + 1; // Usamos 0.2001 para margen de error flotante
+  const integer = Math.floor(amount);
+  const decimal = amount - integer;
+  return decimal <= 0.2001 ? integer : integer + 1; // Usamos 0.2001 para margen de error flotante
 };
 
-import { MessageService } from '../services/MessageService';
+import { MessageService } from "../services/MessageService";
 
 // Re-export deprecated function referencing the new service
 export const generatePaymentMessage = (params) => {
-    return MessageService.buildPaymentMessage(params);
+  return MessageService.buildPaymentMessage(params);
 };
 
 // Normaliza número venezolano al formato internacional para wa.me
@@ -26,10 +33,10 @@ export const generatePaymentMessage = (params) => {
 //         4121234567  → 584121234567
 //         584121234567 → 584121234567
 export const formatVzlaPhone = (raw) => {
-    if (!raw) return null;
-    const digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('58') && digits.length >= 12) return digits;
-    if (digits.startsWith('0')) return '58' + digits.slice(1);
-    if (digits.length >= 10) return '58' + digits;
-    return null;
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("58") && digits.length >= 12) return digits;
+  if (digits.startsWith("0")) return "58" + digits.slice(1);
+  if (digits.length >= 10) return "58" + digits;
+  return null;
 };

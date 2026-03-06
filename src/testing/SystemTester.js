@@ -7,139 +7,163 @@
 // v4.0: Cobertura completa de servicios + Análisis Groq AI
 // ============================================================
 
-import { storageService } from '../utils/storageService';
-import { formatBs, smartCashRounding, formatVzlaPhone } from '../utils/calculatorUtils';
-import { DEFAULT_PAYMENT_METHODS, getPaymentLabel, getPaymentMethod, addPaymentMethod, removePaymentMethod, getActivePaymentMethods } from '../config/paymentMethods';
-import { CurrencyService } from '../services/CurrencyService';
-import { RateService } from '../services/RateService';
-import { procesarImpactoCliente } from '../utils/financialLogic';
-import { MessageService } from '../services/MessageService';
+import { storageService } from "../utils/storageService";
+import {
+  formatBs,
+  smartCashRounding,
+  formatVzlaPhone,
+} from "../utils/calculatorUtils";
+import {
+  DEFAULT_PAYMENT_METHODS,
+  getPaymentLabel,
+  getPaymentMethod,
+  addPaymentMethod,
+  removePaymentMethod,
+  getActivePaymentMethods,
+} from "../config/paymentMethods";
+import { CurrencyService } from "../services/CurrencyService";
+import { RateService } from "../services/RateService";
+import { procesarImpactoCliente } from "../utils/financialLogic";
+import { MessageService } from "../services/MessageService";
 
 // ── Claves de Storage Aisladas para Test ──
 const TEST_KEYS = {
-    products: 'test_myproductsv1',
-    sales: 'test_mysalesv1',
-    customers: 'test_mycustv1',
+  products: "test_myproductsv1",
+  sales: "test_mysalesv1",
+  customers: "test_mycustv1",
 };
 
 // ── Test State ──
 const state = {
-    logs: [],
-    suites: [],          // { id, name, status: 'pending'|'running'|'passed'|'failed'|'skipped', startedAt, finishedAt, error }
-    isRunning: false,
-    stopped: false,
-    startedAt: null,
-    finishedAt: null,
-    onLog: null,
-    onProgress: null,
-    onComplete: null,
-    _7dayStats: null,
+  logs: [],
+  suites: [], // { id, name, status: 'pending'|'running'|'passed'|'failed'|'skipped', startedAt, finishedAt, error }
+  isRunning: false,
+  stopped: false,
+  startedAt: null,
+  finishedAt: null,
+  onLog: null,
+  onProgress: null,
+  onComplete: null,
+  _7dayStats: null,
 };
 
 // ── Helpers de Estado ──
 function initSuites(activeSuites) {
-    state.suites = activeSuites.map(s => ({
-        id: s.key,
-        name: s.name,
-        status: 'pending',
-        startedAt: null,
-        finishedAt: null,
-        error: null
-    }));
+  state.suites = activeSuites.map((s) => ({
+    id: s.key,
+    name: s.name,
+    status: "pending",
+    startedAt: null,
+    finishedAt: null,
+    error: null,
+  }));
 }
 
 function updateSuiteStatus(id, patch) {
-    const s = state.suites.find(x => x.id === id);
-    if (!s) return;
-    Object.assign(s, patch);
+  const s = state.suites.find((x) => x.id === id);
+  if (!s) return;
+  Object.assign(s, patch);
 }
 
 // ── Logging ──
-function log(msg, type = 'info') {
-    const ts = new Date().toLocaleTimeString('es-VE', { hour12: false });
-    const icons = { info: 'ℹ️', success: '✅', error: '❌', warn: '⚠️', section: '━', ai: '🤖', day: '📅' };
-    const icon = icons[type] || 'ℹ️';
-    const entry = { time: ts, msg: `${icon} ${msg}`, type, raw: msg };
+function log(msg, type = "info") {
+  const ts = new Date().toLocaleTimeString("es-VE", { hour12: false });
+  const icons = {
+    info: "ℹ️",
+    success: "✅",
+    error: "❌",
+    warn: "⚠️",
+    section: "━",
+    ai: "🤖",
+    day: "📅",
+  };
+  const icon = icons[type] || "ℹ️";
+  const entry = { time: ts, msg: `${icon} ${msg}`, type, raw: msg };
 
-    state.logs.push(entry);
-    state.onLog?.(entry);
+  state.logs.push(entry);
+  state.onLog?.(entry);
 
-    if (type === 'error') console.error(`[TEST ERROR] ${msg}`);
+  if (type === "error") console.error(`[TEST ERROR] ${msg}`);
 }
 
 function section(title) {
-    log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'section');
-    log(title, 'section');
-    log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'section');
+  log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, "section");
+  log(title, "section");
+  log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, "section");
 }
 
 // ── Assertions ──
 class AssertionError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'AssertionError';
-    }
+  constructor(message) {
+    super(message);
+    this.name = "AssertionError";
+  }
 }
 
 function assert(condition, message) {
-    if (!condition) throw new AssertionError(message);
+  if (!condition) throw new AssertionError(message);
 }
 
 function assertEqual(actual, expected, message) {
-    if (actual !== expected) throw new AssertionError(`${message} (Esperado: ${expected}, Recibido: ${actual})`);
+  if (actual !== expected)
+    throw new AssertionError(
+      `${message} (Esperado: ${expected}, Recibido: ${actual})`,
+    );
 }
 
 function assertClose(actual, expected, message, tolerance = 0.02) {
-    const diff = Math.abs(actual - expected);
-    if (diff > tolerance) {
-        throw new AssertionError(`${message} (Esperado: ~${expected}, Recibido: ${actual}, Diff: ${diff.toFixed(4)})`);
-    }
+  const diff = Math.abs(actual - expected);
+  if (diff > tolerance) {
+    throw new AssertionError(
+      `${message} (Esperado: ~${expected}, Recibido: ${actual}, Diff: ${diff.toFixed(4)})`,
+    );
+  }
 }
 
 // ── Helpers Generales ──
-const TEST_PREFIX = '🧪_TEST_';
-const delay = (ms) => new Promise(r => setTimeout(r, ms));
+const TEST_PREFIX = "🧪_TEST_";
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function createTestProduct(overrides = {}) {
-    return {
-        id: `${TEST_PREFIX}${crypto.randomUUID().slice(0, 8)}`,
-        name: `${TEST_PREFIX}Producto ${Date.now()}`,
-        priceUsdt: 5.00,
-        costBs: 100,
-        stock: 50,
-        category: 'Test',
-        barcode: `TST${Date.now()}`,
-        unit: 'und',
-        sellByUnit: false,
-        _testData: true,
-        ...overrides,
-    };
+  return {
+    id: `${TEST_PREFIX}${crypto.randomUUID().slice(0, 8)}`,
+    name: `${TEST_PREFIX}Producto ${Date.now()}`,
+    priceUsdt: 5.0,
+    costBs: 100,
+    stock: 50,
+    category: "Test",
+    barcode: `TST${Date.now()}`,
+    unit: "und",
+    sellByUnit: false,
+    _testData: true,
+    ...overrides,
+  };
 }
 
 function createTestCustomer(overrides = {}) {
-    return {
-        id: `${TEST_PREFIX}${crypto.randomUUID().slice(0, 8)}`,
-        name: `${TEST_PREFIX}Cliente ${Date.now()}`,
-        phone: '0412-TEST',
-        deuda: 0,
-        _testData: true,
-        ...overrides,
-    };
+  return {
+    id: `${TEST_PREFIX}${crypto.randomUUID().slice(0, 8)}`,
+    name: `${TEST_PREFIX}Cliente ${Date.now()}`,
+    phone: "0412-TEST",
+    deuda: 0,
+    _testData: true,
+    ...overrides,
+  };
 }
 
 // ════════════════════════════════════════════
 // LIMPIEZA TOTAL
 // ════════════════════════════════════════════
 async function cleanupTestData() {
-    log('🧹 Ejecutando limpieza de claves de test...', 'info');
-    try {
-        await storageService.removeItem(TEST_KEYS.products);
-        await storageService.removeItem(TEST_KEYS.sales);
-        await storageService.removeItem(TEST_KEYS.customers);
-        log('Limpieza completada: Claves de test eliminadas.', 'success');
-    } catch (err) {
-        log(`Error en limpieza de data: ${err.message}`, 'error');
-    }
+  log("🧹 Ejecutando limpieza de claves de test...", "info");
+  try {
+    await storageService.removeItem(TEST_KEYS.products);
+    await storageService.removeItem(TEST_KEYS.sales);
+    await storageService.removeItem(TEST_KEYS.customers);
+    log("Limpieza completada: Claves de test eliminadas.", "success");
+  } catch (err) {
+    log(`Error en limpieza de data: ${err.message}`, "error");
+  }
 }
 
 // ════════════════════════════════════════════
@@ -148,399 +172,536 @@ async function cleanupTestData() {
 
 // 1. Validación de Catálogo y Tasas
 async function suiteCatalogoTasas() {
-    section('💱 SUITE: Validación Catálogo y Tasas');
+  section("💱 SUITE: Validación Catálogo y Tasas");
 
-    const rates = {
-        usdt: { price: 600 },
-        bcv: { price: 500 },
-        euro: { price: 650 },
-    };
+  const rates = {
+    usdt: { price: 600 },
+    bcv: { price: 500 },
+    euro: { price: 650 },
+  };
 
-    const mockProducts = [
-        createTestProduct({ priceUsdt: 2.5 }),
-        createTestProduct({ priceUsdt: 10.0 }),
-        createTestProduct({ priceUsdt: 0.5 }),
-    ];
+  const mockProducts = [
+    createTestProduct({ priceUsdt: 2.5 }),
+    createTestProduct({ priceUsdt: 10.0 }),
+    createTestProduct({ priceUsdt: 0.5 }),
+  ];
 
-    for (const p of mockProducts) {
-        const precioBs = p.priceUsdt * rates.bcv.price;
-        const precioBcv = precioBs / rates.bcv.price;
+  for (const p of mockProducts) {
+    const precioBs = p.priceUsdt * rates.bcv.price;
+    const precioBcv = precioBs / rates.bcv.price;
 
-        assert(!isNaN(precioBs) && precioBs !== undefined, `Precio en Bs para ${p.name} no es válido`);
-        assert(!isNaN(precioBcv) && precioBcv !== undefined, `Precio BCV para ${p.name} no es válido`);
+    assert(
+      !isNaN(precioBs) && precioBs !== undefined,
+      `Precio en Bs para ${p.name} no es válido`,
+    );
+    assert(
+      !isNaN(precioBcv) && precioBcv !== undefined,
+      `Precio BCV para ${p.name} no es válido`,
+    );
 
-        // Sensibilidad
-        const tasaUsdtAlta = rates.bcv.price * 1.10; // +10%
-        const precioBsAlto = p.priceUsdt * tasaUsdtAlta;
-        assert(precioBsAlto > precioBs, `Precio Bs no subió con aumento de tasa USDT (base: ${precioBs}, nuevo: ${precioBsAlto})`);
-    }
+    // Sensibilidad
+    const tasaUsdtAlta = rates.bcv.price * 1.1; // +10%
+    const precioBsAlto = p.priceUsdt * tasaUsdtAlta;
+    assert(
+      precioBsAlto > precioBs,
+      `Precio Bs no subió con aumento de tasa USDT (base: ${precioBs}, nuevo: ${precioBsAlto})`,
+    );
+  }
 
-    log('Catálogo OK: 3 productos procesados, precios y sensibilidad validados (Cero NaN).', 'success');
+  log(
+    "Catálogo OK: 3 productos procesados, precios y sensibilidad validados (Cero NaN).",
+    "success",
+  );
 }
 
 // 2. Simulación de Ventas y Ganancias
 async function suiteVentasGanancias() {
-    section('📈 SUITE: Simulación Ventas y Ganancias');
+  section("📈 SUITE: Simulación Ventas y Ganancias");
 
-    const salesList = [
-        // Ganancia (+2, +5, +3, +10)
-        { id: '1', buyPrice: 10, sellPrice: 12, qty: 1 },
-        { id: '2', buyPrice: 15, sellPrice: 20, qty: 1 },
-        { id: '3', buyPrice: 5, sellPrice: 8, qty: 1 },
-        { id: '4', buyPrice: 20, sellPrice: 30, qty: 1 },
-        // Pérdida (-2)
-        { id: '5', buyPrice: 12, sellPrice: 10, qty: 1 },
-    ];
+  const salesList = [
+    // Ganancia (+2, +5, +3, +10)
+    { id: "1", buyPrice: 10, sellPrice: 12, qty: 1 },
+    { id: "2", buyPrice: 15, sellPrice: 20, qty: 1 },
+    { id: "3", buyPrice: 5, sellPrice: 8, qty: 1 },
+    { id: "4", buyPrice: 20, sellPrice: 30, qty: 1 },
+    // Pérdida (-2)
+    { id: "5", buyPrice: 12, sellPrice: 10, qty: 1 },
+  ];
 
-    const generatedSales = salesList.map(mockSale => {
-        const profit = (mockSale.sellPrice - mockSale.buyPrice) * mockSale.qty;
-        return {
-            id: `${TEST_PREFIX}${crypto.randomUUID()}`,
-            items: [{ id: 'mock', qty: mockSale.qty, priceUsd: mockSale.sellPrice, costUsd: mockSale.buyPrice }],
-            totalUsd: mockSale.sellPrice * mockSale.qty,
-            profitTotalUsd: profit,
-        };
-    });
+  const generatedSales = salesList.map((mockSale) => {
+    const profit = (mockSale.sellPrice - mockSale.buyPrice) * mockSale.qty;
+    return {
+      id: `${TEST_PREFIX}${crypto.randomUUID()}`,
+      items: [
+        {
+          id: "mock",
+          qty: mockSale.qty,
+          priceUsd: mockSale.sellPrice,
+          costUsd: mockSale.buyPrice,
+        },
+      ],
+      totalUsd: mockSale.sellPrice * mockSale.qty,
+      profitTotalUsd: profit,
+    };
+  });
 
-    await storageService.setItem(TEST_KEYS.sales, generatedSales);
+  await storageService.setItem(TEST_KEYS.sales, generatedSales);
 
-    const savedSales = await storageService.getItem(TEST_KEYS.sales, []);
-    assertEqual(savedSales.length, 5, 'Deben existir 5 ventas simuladas');
+  const savedSales = await storageService.getItem(TEST_KEYS.sales, []);
+  assertEqual(savedSales.length, 5, "Deben existir 5 ventas simuladas");
 
-    let totalUsd = 0;
-    let totalProfit = 0;
-    let hasLoss = false;
+  let totalUsd = 0;
+  let totalProfit = 0;
+  let hasLoss = false;
 
-    for (const s of savedSales) {
-        assert(s.totalUsd !== undefined && !isNaN(s.totalUsd), `Venta ${s.id} tiene totalUsd inválido`);
-        assert(s.profitTotalUsd !== undefined && !isNaN(s.profitTotalUsd), `Venta ${s.id} tiene profitTotalUsd inválido`);
+  for (const s of savedSales) {
+    assert(
+      s.totalUsd !== undefined && !isNaN(s.totalUsd),
+      `Venta ${s.id} tiene totalUsd inválido`,
+    );
+    assert(
+      s.profitTotalUsd !== undefined && !isNaN(s.profitTotalUsd),
+      `Venta ${s.id} tiene profitTotalUsd inválido`,
+    );
 
-        totalUsd += s.totalUsd;
-        totalProfit += s.profitTotalUsd;
-        if (s.profitTotalUsd < 0) hasLoss = true;
-    }
+    totalUsd += s.totalUsd;
+    totalProfit += s.profitTotalUsd;
+    if (s.profitTotalUsd < 0) hasLoss = true;
+  }
 
-    assert(hasLoss, 'Debe haber registrado al menos una venta con pérdida');
-    assertClose(totalUsd, 80, 'El total vendido en USD debe ser exacto');
-    assertClose(totalProfit, 18, 'La ganancia total USD debe ser exacta (sumando ganancias y la pérdida)');
+  assert(hasLoss, "Debe haber registrado al menos una venta con pérdida");
+  assertClose(totalUsd, 80, "El total vendido en USD debe ser exacto");
+  assertClose(
+    totalProfit,
+    18,
+    "La ganancia total USD debe ser exacta (sumando ganancias y la pérdida)",
+  );
 
-    log('Ventas y ganancias simuladas OK: Cálculos precisos y validación de pérdida exitosa.', 'success');
+  log(
+    "Ventas y ganancias simuladas OK: Cálculos precisos y validación de pérdida exitosa.",
+    "success",
+  );
 }
 
 // 3. Stress Test Ligero (Catálogo 100 items)
 async function suiteStressCatalogo() {
-    section('⚡ SUITE: Stress Test Catálogo (100 items)');
+  section("⚡ SUITE: Stress Test Catálogo (100 items)");
 
-    const payload = Array.from({ length: 100 }, (_, i) =>
-        createTestProduct({ name: `Stress Prod ${i}`, priceUsdt: Math.random() * 20 })
+  const payload = Array.from({ length: 100 }, (_, i) =>
+    createTestProduct({
+      name: `Stress Prod ${i}`,
+      priceUsdt: Math.random() * 20,
+    }),
+  );
+
+  await storageService.setItem(TEST_KEYS.products, payload);
+
+  const t0 = performance.now();
+  const loaded = await storageService.getItem(TEST_KEYS.products, []);
+
+  // Simular render/cálculos pesados (precios e impuestos imaginarios x 100 items)
+  const rateUsdt = 36.5;
+  for (const p of loaded) {
+    const bs = p.priceUsdt * rateUsdt;
+    const bcv = bs / 36.5;
+    assert(!isNaN(bs), "Calculo Bs válido");
+  }
+
+  const elapsed = performance.now() - t0;
+
+  if (elapsed > 300) {
+    throw new Error(
+      `Rendimiento insuficiente: El catálogo tardó demasiado (${elapsed.toFixed(1)}ms). Esperado < 300ms.`,
     );
+  }
 
-    await storageService.setItem(TEST_KEYS.products, payload);
-
-    const t0 = performance.now();
-    const loaded = await storageService.getItem(TEST_KEYS.products, []);
-
-    // Simular render/cálculos pesados (precios e impuestos imaginarios x 100 items)
-    const rateUsdt = 36.5;
-    for (const p of loaded) {
-        const bs = p.priceUsdt * rateUsdt;
-        const bcv = bs / 36.5;
-        assert(!isNaN(bs), 'Calculo Bs válido');
-    }
-
-    const elapsed = performance.now() - t0;
-
-    if (elapsed > 300) {
-        throw new Error(`Rendimiento insuficiente: El catálogo tardó demasiado (${elapsed.toFixed(1)}ms). Esperado < 300ms.`);
-    }
-
-    log(`Stress catálogo OK: Carga y recálculo en ${elapsed.toFixed(1)}ms (umbral 300ms).`, 'success');
+  log(
+    `Stress catálogo OK: Carga y recálculo en ${elapsed.toFixed(1)}ms (umbral 300ms).`,
+    "success",
+  );
 }
 
 // 4. Suite Dashboard (Ventas Hoy / Ayer y Métricas)
 async function suiteDashboard() {
-    section('📊 SUITE: Validación de Dashboard (Cálculos de Tiempo)');
+  section("📊 SUITE: Validación de Dashboard (Cálculos de Tiempo)");
 
-    await storageService.setItem(TEST_KEYS.sales, []); // Clean start
+  await storageService.setItem(TEST_KEYS.sales, []); // Clean start
 
-    const now = new Date();
-    const ayer = new Date();
-    ayer.setDate(ayer.getDate() - 1);
+  const now = new Date();
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
 
-    const ventas = [
-        // Hoy: 2 ventas, 1 fia
-        { id: `test_h1`, date: now.toISOString(), totalUsd: 10, profitTotalUsd: 4, status: 'COMPLETADA' },
-        { id: `test_h2`, date: now.toISOString(), totalUsd: 5, profitTotalUsd: 2, status: 'COMPLETADA' },
-        { id: `test_h3`, date: now.toISOString(), totalUsd: 20, profitTotalUsd: 8, status: 'FIADO' },
-        // Ayer: 1 venta
-        { id: `test_a1`, date: ayer.toISOString(), totalUsd: 50, profitTotalUsd: 20, status: 'COMPLETADA' },
-    ];
+  const ventas = [
+    // Hoy: 2 ventas, 1 fia
+    {
+      id: `test_h1`,
+      date: now.toISOString(),
+      totalUsd: 10,
+      profitTotalUsd: 4,
+      status: "COMPLETADA",
+    },
+    {
+      id: `test_h2`,
+      date: now.toISOString(),
+      totalUsd: 5,
+      profitTotalUsd: 2,
+      status: "COMPLETADA",
+    },
+    {
+      id: `test_h3`,
+      date: now.toISOString(),
+      totalUsd: 20,
+      profitTotalUsd: 8,
+      status: "FIADO",
+    },
+    // Ayer: 1 venta
+    {
+      id: `test_a1`,
+      date: ayer.toISOString(),
+      totalUsd: 50,
+      profitTotalUsd: 20,
+      status: "COMPLETADA",
+    },
+  ];
 
-    await storageService.setItem(TEST_KEYS.sales, ventas);
+  await storageService.setItem(TEST_KEYS.sales, ventas);
 
-    const db = await storageService.getItem(TEST_KEYS.sales, []);
+  const db = await storageService.getItem(TEST_KEYS.sales, []);
 
-    const isSameDay = (d1, d2) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+  const isSameDay = (d1, d2) =>
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear();
 
-    const ventasCompletadasHoy = db.filter(v => v.status === 'COMPLETADA' && isSameDay(new Date(v.date), new Date()));
-    const ventasAyer = db.filter(v => v.status === 'COMPLETADA' && isSameDay(new Date(v.date), ayer));
+  const ventasCompletadasHoy = db.filter(
+    (v) => v.status === "COMPLETADA" && isSameDay(new Date(v.date), new Date()),
+  );
+  const ventasAyer = db.filter(
+    (v) => v.status === "COMPLETADA" && isSameDay(new Date(v.date), ayer),
+  );
 
-    const gananciaHoy = ventasCompletadasHoy.reduce((sum, v) => sum + (v.profitTotalUsd || 0), 0);
-    const ventasHoyUsd = ventasCompletadasHoy.reduce((sum, v) => sum + (v.totalUsd || 0), 0);
-    const ventasAyerUsd = ventasAyer.reduce((sum, v) => sum + (v.totalUsd || 0), 0);
+  const gananciaHoy = ventasCompletadasHoy.reduce(
+    (sum, v) => sum + (v.profitTotalUsd || 0),
+    0,
+  );
+  const ventasHoyUsd = ventasCompletadasHoy.reduce(
+    (sum, v) => sum + (v.totalUsd || 0),
+    0,
+  );
+  const ventasAyerUsd = ventasAyer.reduce(
+    (sum, v) => sum + (v.totalUsd || 0),
+    0,
+  );
 
-    assertClose(ventasHoyUsd, 15, 'Total USD de HOY debe sumar exacto excluyendo fiados');
-    assertClose(gananciaHoy, 6, 'Ganancia neta HOY exacta');
-    assertClose(ventasAyerUsd, 50, 'Total USD AYER exacto');
+  assertClose(
+    ventasHoyUsd,
+    15,
+    "Total USD de HOY debe sumar exacto excluyendo fiados",
+  );
+  assertClose(gananciaHoy, 6, "Ganancia neta HOY exacta");
+  assertClose(ventasAyerUsd, 50, "Total USD AYER exacto");
 
-    log('Métricas del Dashboard simuladas correctamente (cruces de tiempo estrictos OK).', 'success');
+  log(
+    "Métricas del Dashboard simuladas correctamente (cruces de tiempo estrictos OK).",
+    "success",
+  );
 }
 
 // 5. Suite Corrupción de Data (Caos)
 async function suiteChaos() {
-    section('🌪️ SUITE: Corrupción de Data en LocalForage (Hydration Resilience)');
+  section("🌪️ SUITE: Corrupción de Data en LocalForage (Hydration Resilience)");
 
-    const garbageProducts = [
-        createTestProduct({ priceUsdt: NaN, costBs: 'abc' }), // Bad floats
-        { name: 'Fantasma sin ID verdadero', priceUsdt: 10, stock: 5 }, // Raw object, missing vital ID
-        createTestProduct({ priceUsdt: -50, category: undefined }), // Negative pricing
-        createTestProduct({ id: 'ok1', priceUsdt: 1.0, costBs: 0.5 }), // The only fully valid one
-    ];
+  const garbageProducts = [
+    createTestProduct({ priceUsdt: NaN, costBs: "abc" }), // Bad floats
+    { name: "Fantasma sin ID verdadero", priceUsdt: 10, stock: 5 }, // Raw object, missing vital ID
+    createTestProduct({ priceUsdt: -50, category: undefined }), // Negative pricing
+    createTestProduct({ id: "ok1", priceUsdt: 1.0, costBs: 0.5 }), // The only fully valid one
+  ];
 
-    await storageService.setItem(TEST_KEYS.products, garbageProducts);
-    const db = await storageService.getItem(TEST_KEYS.products, []);
+  await storageService.setItem(TEST_KEYS.products, garbageProducts);
+  const db = await storageService.getItem(TEST_KEYS.products, []);
 
-    // Simulate our app's resilient hydrating filter
-    const valid = db.filter(p => p && p.id && !isNaN(parseFloat(p.priceUsdt)) && parseFloat(p.priceUsdt) >= 0);
+  // Simulate our app's resilient hydrating filter
+  const valid = db.filter(
+    (p) =>
+      p &&
+      p.id &&
+      !isNaN(parseFloat(p.priceUsdt)) &&
+      parseFloat(p.priceUsdt) >= 0,
+  );
 
-    assertEqual(valid.length, 1, 'Solo 1 de 4 items corruptos debe sobrevivir el filtro de hidratación.');
+  assertEqual(
+    valid.length,
+    1,
+    "Solo 1 de 4 items corruptos debe sobrevivir el filtro de hidratación.",
+  );
 
-    log('Niveles de tolerancia al Caos OK (Los datos corruptos fueron atajados).', 'success');
+  log(
+    "Niveles de tolerancia al Caos OK (Los datos corruptos fueron atajados).",
+    "success",
+  );
 }
 
 // 6. Suite Stress Extremo: 5.000 items (o 500 en FastMode)
 async function suiteExtremo(fastMode) {
-    const qty = fastMode ? 500 : 5000;
-    section(`🌋 SUITE: EXTREME STRESS (${qty} items)`);
+  const qty = fastMode ? 500 : 5000;
+  section(`🌋 SUITE: EXTREME STRESS (${qty} items)`);
 
-    const payload = Array.from({ length: qty }, () => createTestProduct());
+  const payload = Array.from({ length: qty }, () => createTestProduct());
 
-    const t0 = performance.now();
-    await storageService.setItem(TEST_KEYS.products, payload);
-    const writeTime = performance.now() - t0;
+  const t0 = performance.now();
+  await storageService.setItem(TEST_KEYS.products, payload);
+  const writeTime = performance.now() - t0;
 
-    const t1 = performance.now();
-    const read = await storageService.getItem(TEST_KEYS.products, []);
-    const readTime = performance.now() - t1;
+  const t1 = performance.now();
+  const read = await storageService.getItem(TEST_KEYS.products, []);
+  const readTime = performance.now() - t1;
 
-    assertEqual(read.length, qty, 'Lectura íntegra falló');
-    assert(readTime < 1500, `Demasiado lento: LocalForage tardó ${readTime.toFixed(0)}ms para ${qty} items.`);
+  assertEqual(read.length, qty, "Lectura íntegra falló");
+  assert(
+    readTime < 1500,
+    `Demasiado lento: LocalForage tardó ${readTime.toFixed(0)}ms para ${qty} items.`,
+  );
 
-    log(`Sobrevivió carga y parseo masivo de ${qty} keys. (W: ${writeTime.toFixed(0)}ms, R: ${readTime.toFixed(0)}ms, Umbral 1.5s)`, 'success');
+  log(
+    `Sobrevivió carga y parseo masivo de ${qty} keys. (W: ${writeTime.toFixed(0)}ms, R: ${readTime.toFixed(0)}ms, Umbral 1.5s)`,
+    "success",
+  );
 }
 
 // 7. Prueba Transaccional Simulada Quota Exceeded (Promise Reject)
 async function suiteQuota() {
-    section('🔌 SUITE: Storage Mocks (Simulando QuotaExceeded / App Offline)');
+  section("🔌 SUITE: Storage Mocks (Simulando QuotaExceeded / App Offline)");
 
-    const mockStorage = {
-        async setItem() {
-            throw new Error('QuotaExceededError: El disco en dispositivo está lleno');
-        }
-    };
+  const mockStorage = {
+    async setItem() {
+      throw new Error("QuotaExceededError: El disco en dispositivo está lleno");
+    },
+  };
 
-    let caught = false;
-    try {
-        await mockStorage.setItem(TEST_KEYS.products, []);
-    } catch (err) {
-        caught = !!err.message.includes('QuotaExceeded');
-    }
+  let caught = false;
+  try {
+    await mockStorage.setItem(TEST_KEYS.products, []);
+  } catch (err) {
+    caught = !!err.message.includes("QuotaExceeded");
+  }
 
-    assert(caught, 'La App no maneja de forma segura las asincronías rotas del almacenamiento');
-    log('Graceful Failure Offline / Storage lleno validado OK', 'success');
+  assert(
+    caught,
+    "La App no maneja de forma segura las asincronías rotas del almacenamiento",
+  );
+  log("Graceful Failure Offline / Storage lleno validado OK", "success");
 }
-
 
 // ════════════════════════════════════════════
 // SUITES ADAPTADAS (AISLADAS)
 // ════════════════════════════════════════════
 
 async function suiteStorage() {
-    section('💾 SUITE: STORAGE SERVICE (IndexedDB)');
+  section("💾 SUITE: STORAGE SERVICE (IndexedDB)");
 
-    const testKey = `${TEST_PREFIX}test_key_${Date.now()}`;
-    const testObj = { foo: 'bar', num: 42, arr: [1, 2, 3], nested: { a: true } };
+  const testKey = `${TEST_PREFIX}test_key_${Date.now()}`;
+  const testObj = { foo: "bar", num: 42, arr: [1, 2, 3], nested: { a: true } };
 
-    await storageService.setItem(testKey, testObj);
-    const read = await storageService.getItem(testKey);
+  await storageService.setItem(testKey, testObj);
+  const read = await storageService.getItem(testKey);
 
-    assert(read, 'getItem retorna datos');
-    assertEqual(read.foo, 'bar', 'String field');
-    assertEqual(read.num, 42, 'Number field');
-    assert(Array.isArray(read.arr) && read.arr.length === 3, 'Array field');
+  assert(read, "getItem retorna datos");
+  assertEqual(read.foo, "bar", "String field");
+  assertEqual(read.num, 42, "Number field");
+  assert(Array.isArray(read.arr) && read.arr.length === 3, "Array field");
 
-    const missing = await storageService.getItem('nonexistent_key_xyz', 'default_val');
-    assertEqual(missing, 'default_val', 'Default fallback');
+  const missing = await storageService.getItem(
+    "nonexistent_key_xyz",
+    "default_val",
+  );
+  assertEqual(missing, "default_val", "Default fallback");
 
-    // Cleanup
-    await storageService.removeItem(testKey);
-    const deleted = await storageService.getItem(testKey);
-    assertEqual(deleted, null, 'removeItem');
+  // Cleanup
+  await storageService.removeItem(testKey);
+  const deleted = await storageService.getItem(testKey);
+  assertEqual(deleted, null, "removeItem");
 
-    log('Storage CRUD OK', 'success');
+  log("Storage CRUD OK", "success");
 }
 
 async function suiteProductos() {
-    section('📦 SUITE: PRODUCTOS (Catálogo Aislado)');
+  section("📦 SUITE: PRODUCTOS (Catálogo Aislado)");
 
-    await storageService.setItem(TEST_KEYS.products, []); // Clean start
+  await storageService.setItem(TEST_KEYS.products, []); // Clean start
 
-    const prod1 = createTestProduct({ priceUsdt: 2.50, stock: 100, category: 'Harinas' });
-    const prod2 = createTestProduct({ priceUsdt: 4.00, stock: 30, category: 'Lácteos' });
+  const prod1 = createTestProduct({
+    priceUsdt: 2.5,
+    stock: 100,
+    category: "Harinas",
+  });
+  const prod2 = createTestProduct({
+    priceUsdt: 4.0,
+    stock: 30,
+    category: "Lácteos",
+  });
 
-    await storageService.setItem(TEST_KEYS.products, [prod1, prod2]);
-    const saved = await storageService.getItem(TEST_KEYS.products, []);
+  await storageService.setItem(TEST_KEYS.products, [prod1, prod2]);
+  const saved = await storageService.getItem(TEST_KEYS.products, []);
 
-    assertEqual(saved.length, 2, 'Productos guardados');
-    assertClose(saved.find(p => p.id === prod1.id).priceUsdt, 2.50, 'Lectura precisa de precio');
+  assertEqual(saved.length, 2, "Productos guardados");
+  assertClose(
+    saved.find((p) => p.id === prod1.id).priceUsdt,
+    2.5,
+    "Lectura precisa de precio",
+  );
 
-    // Filter
-    const harinas = saved.filter(p => p.category === 'Harinas');
-    assertEqual(harinas.length, 1, 'Filtro categoría');
+  // Filter
+  const harinas = saved.filter((p) => p.category === "Harinas");
+  assertEqual(harinas.length, 1, "Filtro categoría");
 
-    log('CRUD de Productos OK', 'success');
+  log("CRUD de Productos OK", "success");
 }
 
 async function suiteCarrito() {
-    section('🛒 SUITE: CARRITO (Lógica de Cesta)');
+  section("🛒 SUITE: CARRITO (Lógica de Cesta)");
 
-    const RATE = 95.50;
-    let cart = [
-        { id: 't1', priceUsd: 2.50, qty: 1 },
-        { id: 't2', priceUsd: 4.00, qty: 2 }
-    ];
+  const RATE = 95.5;
+  let cart = [
+    { id: "t1", priceUsd: 2.5, qty: 1 },
+    { id: "t2", priceUsd: 4.0, qty: 2 },
+  ];
 
-    const totalUsd = cart.reduce((sum, i) => sum + (i.priceUsd * i.qty), 0);
-    assertClose(totalUsd, 10.50, 'Total USD carrito');
+  const totalUsd = cart.reduce((sum, i) => sum + i.priceUsd * i.qty, 0);
+  assertClose(totalUsd, 10.5, "Total USD carrito");
 
-    const totalBs = totalUsd * RATE;
-    assert(totalBs > 0, 'Total Bs correcto');
+  const totalBs = totalUsd * RATE;
+  assert(totalBs > 0, "Total Bs correcto");
 
-    const formatChecked = formatBs(totalBs);
-    assert(!formatChecked.includes(','), 'formatBs sin decimales extraños');
+  const formatChecked = formatBs(totalBs);
+  assert(!formatChecked.includes(","), "formatBs sin decimales extraños");
 
-    log('Cálculos carrito OK', 'success');
+  log("Cálculos carrito OK", "success");
 }
 
 async function suiteBimoneda() {
-    section('💱 SUITE: BIMONEDA (Conversiones)');
+  section("💱 SUITE: BIMONEDA (Conversiones)");
 
-    const RATE = 95.50;
-    const TOTAL_USD = 15.00;
+  const RATE = 95.5;
+  const TOTAL_USD = 15.0;
 
-    const paidUsd = 10.00;
-    const paidBs = 500;
-    const paidBsToUsd = paidBs / RATE;
-    const totalPaidUsd = paidUsd + paidBsToUsd;
+  const paidUsd = 10.0;
+  const paidBs = 500;
+  const paidBsToUsd = paidBs / RATE;
+  const totalPaidUsd = paidUsd + paidBsToUsd;
 
-    assertClose(paidBsToUsd, 5.235, 'Bs -> USD exacto');
-    assertClose(totalPaidUsd, 15.235, 'Pago total USD');
+  assertClose(paidBsToUsd, 5.235, "Bs -> USD exacto");
+  assertClose(totalPaidUsd, 15.235, "Pago total USD");
 
-    const changeUsd = Math.max(0, totalPaidUsd - TOTAL_USD);
-    assertClose(changeUsd, 0.235, 'Vuelto USD');
+  const changeUsd = Math.max(0, totalPaidUsd - TOTAL_USD);
+  assertClose(changeUsd, 0.235, "Vuelto USD");
 
-    log('Bimoneda OK', 'success');
+  log("Bimoneda OK", "success");
 }
 
 async function suiteCheckout() {
-    section('🧾 SUITE: CHECKOUT (Persistencia Aislada)');
+  section("🧾 SUITE: CHECKOUT (Persistencia Aislada)");
 
-    await storageService.setItem(TEST_KEYS.sales, []); // Clean start
+  await storageService.setItem(TEST_KEYS.sales, []); // Clean start
 
-    const RATE = 95.50;
-    const totalUsd = 11.50;
+  const RATE = 95.5;
+  const totalUsd = 11.5;
 
-    const sale = {
-        id: `${TEST_PREFIX}${crypto.randomUUID()}`,
-        status: 'COMPLETADA',
-        items: [{ id: 'mock', qty: 1, priceUsd: 11.5 }],
-        totalUsd, totalBs: totalUsd * RATE,
-    };
+  const sale = {
+    id: `${TEST_PREFIX}${crypto.randomUUID()}`,
+    status: "COMPLETADA",
+    items: [{ id: "mock", qty: 1, priceUsd: 11.5 }],
+    totalUsd,
+    totalBs: totalUsd * RATE,
+  };
 
-    await storageService.setItem(TEST_KEYS.sales, [sale]);
-    const readSales = await storageService.getItem(TEST_KEYS.sales, []);
+  await storageService.setItem(TEST_KEYS.sales, [sale]);
+  const readSales = await storageService.getItem(TEST_KEYS.sales, []);
 
-    assertEqual(readSales.length, 1, 'Venta persistida en test_key');
-    assertEqual(readSales[0].status, 'COMPLETADA', 'Status preservado');
+  assertEqual(readSales.length, 1, "Venta persistida en test_key");
+  assertEqual(readSales[0].status, "COMPLETADA", "Status preservado");
 
-    log('Checkout OK', 'success');
+  log("Checkout OK", "success");
 }
 
 async function suiteClientes() {
-    section('👥 SUITE: CLIENTES (Manejo Deuda Aislado)');
+  section("👥 SUITE: CLIENTES (Manejo Deuda Aislado)");
 
-    await storageService.setItem(TEST_KEYS.customers, []); // Clean start
+  await storageService.setItem(TEST_KEYS.customers, []); // Clean start
 
-    const customer = createTestCustomer({ deuda: 0 });
-    await storageService.setItem(TEST_KEYS.customers, [customer]);
+  const customer = createTestCustomer({ deuda: 0 });
+  await storageService.setItem(TEST_KEYS.customers, [customer]);
 
-    let db = await storageService.getItem(TEST_KEYS.customers, []);
-    assertEqual(db[0].deuda, 0, 'Deuda inicial 0');
+  let db = await storageService.getItem(TEST_KEYS.customers, []);
+  assertEqual(db[0].deuda, 0, "Deuda inicial 0");
 
-    // Fiado
-    db = db.map(c => c.id === customer.id ? { ...c, deuda: c.deuda + 15 } : c);
-    await storageService.setItem(TEST_KEYS.customers, db);
-    db = await storageService.getItem(TEST_KEYS.customers, []);
-    assertClose(db[0].deuda, 15, 'Deuda fiada sumada correctamente');
+  // Fiado
+  db = db.map((c) =>
+    c.id === customer.id ? { ...c, deuda: c.deuda + 15 } : c,
+  );
+  await storageService.setItem(TEST_KEYS.customers, db);
+  db = await storageService.getItem(TEST_KEYS.customers, []);
+  assertClose(db[0].deuda, 15, "Deuda fiada sumada correctamente");
 
-    log('Manejo deuda clientes OK', 'success');
+  log("Manejo deuda clientes OK", "success");
 }
 
 async function suite7Days() {
-    section('🗓️ SUITE: SIMULACIÓN 7 DÍAS DE OPERACIÓN');
+  section("🗓️ SUITE: SIMULACIÓN 7 DÍAS DE OPERACIÓN");
 
-    await storageService.setItem(TEST_KEYS.products, []);
-    await storageService.setItem(TEST_KEYS.sales, []);
+  await storageService.setItem(TEST_KEYS.products, []);
+  await storageService.setItem(TEST_KEYS.sales, []);
 
-    const prods = [createTestProduct({ priceUsdt: 2.0, stock: 100 })];
-    await storageService.setItem(TEST_KEYS.products, prods);
+  const prods = [createTestProduct({ priceUsdt: 2.0, stock: 100 })];
+  await storageService.setItem(TEST_KEYS.products, prods);
 
-    let generatedSales = [];
-    let revenue = 0;
+  let generatedSales = [];
+  let revenue = 0;
 
-    for (let day = 0; day < 7; day++) {
-        if (state.stopped) break;
+  for (let day = 0; day < 7; day++) {
+    if (state.stopped) break;
 
-        for (let s = 0; s < 3; s++) { // 3 ventas/dia
-            revenue += 2.0;
-            generatedSales.push({
-                id: `7d_${day}_${s}`,
-                totalUsd: 2.0,
-                items: [{ id: prods[0].id, qty: 1 }]
-            });
-        }
-        log(`Simulado día ${day + 1}: 3 ventas.`, 'info');
-        state.onProgress?.({ name: `Simulando Día ${day + 1}...`, current: day + 1, total: 7 });
-        await delay(30);
+    for (let s = 0; s < 3; s++) {
+      // 3 ventas/dia
+      revenue += 2.0;
+      generatedSales.push({
+        id: `7d_${day}_${s}`,
+        totalUsd: 2.0,
+        items: [{ id: prods[0].id, qty: 1 }],
+      });
     }
+    log(`Simulado día ${day + 1}: 3 ventas.`, "info");
+    state.onProgress?.({
+      name: `Simulando Día ${day + 1}...`,
+      current: day + 1,
+      total: 7,
+    });
+    await delay(30);
+  }
 
-    await storageService.setItem(TEST_KEYS.sales, generatedSales);
+  await storageService.setItem(TEST_KEYS.sales, generatedSales);
 
-    // Check persist
-    const checkSales = await storageService.getItem(TEST_KEYS.sales, []);
-    assert(checkSales.length >= 20, 'Ventas generadas persisten (al menos 21 ventas)');
+  // Check persist
+  const checkSales = await storageService.getItem(TEST_KEYS.sales, []);
+  assert(
+    checkSales.length >= 20,
+    "Ventas generadas persisten (al menos 21 ventas)",
+  );
 
-    log(`Simulación completada. Total revenue: $${revenue.toFixed(2)}`, 'success');
+  log(
+    `Simulación completada. Total revenue: $${revenue.toFixed(2)}`,
+    "success",
+  );
 }
 
 async function suiteIntegridad() {
-    section('🛡️ SUITE: INTEGRIDAD NaN/NULL');
-    const badValues = [null, undefined, '', 'abc', NaN];
-    for (const v of badValues) {
-        const parsed = parseFloat(v) || 0;
-        assert(!isNaN(parsed), `parseFloat maneja ${v}`);
-    }
-    log('Manejo de nulls y NaN OK', 'success');
+  section("🛡️ SUITE: INTEGRIDAD NaN/NULL");
+  const badValues = [null, undefined, "", "abc", NaN];
+  for (const v of badValues) {
+    const parsed = parseFloat(v) || 0;
+    assert(!isNaN(parsed), `parseFloat maneja ${v}`);
+  }
+  log("Manejo de nulls y NaN OK", "success");
 }
 
 // ════════════════════════════════════════════
@@ -549,196 +710,336 @@ async function suiteIntegridad() {
 
 // 8. CurrencyService (Matemática Central de Precios)
 async function suiteCurrencyService() {
-    section('🧳 SUITE: CurrencyService — Matemática Central');
+  section("🧳 SUITE: CurrencyService — Matemática Central");
 
-    // safeParse
-    assertEqual(CurrencyService.safeParse('12.50'), 12.50, 'safeParse string normal');
-    assertEqual(CurrencyService.safeParse('12,50'), 12.50, 'safeParse con coma venezolana');
-    assertEqual(CurrencyService.safeParse(''), 0, 'safeParse string vacío');
-    assertEqual(CurrencyService.safeParse('.'), 0, 'safeParse solo punto');
-    assertEqual(CurrencyService.safeParse(null), 0, 'safeParse null');
-    assertEqual(CurrencyService.safeParse(42), 42, 'safeParse number directo');
+  // safeParse
+  assertEqual(
+    CurrencyService.safeParse("12.50"),
+    12.5,
+    "safeParse string normal",
+  );
+  assertEqual(
+    CurrencyService.safeParse("12,50"),
+    12.5,
+    "safeParse con coma venezolana",
+  );
+  assertEqual(CurrencyService.safeParse(""), 0, "safeParse string vacío");
+  assertEqual(CurrencyService.safeParse("."), 0, "safeParse solo punto");
+  assertEqual(CurrencyService.safeParse(null), 0, "safeParse null");
+  assertEqual(CurrencyService.safeParse(42), 42, "safeParse number directo");
 
-    // applyRoundingRule
-    assertEqual(CurrencyService.applyRoundingRule(99.4, 'VES'), '100', 'VES redondea ceil entero');
-    assertEqual(CurrencyService.applyRoundingRule(12.456, 'USD'), '12.46', 'USD a 2 decimales');
-    assertEqual(CurrencyService.applyRoundingRule(0.001, 'VES'), '1', 'VES ceil de centavos');
+  // applyRoundingRule
+  assertEqual(
+    CurrencyService.applyRoundingRule(99.4, "VES"),
+    "100",
+    "VES redondea ceil entero",
+  );
+  assertEqual(
+    CurrencyService.applyRoundingRule(12.456, "USD"),
+    "12.46",
+    "USD a 2 decimales",
+  );
+  assertEqual(
+    CurrencyService.applyRoundingRule(0.001, "VES"),
+    "1",
+    "VES ceil de centavos",
+  );
 
-    // calculateExchange
-    const result = CurrencyService.calculateExchange(100, 36.5, 1);
-    assertClose(result, 3650, 'Exchange 100 USD * 36.5 rate');
-    assertEqual(CurrencyService.calculateExchange(100, 36.5, 0), 0, 'Exchange con rateTo=0 retorna 0');
-    assertEqual(CurrencyService.calculateExchange(100, 0, 36.5), 0, 'Exchange con rateFrom=0 retorna 0');
+  // calculateExchange
+  const result = CurrencyService.calculateExchange(100, 36.5, 1);
+  assertClose(result, 3650, "Exchange 100 USD * 36.5 rate");
+  assertEqual(
+    CurrencyService.calculateExchange(100, 36.5, 0),
+    0,
+    "Exchange con rateTo=0 retorna 0",
+  );
+  assertEqual(
+    CurrencyService.calculateExchange(100, 0, 36.5),
+    0,
+    "Exchange con rateFrom=0 retorna 0",
+  );
 
-    log('CurrencyService: safeParse + applyRoundingRule + calculateExchange OK', 'success');
+  log(
+    "CurrencyService: safeParse + applyRoundingRule + calculateExchange OK",
+    "success",
+  );
 }
 
 // 9. RateService (Normalización + Contextos de Tasa)
 async function suiteRateService() {
-    section('📊 SUITE: RateService — Normalización y Contextos');
+  section("📊 SUITE: RateService — Normalización y Contextos");
 
-    // normalizeCurrencyCode
-    assertEqual(RateService.normalizeCurrencyCode('bolivares'), 'VES', 'Normaliza "bolivares" → VES');
-    assertEqual(RateService.normalizeCurrencyCode('BOLÍVARES'), 'VES', 'Normaliza con tilde');
-    assertEqual(RateService.normalizeCurrencyCode('teter'), 'USDT', 'Normaliza typo "teter" → USDT');
-    assertEqual(RateService.normalizeCurrencyCode('binance'), 'USDT', 'Normaliza "binance" → USDT');
-    assertEqual(RateService.normalizeCurrencyCode('euro'), 'EUR', 'Normaliza "euro" → EUR');
-    assertEqual(RateService.normalizeCurrencyCode(''), 'USD', 'Vacío → USD default');
-    assertEqual(RateService.normalizeCurrencyCode(null), 'USD', 'null → USD default');
+  // normalizeCurrencyCode
+  assertEqual(
+    RateService.normalizeCurrencyCode("bolivares"),
+    "VES",
+    'Normaliza "bolivares" → VES',
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode("BOLÍVARES"),
+    "VES",
+    "Normaliza con tilde",
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode("teter"),
+    "USDT",
+    'Normaliza typo "teter" → USDT',
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode("binance"),
+    "USDT",
+    'Normaliza "binance" → USDT',
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode("euro"),
+    "EUR",
+    'Normaliza "euro" → EUR',
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode(""),
+    "USD",
+    "Vacío → USD default",
+  );
+  assertEqual(
+    RateService.normalizeCurrencyCode(null),
+    "USD",
+    "null → USD default",
+  );
 
-    // getExchangeContext
-    const mockRates = {
-        usdt: { price: 37.10 },
-        bcv: { price: 36.35 },
-        euro: { price: 39.50 },
-    };
+  // getExchangeContext
+  const mockRates = {
+    usdt: { price: 37.1 },
+    bcv: { price: 36.35 },
+    euro: { price: 39.5 },
+  };
 
-    const ctx1 = RateService.getExchangeContext('USDT', 'VES', mockRates);
-    assertClose(ctx1.rateUsed, 37.10, 'USDT→VES usa tasa USDT');
-    assertEqual(ctx1.target, 'VES', 'Target correcto');
+  const ctx1 = RateService.getExchangeContext("USDT", "VES", mockRates);
+  assertClose(ctx1.rateUsed, 37.1, "USDT→VES usa tasa USDT");
+  assertEqual(ctx1.target, "VES", "Target correcto");
 
-    const ctx2 = RateService.getExchangeContext('VES', null, mockRates);
-    assertEqual(ctx2.target, 'USD', 'VES sin target → USD auto');
+  const ctx2 = RateService.getExchangeContext("VES", null, mockRates);
+  assertEqual(ctx2.target, "USD", "VES sin target → USD auto");
 
-    const ctx3 = RateService.getExchangeContext('USDT', 'USD', mockRates);
-    assert(ctx3.rateUsed > 0, 'Brecha USDT→USD calculada');
+  const ctx3 = RateService.getExchangeContext("USDT", "USD", mockRates);
+  assert(ctx3.rateUsed > 0, "Brecha USDT→USD calculada");
 
-    log('RateService: Normalización + Contexto de tasas OK', 'success');
+  log("RateService: Normalización + Contexto de tasas OK", "success");
 }
 
 // 10. FinancialLogic (procesarImpactoCliente — Las Reglas de Oro del Dinero)
 async function suiteFinancialLogic() {
-    section('💰 SUITE: FinancialLogic — Impacto Financiero de Clientes');
+  section("💰 SUITE: FinancialLogic — Impacto Financiero de Clientes");
 
-    // Escenario 1: Cliente limpio, paga sin deuda
-    const c1 = procesarImpactoCliente({ deuda: 0, favor: 0 }, { usaSaldoFavor: 0, esCredito: false, deudaGenerada: 0, vueltoParaMonedero: 0 });
-    assertEqual(c1.deuda, 0, 'Sin transacción = sin cambio deuda');
-    assertEqual(c1.favor, 0, 'Sin transacción = sin cambio favor');
+  // Escenario 1: Cliente limpio, paga sin deuda
+  const c1 = procesarImpactoCliente(
+    { deuda: 0, favor: 0 },
+    {
+      usaSaldoFavor: 0,
+      esCredito: false,
+      deudaGenerada: 0,
+      vueltoParaMonedero: 0,
+    },
+  );
+  assertEqual(c1.deuda, 0, "Sin transacción = sin cambio deuda");
+  assertEqual(c1.favor, 0, "Sin transacción = sin cambio favor");
 
-    // Escenario 2: Fiar $50
-    const c2 = procesarImpactoCliente({ deuda: 0, favor: 0 }, { esCredito: true, deudaGenerada: 50 });
-    assertEqual(c2.deuda, 50, 'Fiado genera deuda');
+  // Escenario 2: Fiar $50
+  const c2 = procesarImpactoCliente(
+    { deuda: 0, favor: 0 },
+    { esCredito: true, deudaGenerada: 50 },
+  );
+  assertEqual(c2.deuda, 50, "Fiado genera deuda");
 
-    // Escenario 3: Vuelto digital abona deuda existente
-    const c3 = procesarImpactoCliente({ deuda: 30, favor: 0 }, { vueltoParaMonedero: 10 });
-    assertClose(c3.deuda, 20, 'Vuelto reduce deuda parcialmente');
-    assertEqual(c3.favor, 0, 'No genera favor si deuda pendiente');
+  // Escenario 3: Vuelto digital abona deuda existente
+  const c3 = procesarImpactoCliente(
+    { deuda: 30, favor: 0 },
+    { vueltoParaMonedero: 10 },
+  );
+  assertClose(c3.deuda, 20, "Vuelto reduce deuda parcialmente");
+  assertEqual(c3.favor, 0, "No genera favor si deuda pendiente");
 
-    // Escenario 4: Vuelto digital excede deuda → genera favor
-    const c4 = procesarImpactoCliente({ deuda: 5, favor: 0 }, { vueltoParaMonedero: 20 });
-    assertEqual(c4.deuda, 0, 'Deuda se cancela completa');
-    assertClose(c4.favor, 15, 'Excedente va a favor');
+  // Escenario 4: Vuelto digital excede deuda → genera favor
+  const c4 = procesarImpactoCliente(
+    { deuda: 5, favor: 0 },
+    { vueltoParaMonedero: 20 },
+  );
+  assertEqual(c4.deuda, 0, "Deuda se cancela completa");
+  assertClose(c4.favor, 15, "Excedente va a favor");
 
-    // Escenario 5: Uso de saldo a favor
-    const c5 = procesarImpactoCliente({ deuda: 0, favor: 100 }, { usaSaldoFavor: 40 });
-    assertClose(c5.favor, 60, 'Saldo a favor se reduce');
+  // Escenario 5: Uso de saldo a favor
+  const c5 = procesarImpactoCliente(
+    { deuda: 0, favor: 100 },
+    { usaSaldoFavor: 40 },
+  );
+  assertClose(c5.favor, 60, "Saldo a favor se reduce");
 
-    // Escenario 6: Normalización — favor y deuda simultáneos (The Golden Rule)
-    const c6 = procesarImpactoCliente({ deuda: 100, favor: 30 }, { vueltoParaMonedero: 0 });
-    assertEqual(c6.favor, 0, 'Golden Rule: favor se consume contra deuda');
-    assertClose(c6.deuda, 70, 'Golden Rule: deuda neta correcta');
+  // Escenario 6: Normalización — favor y deuda simultáneos (The Golden Rule)
+  const c6 = procesarImpactoCliente(
+    { deuda: 100, favor: 30 },
+    { vueltoParaMonedero: 0 },
+  );
+  assertEqual(c6.favor, 0, "Golden Rule: favor se consume contra deuda");
+  assertClose(c6.deuda, 70, "Golden Rule: deuda neta correcta");
 
-    log('FinancialLogic: 6 escenarios de impacto financiero validados OK', 'success');
+  log(
+    "FinancialLogic: 6 escenarios de impacto financiero validados OK",
+    "success",
+  );
 }
 
 // 11. Utilidades (smartCashRounding + formatVzlaPhone)
 async function suiteUtilidades() {
-    section('🛠️ SUITE: Utilidades — Redondeo Efectivo + Teléfono VE');
+  section("🛠️ SUITE: Utilidades — Redondeo Efectivo + Teléfono VE");
 
-    // smartCashRounding
-    assertEqual(smartCashRounding(99.10), 99, 'Decimal ≤0.20 → floor (99.10 → 99)');
-    assertEqual(smartCashRounding(99.20), 99, 'Decimal =0.20 → floor (99.20 → 99)');
-    assertEqual(smartCashRounding(99.21), 100, 'Decimal >0.20 → ceil (99.21 → 100)');
-    assertEqual(smartCashRounding(99.99), 100, 'Decimal alto → ceil (99.99 → 100)');
-    assertEqual(smartCashRounding(100.00), 100, 'Entero exacto sin cambio');
+  // smartCashRounding
+  assertEqual(
+    smartCashRounding(99.1),
+    99,
+    "Decimal ≤0.20 → floor (99.10 → 99)",
+  );
+  assertEqual(
+    smartCashRounding(99.2),
+    99,
+    "Decimal =0.20 → floor (99.20 → 99)",
+  );
+  assertEqual(
+    smartCashRounding(99.21),
+    100,
+    "Decimal >0.20 → ceil (99.21 → 100)",
+  );
+  assertEqual(
+    smartCashRounding(99.99),
+    100,
+    "Decimal alto → ceil (99.99 → 100)",
+  );
+  assertEqual(smartCashRounding(100.0), 100, "Entero exacto sin cambio");
 
-    // formatVzlaPhone
-    assertEqual(formatVzlaPhone('04121234567'), '584121234567', '04xx → 58xx');
-    assertEqual(formatVzlaPhone('4121234567'), '584121234567', 'Sin 0 → 58xx');
-    assertEqual(formatVzlaPhone('584121234567'), '584121234567', 'Ya internacional → sin cambio');
-    assertEqual(formatVzlaPhone(''), null, 'Vacío → null');
-    assertEqual(formatVzlaPhone(null), null, 'null → null');
+  // formatVzlaPhone
+  assertEqual(formatVzlaPhone("04121234567"), "584121234567", "04xx → 58xx");
+  assertEqual(formatVzlaPhone("4121234567"), "584121234567", "Sin 0 → 58xx");
+  assertEqual(
+    formatVzlaPhone("584121234567"),
+    "584121234567",
+    "Ya internacional → sin cambio",
+  );
+  assertEqual(formatVzlaPhone(""), null, "Vacío → null");
+  assertEqual(formatVzlaPhone(null), null, "null → null");
 
-    log('Utilidades: smartCashRounding (5 casos) + formatVzlaPhone (5 casos) OK', 'success');
+  log(
+    "Utilidades: smartCashRounding (5 casos) + formatVzlaPhone (5 casos) OK",
+    "success",
+  );
 }
 
 // 12. PaymentMethods (CRUD de métodos de pago)
 async function suitePaymentMethods() {
-    section('💳 SUITE: PaymentMethods — Factory + Custom CRUD');
+  section("💳 SUITE: PaymentMethods — Factory + Custom CRUD");
 
-    // Factory methods existen
-    assert(DEFAULT_PAYMENT_METHODS.length >= 4, 'Al menos 4 métodos de fábrica');
-    const efectivoBs = DEFAULT_PAYMENT_METHODS.find(m => m.id === 'efectivo_bs');
-    assert(efectivoBs, 'Existe Efectivo Bs en fábrica');
-    assertEqual(efectivoBs.isFactory, true, 'Es método de fábrica');
+  // Factory methods existen
+  assert(DEFAULT_PAYMENT_METHODS.length >= 4, "Al menos 4 métodos de fábrica");
+  const efectivoBs = DEFAULT_PAYMENT_METHODS.find(
+    (m) => m.id === "efectivo_bs",
+  );
+  assert(efectivoBs, "Existe Efectivo Bs en fábrica");
+  assertEqual(efectivoBs.isFactory, true, "Es método de fábrica");
 
-    // Helpers de lookup
-    const label = getPaymentLabel('pago_movil');
-    assert(label.includes('Pago Móvil'), 'getPaymentLabel retorna nombre correcto');
+  // Helpers de lookup
+  const label = getPaymentLabel("pago_movil");
+  assert(
+    label.includes("Pago Móvil"),
+    "getPaymentLabel retorna nombre correcto",
+  );
 
-    const method = getPaymentMethod('efectivo_usd');
-    assertEqual(method.currency, 'USD', 'getPaymentMethod retorna moneda correcta');
+  const method = getPaymentMethod("efectivo_usd");
+  assertEqual(
+    method.currency,
+    "USD",
+    "getPaymentMethod retorna moneda correcta",
+  );
 
-    // Fallback de getPaymentMethod
-    const fallback = getPaymentMethod('metodo_inventado_xyz');
-    assert(fallback !== null && fallback !== undefined, 'getPaymentMethod con ID inválido retorna fallback');
+  // Fallback de getPaymentMethod
+  const fallback = getPaymentMethod("metodo_inventado_xyz");
+  assert(
+    fallback !== null && fallback !== undefined,
+    "getPaymentMethod con ID inválido retorna fallback",
+  );
 
-    log('PaymentMethods: Factory validation + Lookup helpers OK', 'success');
+  log("PaymentMethods: Factory validation + Lookup helpers OK", "success");
 }
 
 // 13. MessageService (Generación de mensajes de cobro)
 async function suiteMessageService() {
-    section('💬 SUITE: MessageService — Generación de Mensajes (3 Tonos)');
+  section("💬 SUITE: MessageService — Generación de Mensajes (3 Tonos)");
 
-    const mockRates = {
-        usdt: { price: 37.10 },
-        bcv: { price: 36.35 },
-        euro: { price: 39.50 },
-    };
+  const mockRates = {
+    usdt: { price: 37.1 },
+    bcv: { price: 36.35 },
+    euro: { price: 39.5 },
+  };
 
-    const mockCurrencies = [
-        { id: 'VES', rate: 1 },
-        { id: 'USDT', rate: 37.10 },
-        { id: 'BCV', rate: 36.35 },
-        { id: 'EUR', rate: 39.50 },
-    ];
+  const mockCurrencies = [
+    { id: "VES", rate: 1 },
+    { id: "USDT", rate: 37.1 },
+    { id: "BCV", rate: 36.35 },
+    { id: "EUR", rate: 39.5 },
+  ];
 
-    const mockAccount = {
-        type: 'pago_movil',
-        data: { bankName: 'Mercantil', phone: '04121234567', docId: 'V-12345678' },
-        currency: 'VES',
-    };
+  const mockAccount = {
+    type: "pago_movil",
+    data: { bankName: "Mercantil", phone: "04121234567", docId: "V-12345678" },
+    currency: "VES",
+  };
 
-    const baseParams = {
-        amountTop: '100',
-        amountBot: '3650',
-        from: 'USDT',
-        to: 'VES',
-        selectedAccount: mockAccount,
-        rates: mockRates,
-        currencies: mockCurrencies,
-    };
+  const baseParams = {
+    amountTop: "100",
+    amountBot: "3650",
+    from: "USDT",
+    to: "VES",
+    selectedAccount: mockAccount,
+    rates: mockRates,
+    currencies: mockCurrencies,
+  };
 
-    // Tono Casual
-    const casual = MessageService.buildPaymentMessage({ ...baseParams, tone: 'casual' });
-    assert(casual.includes('Hola'), 'Tono casual incluye "Hola"');
-    assert(casual.includes('Pago Móvil'), 'Incluye datos de Pago Móvil');
+  // Tono Casual
+  const casual = MessageService.buildPaymentMessage({
+    ...baseParams,
+    tone: "casual",
+  });
+  assert(casual.includes("Hola"), 'Tono casual incluye "Hola"');
+  assert(casual.includes("Pago Móvil"), "Incluye datos de Pago Móvil");
 
-    // Tono Formal
-    const formal = MessageService.buildPaymentMessage({ ...baseParams, tone: 'formal', clientName: 'Juan' });
-    assert(formal.includes('Estimado'), 'Tono formal incluye "Estimado"');
-    assert(formal.includes('Juan'), 'Incluye nombre del cliente');
+  // Tono Formal
+  const formal = MessageService.buildPaymentMessage({
+    ...baseParams,
+    tone: "formal",
+    clientName: "Juan",
+  });
+  assert(formal.includes("Estimado"), 'Tono formal incluye "Estimado"');
+  assert(formal.includes("Juan"), "Incluye nombre del cliente");
 
-    // Tono Directo
-    const direct = MessageService.buildPaymentMessage({ ...baseParams, tone: 'direct' });
-    assert(direct.includes('DETALLES DE PAGO'), 'Tono directo incluye "DETALLES DE PAGO"');
+  // Tono Directo
+  const direct = MessageService.buildPaymentMessage({
+    ...baseParams,
+    tone: "direct",
+  });
+  assert(
+    direct.includes("DETALLES DE PAGO"),
+    'Tono directo incluye "DETALLES DE PAGO"',
+  );
 
-    // Sin cuenta (Fallback)
-    const mockFallback = { type: 'pago_movil', data: {}, currency: 'VES' };
-    const noCuenta = MessageService.buildPaymentMessage({ ...baseParams, selectedAccount: mockFallback, tone: 'casual' });
-    assert(typeof noCuenta === 'string' && noCuenta.length > 10, 'Genera mensaje incluso con datos mínimos');
+  // Sin cuenta (Fallback)
+  const mockFallback = { type: "pago_movil", data: {}, currency: "VES" };
+  const noCuenta = MessageService.buildPaymentMessage({
+    ...baseParams,
+    selectedAccount: mockFallback,
+    tone: "casual",
+  });
+  assert(
+    typeof noCuenta === "string" && noCuenta.length > 10,
+    "Genera mensaje incluso con datos mínimos",
+  );
 
-    log('MessageService: 3 tonos + fallback sin cuenta OK', 'success');
+  log("MessageService: 3 tonos + fallback sin cuenta OK", "success");
 }
 
 // ════════════════════════════════════════════
@@ -746,20 +1047,24 @@ async function suiteMessageService() {
 // ════════════════════════════════════════════
 
 async function analyzeWithGroq(summary) {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    if (!apiKey) return null;
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) return null;
 
-    const passed = summary.suites.filter(s => s.status === 'passed').length;
-    const failed = summary.suites.filter(s => s.status === 'failed').length;
-    const elapsed = summary.startedAt && summary.finishedAt
-        ? ((summary.finishedAt - summary.startedAt) / 1000).toFixed(1)
-        : '?';
+  const passed = summary.suites.filter((s) => s.status === "passed").length;
+  const failed = summary.suites.filter((s) => s.status === "failed").length;
+  const elapsed =
+    summary.startedAt && summary.finishedAt
+      ? ((summary.finishedAt - summary.startedAt) / 1000).toFixed(1)
+      : "?";
 
-    const suiteDetails = summary.suites.map(s =>
-        `${s.status === 'passed' ? '✅' : '❌'} [${s.id}] ${s.name}${s.error ? ` — ERROR: ${s.error}` : ''}`
-    ).join('\n');
+  const suiteDetails = summary.suites
+    .map(
+      (s) =>
+        `${s.status === "passed" ? "✅" : "❌"} [${s.id}] ${s.name}${s.error ? ` — ERROR: ${s.error}` : ""}`,
+    )
+    .join("\n");
 
-    const prompt = `Eres un auditor senior de QA para una aplicación PWA de punto de venta llamada "PreciosAlDía" (Venezuela). 
+  const prompt = `Eres un auditor senior de QA para una aplicación PWA de punto de venta llamada "PreciosAlDía" (Venezuela). 
 Acabamos de correr la batería de tests automáticos del SystemTester v4.0. Aquí están los resultados:
 
 RESULTADOS:
@@ -779,28 +1084,31 @@ Analiza estos resultados y dame:
 
 Responde en español, de forma concisa y directa. Máximo 200 palabras.`;
 
-    try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.3,
-                max_tokens: 400,
-            }),
-        });
+  try {
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.3,
+          max_tokens: 400,
+        }),
+      },
+    );
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content || null;
-    } catch (e) {
-        log(`⚠️ Error contactando Groq API: ${e.message}`, 'warn');
-        return null;
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch (e) {
+    log(`⚠️ Error contactando Groq API: ${e.message}`, "warn");
+    return null;
+  }
 }
 
 // ════════════════════════════════════════════
@@ -808,42 +1116,147 @@ Responde en español, de forma concisa y directa. Máximo 200 palabras.`;
 // ════════════════════════════════════════════
 
 const SUITES = [
-    { key: 'dash_validations', name: '📊 Dash: Totales Hoy vs Ayer', fn: suiteDashboard, fast: true },
-    { key: 'chaos_data', name: '🌪️ Resiliencia a Caos DB', fn: suiteChaos, fast: true },
-    { key: 'extreme_stress', name: '🌋 EXTREMO: 5K Lecturas DB', fn: suiteExtremo, fast: false },
-    { key: 'quota_mock', name: '🔌 Falla de Red / QuotaExceeded', fn: suiteQuota, fast: true },
+  {
+    key: "dash_validations",
+    name: "📊 Dash: Totales Hoy vs Ayer",
+    fn: suiteDashboard,
+    fast: true,
+  },
+  {
+    key: "chaos_data",
+    name: "🌪️ Resiliencia a Caos DB",
+    fn: suiteChaos,
+    fast: true,
+  },
+  {
+    key: "extreme_stress",
+    name: "🌋 EXTREMO: 5K Lecturas DB",
+    fn: suiteExtremo,
+    fast: false,
+  },
+  {
+    key: "quota_mock",
+    name: "🔌 Falla de Red / QuotaExceeded",
+    fn: suiteQuota,
+    fast: true,
+  },
 
-    { key: 'catalogo_tasas', name: '💱 Verificación Tasas/Catálogo', fn: suiteCatalogoTasas, fast: true },
-    { key: 'ventas_ganancias', name: '📈 Simulación de Ganancias', fn: suiteVentasGanancias, fast: true },
-    { key: 'stress_catalogo', name: '⚡ Stress de Rendimiento (100 items)', fn: suiteStressCatalogo, fast: true },
+  {
+    key: "catalogo_tasas",
+    name: "💱 Verificación Tasas/Catálogo",
+    fn: suiteCatalogoTasas,
+    fast: true,
+  },
+  {
+    key: "ventas_ganancias",
+    name: "📈 Simulación de Ganancias",
+    fn: suiteVentasGanancias,
+    fast: true,
+  },
+  {
+    key: "stress_catalogo",
+    name: "⚡ Stress de Rendimiento (100 items)",
+    fn: suiteStressCatalogo,
+    fast: true,
+  },
 
-    { key: 'storage', name: '💾 Funciones Storage Base', fn: suiteStorage, fast: true },
-    { key: 'productos', name: '📦 CRUD Productos', fn: suiteProductos, fast: true },
-    { key: 'carrito', name: '🛒 Matemáticas de Carrito', fn: suiteCarrito, fast: true },
-    { key: 'bimoneda', name: '💱 Conversiones Bimoneda', fn: suiteBimoneda, fast: true },
-    { key: 'checkout', name: '🧾 Guardado Checkout', fn: suiteCheckout, fast: true },
-    { key: 'clientes', name: '👥 Actualización Deudas', fn: suiteClientes, fast: true },
-    { key: 'integridad', name: '🛡️ Defensas de Tipos', fn: suiteIntegridad, fast: true },
+  {
+    key: "storage",
+    name: "💾 Funciones Storage Base",
+    fn: suiteStorage,
+    fast: true,
+  },
+  {
+    key: "productos",
+    name: "📦 CRUD Productos",
+    fn: suiteProductos,
+    fast: true,
+  },
+  {
+    key: "carrito",
+    name: "🛒 Matemáticas de Carrito",
+    fn: suiteCarrito,
+    fast: true,
+  },
+  {
+    key: "bimoneda",
+    name: "💱 Conversiones Bimoneda",
+    fn: suiteBimoneda,
+    fast: true,
+  },
+  {
+    key: "checkout",
+    name: "🧾 Guardado Checkout",
+    fn: suiteCheckout,
+    fast: true,
+  },
+  {
+    key: "clientes",
+    name: "👥 Actualización Deudas",
+    fn: suiteClientes,
+    fast: true,
+  },
+  {
+    key: "integridad",
+    name: "🛡️ Defensas de Tipos",
+    fn: suiteIntegridad,
+    fast: true,
+  },
 
-    // v4.0 — Cobertura Total
-    { key: 'currency_svc', name: '🧳 CurrencyService (Matemática Central)', fn: suiteCurrencyService, fast: true },
-    { key: 'rate_svc', name: '📊 RateService (Normalización + Contextos)', fn: suiteRateService, fast: true },
-    { key: 'financial', name: '💰 FinancialLogic (Deuda/Favor/Vuelto)', fn: suiteFinancialLogic, fast: true },
-    { key: 'utils_extra', name: '🛠️ Redondeo Efectivo + Teléfono VE', fn: suiteUtilidades, fast: true },
-    { key: 'pay_methods', name: '💳 Métodos de Pago (CRUD)', fn: suitePaymentMethods, fast: true },
-    { key: 'msg_service', name: '💬 MessageService (3 Tonos)', fn: suiteMessageService, fast: true },
+  // v4.0 — Cobertura Total
+  {
+    key: "currency_svc",
+    name: "🧳 CurrencyService (Matemática Central)",
+    fn: suiteCurrencyService,
+    fast: true,
+  },
+  {
+    key: "rate_svc",
+    name: "📊 RateService (Normalización + Contextos)",
+    fn: suiteRateService,
+    fast: true,
+  },
+  {
+    key: "financial",
+    name: "💰 FinancialLogic (Deuda/Favor/Vuelto)",
+    fn: suiteFinancialLogic,
+    fast: true,
+  },
+  {
+    key: "utils_extra",
+    name: "🛠️ Redondeo Efectivo + Teléfono VE",
+    fn: suiteUtilidades,
+    fast: true,
+  },
+  {
+    key: "pay_methods",
+    name: "💳 Métodos de Pago (CRUD)",
+    fn: suitePaymentMethods,
+    fast: true,
+  },
+  {
+    key: "msg_service",
+    name: "💬 MessageService (3 Tonos)",
+    fn: suiteMessageService,
+    fast: true,
+  },
 
-    { key: '7days', name: '🗓️ Week Sim (Storage Pesado)', fn: suite7Days, fast: false },
+  {
+    key: "7days",
+    name: "🗓️ Week Sim (Storage Pesado)",
+    fn: suite7Days,
+    fast: false,
+  },
 ];
 
 function resetState() {
-    state.logs = [];
-    state.suites = [];
-    state.isRunning = false;
-    state.stopped = false;
-    state.startedAt = null;
-    state.finishedAt = null;
-    state._7dayStats = null;
+  state.logs = [];
+  state.suites = [];
+  state.isRunning = false;
+  state.stopped = false;
+  state.startedAt = null;
+  state.finishedAt = null;
+  state._7dayStats = null;
 }
 
 // ════════════════════════════════════════════
@@ -851,130 +1264,160 @@ function resetState() {
 // ════════════════════════════════════════════
 
 export const SystemTester = {
-    getSuites: () => [...SUITES],
+  getSuites: () => [...SUITES],
 
-    getState: () => ({
-        logs: [...state.logs],
-        suites: [...state.suites],
-        isRunning: state.isRunning,
-        stopped: state.stopped,
-        startedAt: state.startedAt,
-        finishedAt: state.finishedAt
-    }),
+  getState: () => ({
+    logs: [...state.logs],
+    suites: [...state.suites],
+    isRunning: state.isRunning,
+    stopped: state.stopped,
+    startedAt: state.startedAt,
+    finishedAt: state.finishedAt,
+  }),
 
-    stop: () => {
-        state.stopped = true;
-        log('⛔ Se solicitó detección de los tests.', 'warn');
-    },
+  stop: () => {
+    state.stopped = true;
+    log("⛔ Se solicitó detección de los tests.", "warn");
+  },
 
-    async runAll({ onLog, onProgress, onComplete, fastMode = false } = {}) {
-        resetState();
+  async runAll({ onLog, onProgress, onComplete, fastMode = false } = {}) {
+    resetState();
 
-        // Determinar qué suites correr basado en fastMode
-        const targetSuites = fastMode ? SUITES.filter(s => s.fast) : SUITES;
-        initSuites(targetSuites);
+    // Determinar qué suites correr basado en fastMode
+    const targetSuites = fastMode ? SUITES.filter((s) => s.fast) : SUITES;
+    initSuites(targetSuites);
 
-        state.isRunning = true;
-        state.startedAt = Date.now();
-        state.onLog = onLog || null;
-        state.onProgress = onProgress || null;
+    state.isRunning = true;
+    state.startedAt = Date.now();
+    state.onLog = onLog || null;
+    state.onProgress = onProgress || null;
 
-        log(`🚀 Iniciando System Tester v4.0 [FastMode: ${fastMode ? 'ON' : 'OFF'}]`, 'info');
+    log(
+      `🚀 Iniciando System Tester v4.0 [FastMode: ${fastMode ? "ON" : "OFF"}]`,
+      "info",
+    );
 
-        let passed = 0;
-        let failed = 0;
+    let passed = 0;
+    let failed = 0;
 
-        await cleanupTestData(); // Asegurar entorno limpio
+    await cleanupTestData(); // Asegurar entorno limpio
 
-        for (let i = 0; i < targetSuites.length; i++) {
-            const suiteConfig = targetSuites[i];
+    for (let i = 0; i < targetSuites.length; i++) {
+      const suiteConfig = targetSuites[i];
 
-            if (state.stopped) {
-                log('⛔ Test abortado por el usuario', 'warn');
-                updateSuiteStatus(suiteConfig.key, { status: 'skipped' });
-                continue;
-            }
+      if (state.stopped) {
+        log("⛔ Test abortado por el usuario", "warn");
+        updateSuiteStatus(suiteConfig.key, { status: "skipped" });
+        continue;
+      }
 
-            onProgress?.({ name: suiteConfig.name, current: i + 1, total: targetSuites.length });
-            log(`Iniciando suite: ${suiteConfig.name}`, 'info');
+      onProgress?.({
+        name: suiteConfig.name,
+        current: i + 1,
+        total: targetSuites.length,
+      });
+      log(`Iniciando suite: ${suiteConfig.name}`, "info");
 
-            updateSuiteStatus(suiteConfig.key, { status: 'running', startedAt: Date.now() });
+      updateSuiteStatus(suiteConfig.key, {
+        status: "running",
+        startedAt: Date.now(),
+      });
 
-            try {
-                await suiteConfig.fn();
-                updateSuiteStatus(suiteConfig.key, { status: 'passed', finishedAt: Date.now() });
-                passed++;
-            } catch (err) {
-                log(`💥 Suite Failed: ${suiteConfig.name} - ${err.message}`, 'error');
-                updateSuiteStatus(suiteConfig.key, { status: 'failed', finishedAt: Date.now(), error: err.message });
-                failed++;
-            }
+      try {
+        await suiteConfig.fn();
+        updateSuiteStatus(suiteConfig.key, {
+          status: "passed",
+          finishedAt: Date.now(),
+        });
+        passed++;
+      } catch (err) {
+        log(`💥 Suite Failed: ${suiteConfig.name} - ${err.message}`, "error");
+        updateSuiteStatus(suiteConfig.key, {
+          status: "failed",
+          finishedAt: Date.now(),
+          error: err.message,
+        });
+        failed++;
+      }
 
-            await delay(30);
-        }
+      await delay(30);
+    }
 
-        await cleanupTestData(); // Limpiar al final
+    await cleanupTestData(); // Limpiar al final
 
-        state.finishedAt = Date.now();
-        const elapsedSec = ((state.finishedAt - state.startedAt) / 1000).toFixed(1);
+    state.finishedAt = Date.now();
+    const elapsedSec = ((state.finishedAt - state.startedAt) / 1000).toFixed(1);
 
-        section('📊 RESULTADO FINAL');
-        log(`✅ ${passed} aprobadas | ❌ ${failed} fallidas | ⏱️ ${elapsedSec}s`, passed > 0 && failed === 0 ? 'success' : 'error');
+    section("📊 RESULTADO FINAL");
+    log(
+      `✅ ${passed} aprobadas | ❌ ${failed} fallidas | ⏱️ ${elapsedSec}s`,
+      passed > 0 && failed === 0 ? "success" : "error",
+    );
 
-        state.isRunning = false;
+    state.isRunning = false;
 
-        // ════ GROQ AI ANALYSIS (Post-Run) ════
-        const finalSummary = this.getState();
-        let aiAnalysis = null;
-        try {
-            aiAnalysis = await analyzeWithGroq(finalSummary);
-            if (aiAnalysis) {
-                finalSummary.aiAnalysis = aiAnalysis;
-                log('🧠 Análisis AI completado.', 'ai');
-            }
-        } catch (e) {
-            log(`⚠️ Groq AI no disponible: ${e.message}`, 'warn');
-        }
+    // ════ GROQ AI ANALYSIS (Post-Run) ════
+    const finalSummary = this.getState();
+    let aiAnalysis = null;
+    try {
+      aiAnalysis = await analyzeWithGroq(finalSummary);
+      if (aiAnalysis) {
+        finalSummary.aiAnalysis = aiAnalysis;
+        log("🧠 Análisis AI completado.", "ai");
+      }
+    } catch (e) {
+      log(`⚠️ Groq AI no disponible: ${e.message}`, "warn");
+    }
 
-        onComplete?.(finalSummary);
+    onComplete?.(finalSummary);
 
-        return finalSummary;
-    },
+    return finalSummary;
+  },
 
-    async runSuite(suiteId, { onLog } = {}) {
-        resetState();
-        const suiteConfig = SUITES.find(s => s.key === suiteId);
+  async runSuite(suiteId, { onLog } = {}) {
+    resetState();
+    const suiteConfig = SUITES.find((s) => s.key === suiteId);
 
-        if (!suiteConfig) {
-            log(`Suite "${suiteId}" no encontrada`, 'error');
-            return null;
-        }
+    if (!suiteConfig) {
+      log(`Suite "${suiteId}" no encontrada`, "error");
+      return null;
+    }
 
-        initSuites([suiteConfig]);
+    initSuites([suiteConfig]);
 
-        state.isRunning = true;
-        state.startedAt = Date.now();
-        state.onLog = onLog || null;
+    state.isRunning = true;
+    state.startedAt = Date.now();
+    state.onLog = onLog || null;
 
-        await cleanupTestData();
+    await cleanupTestData();
 
-        log(`🚀 Ejecutando suite unitaria: ${suiteConfig.name}`, 'info');
-        updateSuiteStatus(suiteConfig.key, { status: 'running', startedAt: Date.now() });
+    log(`🚀 Ejecutando suite unitaria: ${suiteConfig.name}`, "info");
+    updateSuiteStatus(suiteConfig.key, {
+      status: "running",
+      startedAt: Date.now(),
+    });
 
-        try {
-            await suiteConfig.fn();
-            updateSuiteStatus(suiteConfig.key, { status: 'passed', finishedAt: Date.now() });
-            log(`${suiteConfig.name} ✓`, 'success');
-        } catch (err) {
-            log(`💥 Error en ${suiteConfig.name}: ${err.message}`, 'error');
-            updateSuiteStatus(suiteConfig.key, { status: 'failed', finishedAt: Date.now(), error: err.message });
-        }
+    try {
+      await suiteConfig.fn();
+      updateSuiteStatus(suiteConfig.key, {
+        status: "passed",
+        finishedAt: Date.now(),
+      });
+      log(`${suiteConfig.name} ✓`, "success");
+    } catch (err) {
+      log(`💥 Error en ${suiteConfig.name}: ${err.message}`, "error");
+      updateSuiteStatus(suiteConfig.key, {
+        status: "failed",
+        finishedAt: Date.now(),
+        error: err.message,
+      });
+    }
 
-        await cleanupTestData();
+    await cleanupTestData();
 
-        state.finishedAt = Date.now();
-        state.isRunning = false;
+    state.finishedAt = Date.now();
+    state.isRunning = false;
 
-        return this.getState();
-    },
+    return this.getState();
+  },
 };

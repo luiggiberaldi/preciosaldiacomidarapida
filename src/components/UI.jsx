@@ -1,8 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Minus, Terminal, DollarSign, Zap } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Terminal,
+  DollarSign,
+  Zap,
+} from "lucide-react";
 
 export const Card = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300 ${className}`}>
+  <div
+    className={`bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300 ${className}`}
+  >
     {children}
   </div>
 );
@@ -10,21 +19,32 @@ export const Card = ({ children, className = "" }) => (
 export const Badge = ({ children, color = "slate", className = "" }) => {
   const colors = {
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-    amber: "bg-amber-50 text-red-600 border border-amber-100 dark:bg-amber-900/30 dark:text-red-400 dark:border-amber-800",
-    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
+    amber:
+      "bg-amber-50 text-red-600 border border-amber-100 dark:bg-amber-900/30 dark:text-red-400 dark:border-amber-800",
+    indigo:
+      "bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
   };
   return (
-    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border dark:border-opacity-50 ${colors[color] || colors.slate} ${className}`}>
+    <span
+      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border dark:border-opacity-50 ${colors[color] || colors.slate} ${className}`}
+    >
       {children}
     </span>
   );
 };
 
 export const ChangeIndicator = ({ percent }) => {
-  if (!percent || Math.abs(percent) < 0.01) return <span className="text-slate-300 dark:text-slate-600"><Minus size={12} /></span>;
+  if (!percent || Math.abs(percent) < 0.01)
+    return (
+      <span className="text-slate-300 dark:text-slate-600">
+        <Minus size={12} />
+      </span>
+    );
   const isUp = percent > 0;
   return (
-    <div className={`flex items-center gap-0.5 text-[10px] font-bold ${isUp ? 'text-red-500 dark:text-red-400' : 'text-rose-500 dark:text-rose-400'}`}>
+    <div
+      className={`flex items-center gap-0.5 text-[10px] font-bold ${isUp ? "text-red-500 dark:text-red-400" : "text-rose-500 dark:text-rose-400"}`}
+    >
       {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
       {Math.abs(percent).toFixed(2)}%
     </div>
@@ -34,21 +54,31 @@ export const ChangeIndicator = ({ percent }) => {
 export const LogViewer = ({ logs }) => {
   const scrollRef = useRef(null);
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollRef.current)
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [logs]);
 
   return (
     <div className="bg-slate-900 dark:bg-black rounded-2xl p-4 font-mono text-[10px] text-slate-300 shadow-inner border border-slate-800">
       <div className="flex items-center gap-2 mb-2 text-slate-400 border-b border-slate-800 pb-2">
         <Terminal size={12} />
-        <span className="uppercase font-bold tracking-wider">Registro de Conexión</span>
+        <span className="uppercase font-bold tracking-wider">
+          Registro de Conexión
+        </span>
       </div>
-      <div ref={scrollRef} className="h-32 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700">
-        {logs.length === 0 && <p className="text-slate-600 italic">Esperando actividad...</p>}
+      <div
+        ref={scrollRef}
+        className="h-32 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700"
+      >
+        {logs.length === 0 && (
+          <p className="text-slate-600 italic">Esperando actividad...</p>
+        )}
         {logs.map((log, i) => (
           <div key={i} className="flex gap-2">
             <span className="text-slate-600 shrink-0">[{log.time}]</span>
-            <span className={`${log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-red-400' : 'text-slate-300'}`}>
+            <span
+              className={`${log.type === "error" ? "text-red-400" : log.type === "success" ? "text-red-400" : "text-slate-300"}`}
+            >
               {log.msg}
             </span>
           </div>

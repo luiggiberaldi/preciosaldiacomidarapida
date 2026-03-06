@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { storageService } from '../utils/storageService';
+import { useState, useEffect, useCallback } from "react";
+import { storageService } from "../utils/storageService";
 
-const STORAGE_KEY = 'my_accounts_v2';
+const STORAGE_KEY = "my_accounts_v2";
 
 export function useWallet() {
   const [accounts, setAccounts] = useState([]);
@@ -14,7 +14,7 @@ export function useWallet() {
       try {
         const saved = await storageService.getItem(STORAGE_KEY, []);
         // Normalize: WalletView creates accounts with `id_gen`, useWallet expects `id`.
-        const normalized = (saved || []).map(acc => ({
+        const normalized = (saved || []).map((acc) => ({
           ...acc,
           id: acc.id || String(acc.id_gen || crypto.randomUUID()),
           id_gen: acc.id_gen || acc.id || Date.now(),
@@ -32,7 +32,9 @@ export function useWallet() {
     };
 
     loadData();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 2. Guardar automáticamente cada vez que cambien (sólo si ya cargó)
@@ -55,24 +57,24 @@ export function useWallet() {
     const newAccount = {
       id: crypto.randomUUID(), // ID único para cada cuenta
       createdAt: new Date().toISOString(),
-      type,      // Tipo de método
-      alias,     // Nombre para mostrar
-      currency,  // VES o USDT
-      data       // Objeto flexible con los datos
+      type, // Tipo de método
+      alias, // Nombre para mostrar
+      currency, // VES o USDT
+      data, // Objeto flexible con los datos
     };
 
-    setAccounts(prev => [...prev, newAccount]);
+    setAccounts((prev) => [...prev, newAccount]);
     return newAccount;
   }, []);
 
   const removeAccount = useCallback((id) => {
-    setAccounts(prev => prev.filter(account => account.id !== id));
+    setAccounts((prev) => prev.filter((account) => account.id !== id));
   }, []);
 
   const updateAccount = useCallback((id, updatedFields) => {
-    setAccounts(prev => prev.map(acc =>
-      acc.id === id ? { ...acc, ...updatedFields } : acc
-    ));
+    setAccounts((prev) =>
+      prev.map((acc) => (acc.id === id ? { ...acc, ...updatedFields } : acc)),
+    );
   }, []);
 
   return {
@@ -80,6 +82,6 @@ export function useWallet() {
     isLoading,
     addAccount,
     removeAccount,
-    updateAccount
+    updateAccount,
   };
 }

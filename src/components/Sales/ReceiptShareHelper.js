@@ -4,87 +4,102 @@
  * @returns {string} WhatsApp URL with pre-filled message
  */
 export function buildReceiptWhatsAppUrl(receipt) {
-    const r = receipt;
-    const fecha = new Date(r.timestamp).toLocaleDateString('es-VE', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
-    const saleNum = String(r.saleNumber || 0).padStart(2, '0');
-    const sep = '================================';
-    const sep2 = '--------------------------------';
+  const r = receipt;
+  const fecha = new Date(r.timestamp).toLocaleDateString("es-VE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const saleNum = String(r.saleNumber || 0).padStart(2, "0");
+  const sep = "================================";
+  const sep2 = "--------------------------------";
 
-    // Items
-    const itemsLines = (r.items ?? []).map(item => {
-        const qty = item.isWeight
-            ? `${parseFloat(item.qty).toFixed(3)} kg`
-            : `${item.qty} und`;
-        const sub = (item.priceUsd * item.qty).toFixed(2);
-        const noteLine = item.note ? `\n  💬 Nota: ${item.note}` : '';
-        return `- ${item.name}${noteLine}\n  ${qty} x $${parseFloat(item.priceUsd).toFixed(2)} = $${sub}`;
-    }).join('\n\n');
+  // Items
+  const itemsLines = (r.items ?? [])
+    .map((item) => {
+      const qty = item.isWeight
+        ? `${parseFloat(item.qty).toFixed(3)} kg`
+        : `${item.qty} und`;
+      const sub = (item.priceUsd * item.qty).toFixed(2);
+      const noteLine = item.note ? `\n  💬 Nota: ${item.note}` : "";
+      return `- ${item.name}${noteLine}\n  ${qty} x $${parseFloat(item.priceUsd).toFixed(2)} = $${sub}`;
+    })
+    .join("\n\n");
 
-    // Pagos
-    const paymentsLines = (r.payments ?? []).map(p => {
-        const isBs = p.currency === 'BS';
-        const val = isBs
-            ? `Bs ${Math.ceil(p.amountBs ?? p.amountUsd * r.rate)}`
-            : `$${parseFloat(p.amountUsd).toFixed(2)}`;
-        return `  ${p.methodLabel}: ${val}`;
-    }).join('\n');
+  // Pagos
+  const paymentsLines = (r.payments ?? [])
+    .map((p) => {
+      const isBs = p.currency === "BS";
+      const val = isBs
+        ? `Bs ${Math.ceil(p.amountBs ?? p.amountUsd * r.rate)}`
+        : `$${parseFloat(p.amountUsd).toFixed(2)}`;
+      return `  ${p.methodLabel}: ${val}`;
+    })
+    .join("\n");
 
-    // Totales
-    const totalBs = r.totalBs ?? (r.totalUsd * r.rate);
-    const totalUsdStr = `$${parseFloat(r.totalUsd).toFixed(2)}`;
-    const totalBsStr = `Bs ${Math.ceil(totalBs)}`;
+  // Totales
+  const totalBs = r.totalBs ?? r.totalUsd * r.rate;
+  const totalUsdStr = `$${parseFloat(r.totalUsd).toFixed(2)}`;
+  const totalBsStr = `Bs ${Math.ceil(totalBs)}`;
 
-    // Vuelto
-    const changeLines = r.changeUsd > 0.005
-        ? `\nVUELTO: $${parseFloat(r.changeUsd).toFixed(2)}`
-        : '';
+  // Vuelto
+  const changeLines =
+    r.changeUsd > 0.005
+      ? `\nVUELTO: $${parseFloat(r.changeUsd).toFixed(2)}`
+      : "";
 
-    // Fiado
-    const fiadoLine = r.fiadoUsd > 0.005
-        ? `\nPENDIENTE (fiado): $${parseFloat(r.fiadoUsd).toFixed(2)}`
-        : '';
+  // Fiado
+  const fiadoLine =
+    r.fiadoUsd > 0.005
+      ? `\nPENDIENTE (fiado): $${parseFloat(r.fiadoUsd).toFixed(2)}`
+      : "";
 
-    // Cliente
-    const clienteLine = r.customerName && r.customerName !== 'Consumidor Final'
-        ? `Cliente: ${r.customerName}\n`
-        : '';
+  // Cliente
+  const clienteLine =
+    r.customerName && r.customerName !== "Consumidor Final"
+      ? `Cliente: ${r.customerName}\n`
+      : "";
 
-    const deliveryLine = r.deliveryType === 'LLEVAR' ? `TIPO: 🛍️ PARA LLEVAR` : `TIPO: 🍽️ COMER AQUÍ`;
+  const deliveryLine =
+    r.deliveryType === "LLEVAR"
+      ? `TIPO: 🛍️ PARA LLEVAR`
+      : `TIPO: 🍽️ COMER AQUÍ`;
 
-    const text = [
-        `COMPROBANTE DE ORDEN | FAST FOOD`,
-        sep2,
-        `ORDEN: #${saleNum}`,
-        deliveryLine,
-        `${clienteLine}Fecha: ${fecha}`,
-        sep,
-        ``,
-        `DETALLE DE PEDIDO:`,
-        itemsLines,
-        ``,
-        sep,
-        `TOTAL: ${totalUsdStr}  /  ${totalBsStr}`,
-        paymentsLines ? `\nPAGOS:\n${paymentsLines}` : '',
-        changeLines,
-        fiadoLine,
-        sep,
-        `Gracias por su compra!`,
-        `Precios Al Dia - Sistema POS`,
-    ].filter(Boolean).join('\n');
+  const text = [
+    `COMPROBANTE DE ORDEN | FAST FOOD`,
+    sep2,
+    `ORDEN: #${saleNum}`,
+    deliveryLine,
+    `${clienteLine}Fecha: ${fecha}`,
+    sep,
+    ``,
+    `DETALLE DE PEDIDO:`,
+    itemsLines,
+    ``,
+    sep,
+    `TOTAL: ${totalUsdStr}  /  ${totalBsStr}`,
+    paymentsLines ? `\nPAGOS:\n${paymentsLines}` : "",
+    changeLines,
+    fiadoLine,
+    sep,
+    `Gracias por su compra!`,
+    `Precios Al Dia - Sistema POS`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-    const formatVzlaPhone = (phone) => {
-        if (!phone) return null;
-        const digits = phone.replace(/\D/g, '');
-        if (digits.startsWith('58')) return digits;
-        if (digits.startsWith('0')) return '58' + digits.slice(1);
-        return '58' + digits;
-    };
+  const formatVzlaPhone = (phone) => {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("58")) return digits;
+    if (digits.startsWith("0")) return "58" + digits.slice(1);
+    return "58" + digits;
+  };
 
-    const phone = formatVzlaPhone(r.customerPhone);
-    return phone
-        ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-        : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  const phone = formatVzlaPhone(r.customerPhone);
+  return phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

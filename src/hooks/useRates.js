@@ -1,199 +1,249 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const DEFAULT_RATES = {
-    bcv: { price: 36.35, source: 'BCV Oficial', change: 0.05 },
-    euro: { price: 39.80, source: 'Euro BCV', change: -0.02 },
-    lastUpdate: new Date().toISOString()
+  bcv: { price: 36.35, source: "BCV Oficial", change: 0.05 },
+  euro: { price: 39.8, source: "Euro BCV", change: -0.02 },
+  lastUpdate: new Date().toISOString(),
 };
 
-const EXCHANGERATE_KEY = 'F1a3af26247a97a33ee5ad90';
+const EXCHANGERATE_KEY = "F1a3af26247a97a33ee5ad90";
 const DEFAULT_EUR_USD_RATIO = 1.18;
 const UPDATE_INTERVAL = 30000;
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxT9sKz_XWRWuQx_XP-BJ33T0hoAgJsLwhZA00v6nPt4Ij4jRjq-90mDGLVCsS6FXwW9Q/exec?token=Lvbp1994';
+const GOOGLE_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbxT9sKz_XWRWuQx_XP-BJ33T0hoAgJsLwhZA00v6nPt4Ij4jRjq-90mDGLVCsS6FXwW9Q/exec?token=Lvbp1994";
 
 export function useRates() {
-    const [rates, setRates] = useState(() => {
-        try {
-            const saved = JSON.parse(localStorage.getItem('monitor_rates_v12'));
-            if (saved) {
-                // Migrar datos guardados: eliminar usdt si existe
-                if (saved.usdt) delete saved.usdt;
-                return saved;
-            }
-            return null;
-        }
-        catch { return null; }
+  const [rates, setRates] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("monitor_rates_v12"));
+      if (saved) {
+        // Migrar datos guardados: eliminar usdt si existe
+        if (saved.usdt) delete saved.usdt;
+        return saved;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [logs, setLogs] = useState([]);
+
+  const ratesRef = useRef(rates);
+
+  useEffect(() => {
+    ratesRef.current = rates;
+    if (rates) localStorage.setItem("monitor_rates_v12", JSON.stringify(rates));
+  }, [rates]);
+
+  const addLog = useCallback((msg, type = "info") => {
+    const time = new Date().toLocaleTimeString([], {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
+    setLogs((prev) => [...prev.slice(-49), { time, msg, type }]);
+  }, []);
 
-    const [loading, setLoading] = useState(false);
-    const [isOffline, setIsOffline] = useState(false);
-    const [logs, setLogs] = useState([]);
+  const parseSafeFloat = (val) => {
+    if (!val) return 0;
+    if (typeof val === "number") return val;
+    if (typeof val === "string") {
+      const clean = val.replace(/[^\d.,]/g, "");
+      const lastDot = clean.lastIndexOf(".");
+      const lastComma = clean.lastIndexOf(",");
+      const lastSep = Math.max(lastDot, lastComma);
 
-    const ratesRef = useRef(rates);
+      if (lastSep === -1) return parseFloat(clean) || 0;
 
-    useEffect(() => {
-        ratesRef.current = rates;
-        if (rates) localStorage.setItem('monitor_rates_v12', JSON.stringify(rates));
-    }, [rates]);
+      const integer = clean.slice(0, lastSep).replace(/[.,]/g, "");
+      const decimals = clean.slice(lastSep + 1);
+      return parseFloat(`${integer}.${decimals}`) || 0;
+    }
+    return 0;
+  };
 
-    const addLog = useCallback((msg, type = 'info') => {
-        const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setLogs(prev => [...prev.slice(-49), { time, msg, type }]);
-    }, []);
+  const updateData = useCallback(
+    async (isAutoUpdate = false) => {
+      if (!isAutoUpdate) setLoading(true);
 
-    const parseSafeFloat = (val) => {
-        if (!val) return 0;
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') {
-            const clean = val.replace(/[^\d.,]/g, '');
-            const lastDot = clean.lastIndexOf('.');
-            const lastComma = clean.lastIndexOf(',');
-            const lastSep = Math.max(lastDot, lastComma);
+      const log = (msg, type) => !isAutoUpdate && addLog(msg, type);
 
-            if (lastSep === -1) return parseFloat(clean) || 0;
+      log(
+        isAutoUpdate ? "--- Auto-Update ---" : "--- Actualización Manual ---",
+      );
 
-            const integer = clean.slice(0, lastSep).replace(/[.,]/g, '');
-            const decimals = clean.slice(lastSep + 1);
-            return parseFloat(`${integer}.${decimals}`) || 0;
-        }
-        return 0;
-    };
-
-    const updateData = useCallback(async (isAutoUpdate = false) => {
-        if (!isAutoUpdate) setLoading(true);
-
-        const log = (msg, type) => !isAutoUpdate && addLog(msg, type);
-
-        log(isAutoUpdate ? "--- Auto-Update ---" : "--- Actualización Manual ---");
-
-        const fetchGeneric = async (url) => {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 8000);
-            try {
-                const res = await fetch(url, { signal: controller.signal });
-                clearTimeout(id);
-                if (!res.ok) return null;
-                return await res.json();
-            } catch (e) {
-                clearTimeout(id);
-                return null;
-            }
-        };
-
-        const getEuroFactorFallback = async () => {
-            try {
-                const data = await fetchGeneric(`https://v6.exchangerate-api.com/v6/${EXCHANGERATE_KEY}/latest/USD`);
-                if (data?.result === "success" && data.conversion_rates?.EUR) return 1 / data.conversion_rates.EUR;
-            } catch (e) { }
-            return DEFAULT_EUR_USD_RATIO;
-        };
-
-        const getMeta = (newP, oldP, oldChange = 0, apiChange = null) => {
-            let p = parseSafeFloat(newP);
-            const o = parseSafeFloat(oldP);
-
-            if (apiChange !== null && apiChange !== undefined && apiChange !== 0) {
-                return { price: p, change: parseSafeFloat(apiChange) };
-            }
-
-            if (p === o) return { price: p, change: oldChange };
-            return { price: p, change: (p > 0 && o > 0) ? ((p - o) / o) * 100 : 0 };
-        };
-
+      const fetchGeneric = async (url) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000);
         try {
-            // Fetch en paralelo: datos privados (Google Script), dolarapi fallback, y factor euro
-            const taskPrivate = fetchGeneric(GOOGLE_SCRIPT_URL);
-            const taskDolarApi = fetchGeneric('https://ve.dolarapi.com/v1/dolares');
-            const taskEuroFactor = getEuroFactorFallback();
-
-            const [privateData, bcvFallbackData, euroFactor] = await Promise.all([
-                taskPrivate.catch(() => null),
-                taskDolarApi.catch(() => null),
-                taskEuroFactor.catch(() => DEFAULT_EUR_USD_RATIO)
-            ]);
-
-            if (privateData) log("✅ Datos Privados Recibidos", "success");
-
-            let newRates = { ...(ratesRef.current || DEFAULT_RATES) };
-            // Limpiar campo usdt legacy si existe
-            if (newRates.usdt) delete newRates.usdt;
-
-            let newBcvPrice = 0;
-            let newEuroPrice = 0;
-
-            // Procesar BCV/Euro desde datos privados (Google Script)
-            if (privateData) {
-                const rawBcv = privateData.bcv || privateData.usd;
-                const rawEuro = privateData.euro || privateData.eur;
-
-                let bcvP = parseSafeFloat(typeof rawBcv === 'object' ? rawBcv.price : rawBcv);
-                let euroP = parseSafeFloat(typeof rawEuro === 'object' ? rawEuro.price : rawEuro);
-
-                let apiBcvChange = typeof rawBcv === 'object' ? rawBcv.change : null;
-                let apiEuroChange = typeof rawEuro === 'object' ? rawEuro.change : null;
-
-                // Validación de magnitud: si el precio es irrazonablemente bajo o alto, corregir
-                const validateMagnitude = (val) => {
-                    if (!val || val <= 0) return val;
-                    // Las tasas BCV venezolanas están típicamente entre 10 y 200
-                    if (val < 1) {
-                        while (val < 10) val *= 10;
-                    } else if (val > 1000) {
-                        while (val > 200) val /= 10;
-                    }
-                    return val;
-                };
-
-                newBcvPrice = validateMagnitude(bcvP);
-                newEuroPrice = validateMagnitude(euroP);
-
-                if (newBcvPrice > 0) {
-                    const meta = getMeta(newBcvPrice, newRates.bcv.price, newRates.bcv.change, apiBcvChange);
-                    newRates.bcv = { ...newRates.bcv, ...meta, source: 'BCV Oficial' };
-                }
-                if (newEuroPrice > 0) {
-                    const meta = getMeta(newEuroPrice, newRates.euro.price, newRates.euro.change, apiEuroChange);
-                    newRates.euro = { ...newRates.euro, ...meta, source: 'Euro BCV' };
-                }
-
-            } else if (bcvFallbackData) {
-                // Fallback: DolarApi
-                const oficial = Array.isArray(bcvFallbackData) ? bcvFallbackData.find(d => d.fuente === 'oficial' || d.nombre === 'Oficial') : null;
-
-                if (oficial?.promedio > 0) {
-                    let bcvP = parseSafeFloat(oficial.promedio);
-                    newBcvPrice = bcvP;
-                    const meta = getMeta(newBcvPrice, newRates.bcv.price, newRates.bcv.change);
-                    newRates.bcv = { ...newRates.bcv, ...meta, source: 'BCV Oficial (Respaldo)' };
-
-                    if (euroFactor) {
-                        newEuroPrice = newBcvPrice * euroFactor;
-                        const metaEur = getMeta(newEuroPrice, newRates.euro.price, newRates.euro.change);
-                        newRates.euro = { ...newRates.euro, ...metaEur, source: 'Euro BCV (Triangulado)' };
-                    }
-                }
-            }
-
-            newRates.lastUpdate = new Date();
-            setRates(newRates);
-            if (!isAutoUpdate) addLog("Actualización completada", 'success');
-
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(id);
+          if (!res.ok) return null;
+          return await res.json();
         } catch (e) {
-            console.error(e);
-            log("Error actualización", 'error');
-            setIsOffline(true);
-        } finally {
-            setLoading(false);
+          clearTimeout(id);
+          return null;
         }
-    }, [addLog]);
+      };
 
-    useEffect(() => {
-        updateData(false);
-        const intervalId = setInterval(() => { updateData(true); }, UPDATE_INTERVAL);
-        return () => clearInterval(intervalId);
-    }, [updateData]);
+      const getEuroFactorFallback = async () => {
+        try {
+          const data = await fetchGeneric(
+            `https://v6.exchangerate-api.com/v6/${EXCHANGERATE_KEY}/latest/USD`,
+          );
+          if (data?.result === "success" && data.conversion_rates?.EUR)
+            return 1 / data.conversion_rates.EUR;
+        } catch (e) {}
+        return DEFAULT_EUR_USD_RATIO;
+      };
 
-    const currentRates = rates || DEFAULT_RATES;
-    return { rates: currentRates, loading, isOffline, logs, updateData };
+      const getMeta = (newP, oldP, oldChange = 0, apiChange = null) => {
+        let p = parseSafeFloat(newP);
+        const o = parseSafeFloat(oldP);
+
+        if (apiChange !== null && apiChange !== undefined && apiChange !== 0) {
+          return { price: p, change: parseSafeFloat(apiChange) };
+        }
+
+        if (p === o) return { price: p, change: oldChange };
+        return { price: p, change: p > 0 && o > 0 ? ((p - o) / o) * 100 : 0 };
+      };
+
+      try {
+        // Fetch en paralelo: datos privados (Google Script), dolarapi fallback, y factor euro
+        const taskPrivate = fetchGeneric(GOOGLE_SCRIPT_URL);
+        const taskDolarApi = fetchGeneric("https://ve.dolarapi.com/v1/dolares");
+        const taskEuroFactor = getEuroFactorFallback();
+
+        const [privateData, bcvFallbackData, euroFactor] = await Promise.all([
+          taskPrivate.catch(() => null),
+          taskDolarApi.catch(() => null),
+          taskEuroFactor.catch(() => DEFAULT_EUR_USD_RATIO),
+        ]);
+
+        if (privateData) log("✅ Datos Privados Recibidos", "success");
+
+        let newRates = { ...(ratesRef.current || DEFAULT_RATES) };
+        // Limpiar campo usdt legacy si existe
+        if (newRates.usdt) delete newRates.usdt;
+
+        let newBcvPrice = 0;
+        let newEuroPrice = 0;
+
+        // Procesar BCV/Euro desde datos privados (Google Script)
+        if (privateData) {
+          const rawBcv = privateData.bcv || privateData.usd;
+          const rawEuro = privateData.euro || privateData.eur;
+
+          let bcvP = parseSafeFloat(
+            typeof rawBcv === "object" ? rawBcv.price : rawBcv,
+          );
+          let euroP = parseSafeFloat(
+            typeof rawEuro === "object" ? rawEuro.price : rawEuro,
+          );
+
+          let apiBcvChange = typeof rawBcv === "object" ? rawBcv.change : null;
+          let apiEuroChange =
+            typeof rawEuro === "object" ? rawEuro.change : null;
+
+          // Validación de magnitud: si el precio es irrazonablemente bajo o alto, corregir
+          const validateMagnitude = (val) => {
+            if (!val || val <= 0) return val;
+            // Las tasas BCV venezolanas están típicamente entre 10 y 200
+            if (val < 1) {
+              while (val < 10) val *= 10;
+            } else if (val > 1000) {
+              while (val > 200) val /= 10;
+            }
+            return val;
+          };
+
+          newBcvPrice = validateMagnitude(bcvP);
+          newEuroPrice = validateMagnitude(euroP);
+
+          if (newBcvPrice > 0) {
+            const meta = getMeta(
+              newBcvPrice,
+              newRates.bcv.price,
+              newRates.bcv.change,
+              apiBcvChange,
+            );
+            newRates.bcv = { ...newRates.bcv, ...meta, source: "BCV Oficial" };
+          }
+          if (newEuroPrice > 0) {
+            const meta = getMeta(
+              newEuroPrice,
+              newRates.euro.price,
+              newRates.euro.change,
+              apiEuroChange,
+            );
+            newRates.euro = { ...newRates.euro, ...meta, source: "Euro BCV" };
+          }
+        } else if (bcvFallbackData) {
+          // Fallback: DolarApi
+          const oficial = Array.isArray(bcvFallbackData)
+            ? bcvFallbackData.find(
+                (d) => d.fuente === "oficial" || d.nombre === "Oficial",
+              )
+            : null;
+
+          if (oficial?.promedio > 0) {
+            let bcvP = parseSafeFloat(oficial.promedio);
+            newBcvPrice = bcvP;
+            const meta = getMeta(
+              newBcvPrice,
+              newRates.bcv.price,
+              newRates.bcv.change,
+            );
+            newRates.bcv = {
+              ...newRates.bcv,
+              ...meta,
+              source: "BCV Oficial (Respaldo)",
+            };
+
+            if (euroFactor) {
+              newEuroPrice = newBcvPrice * euroFactor;
+              const metaEur = getMeta(
+                newEuroPrice,
+                newRates.euro.price,
+                newRates.euro.change,
+              );
+              newRates.euro = {
+                ...newRates.euro,
+                ...metaEur,
+                source: "Euro BCV (Triangulado)",
+              };
+            }
+          }
+        }
+
+        newRates.lastUpdate = new Date();
+        setRates(newRates);
+        if (!isAutoUpdate) addLog("Actualización completada", "success");
+      } catch (e) {
+        console.error(e);
+        log("Error actualización", "error");
+        setIsOffline(true);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [addLog],
+  );
+
+  useEffect(() => {
+    updateData(false);
+    const intervalId = setInterval(() => {
+      updateData(true);
+    }, UPDATE_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [updateData]);
+
+  const currentRates = rates || DEFAULT_RATES;
+  return { rates: currentRates, loading, isOffline, logs, updateData };
 }

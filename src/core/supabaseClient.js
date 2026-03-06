@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
 // Estas variables deben venir del entorno (.env)
 // Idealmente: VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY

@@ -1,10 +1,15 @@
-import React from 'react';
-import { ManualMode } from '../components/calculator/ManualMode';
-import { useWallet } from '../hooks/useWallet';
+import React from "react";
+import { ManualMode } from "../components/calculator/ManualMode";
+import { useWallet } from "../hooks/useWallet";
 
 const SAFE_RATES = { bcv: { price: 0 }, euro: { price: 0 } };
 
-export default function CalculatorView({ rates, theme, triggerHaptic, isKeyboardOpen }) {
+export default function CalculatorView({
+  rates,
+  theme,
+  triggerHaptic,
+  isKeyboardOpen,
+}) {
   const currentRates = rates || SAFE_RATES;
   const { accounts } = useWallet();
 

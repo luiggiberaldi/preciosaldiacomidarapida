@@ -18,7 +18,7 @@ html,
 body {
   background-color: rgb(var(--color-bg-light));
   color: #1e293b;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .dark html,
@@ -72,7 +72,11 @@ body {
 /* ── Cart Scroll Gradient ── */
 .cart-scroll-shadow {
   mask-image: linear-gradient(to bottom, black calc(100% - 24px), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 24px), transparent);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 24px),
+    transparent
+  );
 }
 
 /* ── Pull to Refresh ── */

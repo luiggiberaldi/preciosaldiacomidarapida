@@ -168,4 +168,4 @@ Si tiene dudas sobre algún aspecto de estos términos, le sugerimos consultar c
 ---
 
 **TasasAlDía - Monitor Financiero de Venezuela** 🇻🇪  
-*Información en tiempo real para decisiones inteligentes*
+_Información en tiempo real para decisiones inteligentes_
