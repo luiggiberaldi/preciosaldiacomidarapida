@@ -39,7 +39,7 @@ import ProductFormModal from "../components/Products/ProductFormModal";
 import ConfirmModal from "../components/ConfirmModal";
 import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
-import { webSupabase } from "../utils/supabase";
+import { webSupabase, getTenantId } from "../utils/supabase";
 
 export const ProductsView = ({ rates, triggerHaptic }) => {
   // ─── STATE DEL HOOK ─────────────────────────────────────
@@ -228,10 +228,12 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   // ─── SYNC WEB CATALOG (AUTO) ──────────────────────────────
   const autoSyncWebCatalog = async (updatedProducts) => {
     try {
+      const tenantId = getTenantId();
       const activeProducts = updatedProducts
         .filter((p) => p.available !== false)
         .map((p) => ({
           id: p.id,
+          tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
           price_usd: p.priceUsdt || 0,
@@ -250,20 +252,19 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           .upsert(activeProducts, { onConflict: "id" });
       }
 
-      // Note: Si se borra un producto, lo ideal sería también borrarlo de web_catalog.
-      // Para mantenerlo simple, obtenemos todos los IDs activos actuales y borramos los que no estén en la lista.
+      // Borrar productos que ya no están activos (solo de ESTE tenant)
       const activeIds = activeProducts.map((p) => p.id);
       if (activeIds.length > 0) {
         await webSupabase
           .from("web_catalog")
           .delete()
+          .eq("tenant_id", tenantId)
           .not("id", "in", `(${activeIds.join(",")})`);
       } else {
-        await webSupabase.from("web_catalog").delete().neq("id", "0"); // Borrar todos si no hay activos
+        await webSupabase.from("web_catalog").delete().eq("tenant_id", tenantId);
       }
     } catch (error) {
       console.error("Error auto-syncing web catalog:", error);
-      // Silencioso para no interrumpir el flujo del usuario
     }
   };
 
@@ -478,10 +479,12 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     setIsPublishing(true);
     try {
       // First, get all web-ready products (that are active)
+      const tenantId = getTenantId();
       const activeProducts = products
         .filter((p) => p.available !== false)
         .map((p) => ({
           id: p.id,
+          tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
           price_usd: p.priceUsdt || 0,
@@ -616,8 +619,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
                   triggerHaptic && triggerHaptic();
                 }}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all snap-start border ${activeCategory === cat.id
-                    ? "bg-red-500 text-white shadow-sm shadow-red-500/20 border-red-500"
-                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 active:scale-95"
+                  ? "bg-red-500 text-white shadow-sm shadow-red-500/20 border-red-500"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 active:scale-95"
                   }`}
               >
                 {cat.label}

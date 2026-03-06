@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { storageService } from "../utils/storageService";
-import { webSupabase } from "../utils/supabase";
+import { webSupabase, getTenantId } from "../utils/supabase";
 import {
   Flame,
   CheckCircle2,
@@ -30,7 +30,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     const sales = await storageService.getItem(SALES_KEY, []);
     const localPending = sales
       .filter((s) => s.kitchenStatus === "PENDING" && s.status !== "ANULADA")
-      .map((s) => ({ ...s, source: "LOCAL" }));
+      .map((s) => ({ ...s, source: "LOCAL", orderNotes: s.notes || "" }));
 
     // 2. Fetch Web Orders
     let webPending = [];
@@ -38,28 +38,44 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
       const { data, error } = await webSupabase
         .from("web_orders")
         .select("*")
+        .eq("tenant_id", getTenantId())
         .eq("status", "kitchen");
       if (error) throw error;
 
       // Map web_orders to the expected structure
-      webPending = (data || []).map((wo) => ({
-        id: wo.id,
-        source: "WEB",
-        saleNumber: "WEB",
-        customerName: wo.customer_name,
-        deliveryType: "LLEVAR",
-        timestamp: wo.updated_at || wo.created_at, // time it entered the kitchen
-        items: wo.items.map((wi) => ({
-          id: wi.id,
-          name:
-            wi.name +
-            (wi.size && wi.size !== "Sencillo" ? ` [${wi.size}]` : ""),
-          qty: wi.qty,
-          note: wi.selectedExtras
-            ? "+ " + wi.selectedExtras.map((e) => e.name).join(", ")
-            : "",
-        })),
-      }));
+      webPending = (data || []).map((wo) => {
+        const notes = wo.customer_notes || "";
+        let dType = "LLEVAR";
+        let cleanNotes = notes;
+
+        if (notes.includes("[EN EL LOCAL]")) {
+          dType = "LOCAL";
+          cleanNotes = notes.replace("[EN EL LOCAL]", "").trim();
+        } else if (notes.includes("[PARA LLEVAR]")) {
+          dType = "LLEVAR";
+          cleanNotes = notes.replace("[PARA LLEVAR]", "").trim();
+        }
+
+        return {
+          id: wo.id,
+          source: "WEB",
+          saleNumber: "WEB",
+          customerName: wo.customer_name,
+          deliveryType: dType,
+          orderNotes: cleanNotes,
+          timestamp: wo.updated_at || wo.created_at,
+          items: wo.items.map((wi) => ({
+            id: wi.id,
+            name:
+              wi.name +
+              (wi.size && wi.size !== "Sencillo" ? ` [${wi.size}]` : ""),
+            qty: wi.qty,
+            note: wi.selectedExtras
+              ? "+ " + wi.selectedExtras.map((e) => e.name).join(", ")
+              : "",
+          })),
+        };
+      });
     } catch (error) {
       console.error("Error fetching web orders for kitchen:", error);
     }
@@ -314,12 +330,11 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                       </span>
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
-                            order.deliveryType === "LLEVAR" ||
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-md ${order.deliveryType === "LLEVAR" ||
                             order.source === "WEB"
-                              ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-                              : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                          }`}
+                            ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                            : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                            }`}
                         >
                           {order.source === "WEB"
                             ? "🌐 PEDIDO WEB"
@@ -353,20 +368,20 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                     {order.items.map((item, index) => (
                       <div
                         key={`${item.id}-${index}`}
-                        className="flex items-start gap-3"
+                        className="flex items-start gap-4"
                       >
                         <div
-                          className={`w-8 h-8 rounded-xl ${colors.bg}/10 dark:${colors.bg}/20 text-slate-700 dark:text-white font-black text-sm flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-800`}
+                          className={`w-9 h-9 rounded-2xl ${colors.bg}/10 dark:${colors.bg}/20 text-slate-800 dark:text-white font-black text-base flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-800 border ${colors.border}/20`}
                         >
                           {item.qty}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                          <p className="text-[15px] font-black text-slate-800 dark:text-slate-100 leading-tight">
                             {item.name}
                           </p>
                           {item.note && (
-                            <div className="mt-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg inline-block">
-                              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                            <div className="mt-1 px-2.5 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl inline-block max-w-full">
+                              <p className="text-[11px] font-black text-amber-700 dark:text-amber-400">
                                 📝 {item.note}
                               </p>
                             </div>
@@ -374,6 +389,18 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                         </div>
                       </div>
                     ))}
+
+                    {/* Order Level Notes */}
+                    {order.orderNotes && (
+                      <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 rounded-lg">
+                        <p className="text-[10px] uppercase font-black text-red-600 dark:text-red-400 mb-0.5">
+                          Nota del Cliente:
+                        </p>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 italic leading-snug">
+                          "{order.orderNotes}"
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Action */}

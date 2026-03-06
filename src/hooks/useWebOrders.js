@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { webSupabase } from "../utils/supabase";
+import { webSupabase, getTenantId } from "../utils/supabase";
 
 // Sound effect for new orders
 const playOrderSound = () => {
@@ -43,6 +43,7 @@ export const useWebOrders = () => {
       const { data, error } = await webSupabase
         .from("web_orders")
         .select("*")
+        .eq("tenant_id", getTenantId())
         .in("status", ["pending", "confirmed", "kitchen"])
         .order("created_at", { ascending: false });
 
@@ -67,6 +68,7 @@ export const useWebOrders = () => {
           event: "*",
           schema: "public",
           table: "web_orders",
+          filter: `tenant_id=eq.${getTenantId()}`,
         },
         (payload) => {
           // Play sound if it is a NEW order (INSERT)
