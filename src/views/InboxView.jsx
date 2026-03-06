@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Smartphone, Check, ChefHat, MessageCircle, X } from "lucide-react";
 import { useWebOrders } from "../hooks/useWebOrders";
 import { formatBs } from "../utils/calculatorUtils";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 export const InboxView = ({ rates, storeConfig }) => {
   const { orders, loading, updateOrderStatus } = useWebOrders();
+  const [confirmCancel, setConfirmCancel] = useState(null);
 
   // The store needs a whatsapp number to send messages from. If it's not set, they can't easily reply.
   const storePhone = storeConfig?.whatsappNumber || "";
@@ -20,7 +22,7 @@ export const InboxView = ({ rates, storeConfig }) => {
 
   const handleConfirmWhatsApp = async (order) => {
     // Construct the WhatsApp message
-    let text = `¡Hola ${order.customer_name}! 👋\nRecibimos tu pedido en *${storeConfig?.name || "Comida Rápida"}*.\n\n`;
+    let text = `Hola ${order.customer_name}, recibimos tu pedido en *${storeConfig?.name || "Comida Rapida"}*.\n\n`;
     text += `*Resumen de tu Orden:*\n`;
 
     order.items.forEach((item) => {
@@ -41,7 +43,7 @@ export const InboxView = ({ rates, storeConfig }) => {
       text += `\n*Notas:* ${order.customer_notes}`;
     }
 
-    text += `\n\nPor favor indícanos tu método de pago para procesarlo en cocina. 🍔`;
+    text += `\n\nPor favor indicanos tu metodo de pago para procesarlo.`;
 
     // We open the chat with the CUSTOMER's phone
     const cleanPhone = order.customer_phone.replace(/\D/g, "");
@@ -58,9 +60,14 @@ export const InboxView = ({ rates, storeConfig }) => {
     await updateOrderStatus(orderId, "kitchen");
   };
 
-  const handleCancel = async (orderId) => {
-    if (window.confirm("¿Estás seguro de cancelar este pedido web?")) {
-      await updateOrderStatus(orderId, "cancelled");
+  const handleCancel = (orderId) => {
+    setConfirmCancel(orderId);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (confirmCancel) {
+      await updateOrderStatus(confirmCancel, "cancelled");
+      setConfirmCancel(null);
     }
   };
 
@@ -175,6 +182,16 @@ export const InboxView = ({ rates, storeConfig }) => {
           )}
         </section>
       </div>
+      <ConfirmDialog
+        isOpen={!!confirmCancel}
+        title="Cancelar pedido"
+        message="Este pedido sera marcado como cancelado y no se podra revertir."
+        confirmText="Si, cancelar"
+        cancelText="Volver"
+        variant="danger"
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setConfirmCancel(null)}
+      />
     </div>
   );
 };

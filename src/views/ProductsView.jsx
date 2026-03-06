@@ -38,6 +38,7 @@ import {
 import ProductCard from "../components/Products/ProductCard";
 import ProductFormModal from "../components/Products/ProductFormModal";
 import ConfirmModal from "../components/ConfirmModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
 import { webSupabase, getTenantId, generateProductId } from "../utils/supabase";
@@ -74,6 +75,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const [deleteCategoryConfirmId, setDeleteCategoryConfirmId] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isShareWebOpen, setIsShareWebOpen] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
 
   // Share State
   const [shareProduct, setShareProduct] = useState(null);
@@ -473,13 +475,11 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       return showToast("No hay productos para publicar", "warning");
 
     triggerHaptic && triggerHaptic();
-    if (
-      !window.confirm(
-        "¿Publicar el menú actual en la App Web para clientes? Esto reemplazará el menú en línea.",
-      )
-    )
-      return;
+    setShowPublishConfirm(true);
+  };
 
+  const executePublish = async () => {
+    setShowPublishConfirm(false);
     setIsPublishing(true);
     try {
       // First, get all web-ready products (that are active)
@@ -947,6 +947,18 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       <ShareWebMenuModal
         isOpen={isShareWebOpen}
         onClose={() => setIsShareWebOpen(false)}
+      />
+
+      {/* Publish Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showPublishConfirm}
+        title="Publicar menu en linea"
+        message="Los productos actuales reemplazaran el menu visible para tus clientes en la pagina web."
+        confirmText="Publicar"
+        cancelText="Cancelar"
+        variant="success"
+        onConfirm={executePublish}
+        onCancel={() => setShowPublishConfirm(false)}
       />
     </div>
   );
