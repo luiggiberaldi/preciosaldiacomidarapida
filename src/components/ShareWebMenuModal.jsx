@@ -155,54 +155,50 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
                             </div>
                             <h3 className="text-lg font-black text-slate-800">Configura tu página</h3>
                             <p className="text-xs text-slate-500 max-w-[240px] mx-auto leading-relaxed">
-                                Tu negocio tendrá una página web con tu menú donde los clientes podrán ver y hacer pedidos.
+                                Escribe el nombre de tu negocio y crearemos tu página web automáticamente.
                             </p>
                         </div>
 
-                        {/* Form Fields */}
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-400 mb-1.5 block uppercase tracking-widest">
-                                    Nombre del negocio
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
-                                    placeholder="Ej: Hamburguesas El Rey"
-                                    className="w-full px-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:ring-0 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-400 mb-1.5 block uppercase tracking-widest">
-                                    Tu enlace personalizado
-                                </label>
-                                <div className="flex items-center bg-white border-2 border-slate-200 rounded-2xl overflow-hidden focus-within:border-emerald-500 transition-all">
-                                    <span className="pl-4 pr-0 text-sm text-slate-300 font-mono shrink-0 select-none">/</span>
-                                    <input
-                                        type="text"
-                                        value={editSlug}
-                                        onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/\s/g, "-"))}
-                                        placeholder="mi-local"
-                                        className="flex-1 px-2 py-3.5 bg-transparent text-sm font-bold text-emerald-700 outline-none placeholder:text-slate-300"
-                                    />
+                        {/* Single Field — Name auto-generates slug */}
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-400 mb-1.5 block uppercase tracking-widest">
+                                Nombre de tu emprendimiento
+                            </label>
+                            <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => {
+                                    const name = e.target.value;
+                                    setEditName(name);
+                                    // Auto-generate slug from name
+                                    const autoSlug = name
+                                        .toLowerCase()
+                                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+                                        .replace(/[^a-z0-9\s-]/g, "")
+                                        .replace(/\s+/g, "-")
+                                        .replace(/-+/g, "-")
+                                        .replace(/^-|-$/g, "");
+                                    setEditSlug(autoSlug);
+                                }}
+                                placeholder="Ej: Hamburguesas El Rey"
+                                className="w-full px-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:ring-0 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300"
+                            />
+                            {editName.trim() && (
+                                <div className="mt-2.5 px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[11px] text-slate-500 font-medium mb-0.5">Tu página será:</p>
+                                    <p className="text-[12px] font-bold text-emerald-600 flex items-center gap-1">
+                                        <Globe size={12} className="shrink-0 opacity-60" />
+                                        <span className="opacity-50">paginacomidarapida.vercel.app/</span>
+                                        <span>{editName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}</span>
+                                    </p>
                                 </div>
-                                {editSlug && (
-                                    <div className="mt-2 px-3 py-2 bg-emerald-50/50 rounded-xl">
-                                        <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1.5">
-                                            <Globe size={11} />
-                                            <span className="opacity-60">paginacomidarapida.vercel.app/</span>
-                                            <span className="font-black">{editSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-")}</span>
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
 
                         <button
                             onClick={handleSaveConfig}
-                            disabled={isSaving}
-                            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-60 text-[15px]"
+                            disabled={isSaving || !editName.trim()}
+                            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-40 text-[15px]"
                         >
                             {isSaving ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -258,8 +254,8 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
                                 <button
                                     onClick={handleCopy}
                                     className={`w-full flex items-center gap-2 px-4 py-3 rounded-2xl border-2 transition-all duration-300 active:scale-[0.98] ${copied
-                                            ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                                            : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white"
+                                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                                        : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white"
                                         }`}
                                 >
                                     <Globe size={16} className="shrink-0 opacity-40" />
