@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export function useCart() {
   const [cart, setCart] = useState(() => {
@@ -90,11 +90,12 @@ export function useCart() {
 
   const clearCart = () => setCart([]);
 
-  const cartTotal = cart.reduce(
+  const cartTotal = useMemo(() => cart.reduce(
     (sum, item) => sum + item.priceUsd * item.qty,
     0,
-  );
-  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  ), [cart]);
+
+  const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
 
   return {
     cart,

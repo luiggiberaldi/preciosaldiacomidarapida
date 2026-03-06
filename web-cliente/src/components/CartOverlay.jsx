@@ -144,6 +144,7 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
                       src={item.image}
                       alt={item.name}
                       className="w-20 h-20 rounded-[16px] object-cover shrink-0 shadow-sm"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-[16px] flex items-center justify-center text-slate-400 shrink-0">
@@ -260,11 +261,10 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
                     <button
                       type="button"
                       onClick={() => setDeliveryType("LLEVAR")}
-                      className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${
-                        deliveryType === "LLEVAR"
+                      className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${deliveryType === "LLEVAR"
                           ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
                           : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
-                      }`}
+                        }`}
                     >
                       <Car
                         size={24}
@@ -277,11 +277,10 @@ export default function CartOverlay({ cartHooks, isOpen, onClose }) {
                     <button
                       type="button"
                       onClick={() => setDeliveryType("LOCAL")}
-                      className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${
-                        deliveryType === "LOCAL"
+                      className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${deliveryType === "LOCAL"
                           ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
                           : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-200"
-                      }`}
+                        }`}
                     >
                       <UtensilsCrossed size={24} />
                       <span className="font-bold text-sm">En el Local</span>
