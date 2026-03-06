@@ -35,19 +35,10 @@ export default function DashboardView({ rates, triggerHaptic, onNavigate, theme,
     const touchStartY = useRef(0);
     const scrollRef = useRef(null);
 
-    const [activeOrdersCount, setActiveOrdersCount] = useState(0);
-    const [showStartupCashModal, setShowStartupCashModal] = useState(false);
-    const [startupCashInput, setStartupCashInput] = useState('');
-
     const bcvRate = rates.bcv?.price || 0;
     const today = new Date().toISOString().split('T')[0];
+    const [activeOrdersCount, setActiveOrdersCount] = useState(0);
 
-    useEffect(() => {
-        const fondo = localStorage.getItem(`bodega_fondo_caja_${today}`);
-        if (fondo === null) {
-            setShowStartupCashModal(true);
-        }
-    }, [today]);
 
     useEffect(() => {
         let mounted = true;
@@ -401,16 +392,6 @@ export default function DashboardView({ rates, triggerHaptic, onNavigate, theme,
         setPullDistance(0);
     };
 
-    const handleSaveStartupCash = (e) => {
-        e.preventDefault();
-        const val = parseFloat(startupCashInput);
-        if (!isNaN(val)) {
-            localStorage.setItem(`bodega_fondo_caja_${today}`, val.toFixed(2));
-            setShowStartupCashModal(false);
-            showToast('Fondo de caja registrado', 'success');
-            if (triggerHaptic) triggerHaptic();
-        }
-    };
 
     return (
         <div
@@ -429,21 +410,19 @@ export default function DashboardView({ rates, triggerHaptic, onNavigate, theme,
                 </div>
             )}
 
-            <div className="flex items-center justify-between mb-6 pt-2">
-                <div className="flex items-center gap-2">
-                    <span className="text-2xl">🔥</span>
-                    <div>
-                        <h1 className="text-lg font-black text-slate-800 dark:text-white leading-none">Comida Rápida</h1>
-                        <p className="text-[10px] text-slate-400 font-medium">Tu carrito, tu negocio</p>
+            <div className="flex items-center justify-between mb-4 pt-2">
+                <div className="flex flex-col items-start gap-0.5">
+                    <img src={theme === 'dark' ? '/logodark.png' : '/logoprincipal.png'} alt="PreciosAlDía" className="h-14 w-auto object-contain drop-shadow-sm" />
+                    <div className="flex items-center gap-1.5 pl-3">
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] leading-none">Comida Rápida</span>
+                        <button
+                            onClick={() => { triggerHaptic(); toggleTheme(); }}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity active:scale-90 outline-none"
+                        >
+                            {theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />}
+                        </button>
                     </div>
                 </div>
-                <button
-                    onClick={() => { triggerHaptic(); toggleTheme(); }}
-                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all"
-                    title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-                >
-                    {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
             </div>
 
             {/* Acciones Rápidas */}
@@ -845,57 +824,6 @@ export default function DashboardView({ rates, triggerHaptic, onNavigate, theme,
                 bcvRate={bcvRate}
             />
 
-            {/* Modal Inicial de Fondo de Caja */}
-            {showStartupCashModal && (
-                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowStartupCashModal(false)}>
-                    <div
-                        className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="p-6 text-center border-b border-slate-100 dark:border-slate-800 relative bg-emerald-50 dark:bg-emerald-900/10">
-                            <button onClick={() => setShowStartupCashModal(false)} className="absolute right-4 top-4 p-2 text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800 rounded-full transition-colors">
-                                <X size={20} />
-                            </button>
-                            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner shadow-emerald-500/20">
-                                <DollarSign size={32} className="text-emerald-500" />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 dark:text-white">Fondo de Caja</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">¿Con cuánto efectivo o sencillo inicias el turno hoy?</p>
-                        </div>
-                        <form onSubmit={handleSaveStartupCash} className="p-6 space-y-5">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Monto inicial en Dólares ($)</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">$</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        required
-                                        value={startupCashInput}
-                                        onChange={(e) => setStartupCashInput(e.target.value)}
-                                        placeholder="0.00"
-                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-10 pr-4 text-2xl font-black text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm transition-all"
-                                        autoFocus
-                                    />
-                                </div>
-                                {bcvRate > 0 && startupCashInput && !isNaN(startupCashInput) && (
-                                    <p className="text-xs font-bold text-slate-400 mt-2 ml-1 flex items-center gap-1">
-                                        ≈ {formatBs(parseFloat(startupCashInput) * bcvRate)} Bs <span className="text-[10px] font-normal opacity-70">(@ {formatBs(bcvRate)} Bs/$)</span>
-                                    </p>
-                                )}
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={!startupCashInput || isNaN(startupCashInput)}
-                                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                Iniciar Turno
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       // Archivos estáticos que deben estar disponibles offline
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['icono.png', 'logodark.png', 'logoprincipal.png'],
       workbox: {
         cleanupOutdatedCaches: true,
         skipWaiting: true,
@@ -26,17 +26,17 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'icono.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icono.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icono.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
