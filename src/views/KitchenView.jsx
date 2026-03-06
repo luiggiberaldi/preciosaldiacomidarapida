@@ -64,16 +64,19 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
           deliveryType: dType,
           orderNotes: cleanNotes,
           timestamp: wo.updated_at || wo.created_at,
-          items: wo.items.map((wi) => ({
-            id: wi.id,
-            name:
-              wi.name +
-              (wi.size && wi.size !== "Sencillo" ? ` [${wi.size}]` : ""),
-            qty: wi.qty,
-            note: wi.selectedExtras
-              ? "+ " + wi.selectedExtras.map((e) => e.name).join(", ")
-              : "",
-          })),
+          items: wo.items.map((wi) => {
+            const extras = wi.selectedExtras?.length
+              ? "Extras: " + wi.selectedExtras.map((e) => e.name).join(", ")
+              : "";
+            const instrucciones = wi.note ? `📝 ${wi.note}` : "";
+            const noteText = [extras, instrucciones].filter(Boolean).join(" | ");
+            return {
+              id: wi.id,
+              name: wi.name + (wi.size && wi.size !== "Sencillo" ? ` [${wi.size}]` : ""),
+              qty: wi.qty,
+              note: noteText,
+            };
+          }),
         };
       });
     } catch (error) {
