@@ -39,7 +39,7 @@ import ProductFormModal from "../components/Products/ProductFormModal";
 import ConfirmModal from "../components/ConfirmModal";
 import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
-import { webSupabase, getTenantId } from "../utils/supabase";
+import { webSupabase, getTenantId, generateProductId } from "../utils/supabase";
 
 export const ProductsView = ({ rates, triggerHaptic }) => {
   // ─── STATE DEL HOOK ─────────────────────────────────────
@@ -232,7 +232,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       const activeProducts = updatedProducts
         .filter((p) => p.available !== false)
         .map((p) => ({
-          id: p.id,
+          id: generateProductId(tenantId, p.id),
+          local_id: p.id,
           tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
@@ -253,13 +254,13 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       }
 
       // Borrar productos que ya no están activos (solo de ESTE tenant)
-      const activeIds = activeProducts.map((p) => p.id);
-      if (activeIds.length > 0) {
+      const activeWebIds = activeProducts.map((p) => p.id);
+      if (activeWebIds.length > 0) {
         await webSupabase
           .from("web_catalog")
           .delete()
           .eq("tenant_id", tenantId)
-          .not("id", "in", `(${activeIds.join(",")})`);
+          .not("id", "in", `(${activeWebIds.join(",")})`);
       } else {
         await webSupabase.from("web_catalog").delete().eq("tenant_id", tenantId);
       }
@@ -483,7 +484,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       const activeProducts = products
         .filter((p) => p.available !== false)
         .map((p) => ({
-          id: p.id,
+          id: generateProductId(tenantId, p.id),
+          local_id: p.id,
           tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
