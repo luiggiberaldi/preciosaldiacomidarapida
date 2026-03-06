@@ -187,7 +187,7 @@ export default function App() {
   ];
 
   return (
-    <div className="font-sans antialiased bg-slate-50 dark:bg-black h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="font-sans antialiased bg-slate-50 dark:bg-black h-[100dvh] flex flex-col overflow-clip transition-colors duration-300">
       {/* Terms and Conditions Overlay (First Use) */}
       <TermsOverlay />
 
@@ -263,7 +263,7 @@ export default function App() {
       )}
 
       <main
-        className={`flex-1 min-h-0 w-full max-w-md md:max-w-2xl lg:max-w-7xl mx-auto relative ${isKeyboardOpen ? "pb-4" : "pb-24"} flex flex-col overflow-hidden`}
+        className={`flex-1 min-h-0 w-full max-w-md md:max-w-2xl lg:max-w-7xl mx-auto relative ${isKeyboardOpen ? "pb-4" : "pb-24"} flex flex-col overflow-y-auto`}
       >
         {/* Hidden Admin Trigger Area */}
         <div
