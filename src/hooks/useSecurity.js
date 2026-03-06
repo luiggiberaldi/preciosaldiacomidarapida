@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { storageService } from "../utils/storageService";
-import { supabase } from "../core/supabaseClient";
+import { supabase } from "../utils/supabase";
 
 const APP_VERSION = "1.0.0";
 const PRODUCT_ID = "comida_rapida";

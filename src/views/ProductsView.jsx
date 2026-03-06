@@ -235,11 +235,11 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         .filter((p) => p.available !== false)
         .map((p) => ({
           id: generateProductId(tenantId, p.id),
-          local_id: p.id,
+          local_id: Number(p.id) || 0,
           tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
-          price_usd: p.priceUsdt || 0,
+          price_usd: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0,
           category: p.category || "otros",
           image_url: p.image || "",
           is_available: true,
@@ -250,9 +250,10 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         }));
 
       if (activeProducts.length > 0) {
-        await webSupabase
+        const { error } = await webSupabase
           .from("web_catalog")
           .upsert(activeProducts, { onConflict: "id" });
+        if (error) console.warn("Auto-sync web_catalog:", error.message);
       }
 
       // Borrar productos que ya no están activos (solo de ESTE tenant)
@@ -487,11 +488,11 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         .filter((p) => p.available !== false)
         .map((p) => ({
           id: generateProductId(tenantId, p.id),
-          local_id: p.id,
+          local_id: Number(p.id) || 0,
           tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
-          price_usd: p.priceUsdt || 0,
+          price_usd: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0,
           category: p.category || "otros",
           image_url: p.image || "",
           is_available: true,
