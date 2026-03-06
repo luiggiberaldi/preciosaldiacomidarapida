@@ -3,7 +3,7 @@ import { storageService } from "../utils/storageService";
 import { supabase } from "../core/supabaseClient";
 
 const APP_VERSION = "1.0.0";
-const PRODUCT_ID = "bodega";
+const PRODUCT_ID = "comida_rapida";
 
 // FIX 1: Salt desde variable de entorno
 const MASTER_SECRET_KEY = import.meta.env.VITE_LICENSE_SALT;
@@ -181,7 +181,7 @@ export function useSecurity() {
             window.location.reload();
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     const sendHeartbeat = async () => {
@@ -200,7 +200,7 @@ export function useSecurity() {
           product_id: PRODUCT_ID,
           app_version: APP_VERSION,
         });
-      } catch (e) {}
+      } catch (e) { }
     };
 
     // 1. Ejecutar heartbeat completo al montar y cada 4 horas
@@ -234,7 +234,7 @@ export function useSecurity() {
           },
         )
         .subscribe();
-    } catch (e) {}
+    } catch (e) { }
 
     return () => {
       clearInterval(heartbeatInterval);
@@ -291,7 +291,7 @@ export function useSecurity() {
                 return; // No hacer reload, licencia restaurada
               }
             }
-          } catch {}
+          } catch { }
           // Si no hay backup válido y estaba premium → revocar
           if (isPremium) {
             setIsPremium(false);
@@ -456,7 +456,7 @@ export function useSecurity() {
           "_pda_s",
           encodeToken(validTokenStr + ":" + currentDeviceId),
         );
-      } catch {}
+      } catch { }
     }
 
     // Migración silenciosa de licencias pre-Supabase
@@ -629,7 +629,7 @@ export function useSecurity() {
             .eq("device_id", deviceId)
             .eq("product_id", PRODUCT_ID)
             .then();
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (finalExpiresAt) {

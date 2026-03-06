@@ -38,18 +38,11 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
 
     const getCatalogUrl = () => {
         if (!slug) return "";
-        // Detectar si estamos en local o en producción
-        const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        const port = window.location.port; // 5174 (PWA)
 
-        // Si la PWA está en local, apuntamos al puerto de la página web (5173 por defecto)
-        if (isLocal) {
-            return `http://${window.location.hostname}:5173/${slug}`;
-        }
+        // Use the configured environment variable, default to preciosaldia.com to avoid locahost issues on prod
+        const baseUrl = import.meta.env.VITE_WEB_BASE_URL || "https://preciosaldia.com/pedidos";
 
-        // Si estás en producción, reemplazar por el dominio real del catálogo web.
-        // Asumimos que el catálogo web está en el mismo dominio o configurar aquí
-        return `https://tu-dominio.com/${slug}`;
+        return `${baseUrl}/${slug}`;
     };
 
     const url = getCatalogUrl();
