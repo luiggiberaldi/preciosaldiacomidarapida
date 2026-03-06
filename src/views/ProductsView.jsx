@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
+import ShareWebMenuModal from "../components/ShareWebMenuModal";
 import SettingsModal from "../components/SettingsModal";
 import ShareInventoryModal from "../components/ShareInventoryModal";
 import {
@@ -72,6 +73,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [deleteCategoryConfirmId, setDeleteCategoryConfirmId] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isShareWebOpen, setIsShareWebOpen] = useState(false);
 
   // Share State
   const [shareProduct, setShareProduct] = useState(null);
@@ -562,7 +564,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
                 onClick={handlePublishWeb}
                 disabled={isPublishing}
                 className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
-                title="Publicar a la Web"
+                title="Actualizar / Publicar a la Web"
               >
                 {isPublishing ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -572,6 +574,22 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
                 <span className="hidden sm:inline">Publicar Web</span>
               </button>
             )}
+
+            {/* New Share QR Button */}
+            {products.length > 0 && (
+              <button
+                onClick={() => {
+                  triggerHaptic && triggerHaptic();
+                  setIsShareWebOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 font-bold text-sm"
+                title="Ver QR y Enlace"
+              >
+                <Globe size={16} strokeWidth={2.5} />
+                <span className="hidden sm:inline">Compartir Web</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 triggerHaptic && triggerHaptic();
@@ -922,6 +940,12 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         message="¿Seguro que deseas borrar esta categoría? Los productos no se eliminarán, pero quedarán sin categoría asignada."
         confirmText="Sí, eliminar"
         variant="warning"
+      />
+
+      {/* Share Web Menu Modal */}
+      <ShareWebMenuModal
+        isOpen={isShareWebOpen}
+        onClose={() => setIsShareWebOpen(false)}
       />
     </div>
   );
