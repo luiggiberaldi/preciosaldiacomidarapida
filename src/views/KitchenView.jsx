@@ -133,7 +133,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
       setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
       playSuccess();
-      showToast("✅ ¡Orden lista para entregar!", "success");
+      showToast("Orden lista para entregar", "success");
     } catch (error) {
       console.error("Error al actualizar orden:", error);
       showToast("Error al actualizar la orden", "error");

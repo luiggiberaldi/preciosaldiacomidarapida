@@ -83,7 +83,7 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
             setSlug(rawSlug);
             setBusinessName(editName.trim());
             setIsEditing(false);
-            showToast("✅ Página configurada con éxito", "success");
+            showToast("Pagina configurada con exito", "success");
         } catch (err) {
             console.error("Error guardando configuración:", err);
             showToast("Error al guardar. Inténtalo de nuevo.", "error");
@@ -99,7 +99,7 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
         if (!url) return;
         navigator.clipboard.writeText(url);
         setCopied(true);
-        showToast("📋 Enlace copiado", "success");
+        showToast("Enlace copiado", "success");
         setTimeout(() => setCopied(false), 2500);
     };
 
@@ -129,7 +129,7 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
         link.download = `QR-${slug}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
-        showToast("📥 QR descargado", "success");
+        showToast("QR descargado", "success");
     };
 
     return (
