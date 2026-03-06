@@ -5,6 +5,7 @@ import { useCatalog } from "./hooks/useCatalog";
 import { useCart } from "./hooks/useCart";
 import ProductCard from "./components/ProductCard";
 import CartOverlay from "./components/CartOverlay";
+import BurgerHero from "./components/BurgerHero";
 
 function MainLayout() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,26 +78,8 @@ function MainLayout() {
         </div>
       </header>
 
-      {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-red-600 to-red-500 pt-8 pb-12 sm:pt-12 sm:pb-16 px-4">
-        <div className="max-w-4xl mx-auto text-center sm:text-left">
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2 shadow-sm shadow-red-500/10">
-            {config?.name || "Nuestro Menú"}
-          </h1>
-          <p className="text-red-100 font-medium sm:text-lg max-w-lg">
-            Pide en línea y recibe directamente. Rápido, fácil y seguro.
-          </p>
-
-          {config && !config.isOpen && (
-            <div className="mt-4 inline-block bg-red-900/40 backdrop-blur border border-red-400/30 px-4 py-2 rounded-xl text-red-50 font-bold text-sm shadow-xl shadow-red-900/20">
-              <span className="flex items-center gap-2">
-                <Flame size={16} /> Lo sentimos, estamos cerrados por los
-                momentos
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Antigravity Flow Hero */}
+      <BurgerHero />
 
       {/* ─── MAIN CONTENT ─── */}
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-8 relative z-10 pb-24">
