@@ -195,11 +195,12 @@ export function useSecurity() {
           .eq("product_id", PRODUCT_ID);
 
         // Registrar heartbeat record
-        await supabase.from("heartbeats").insert({
+        await supabase.from("heartbeats").upsert({
           device_id: deviceId,
           product_id: PRODUCT_ID,
           app_version: APP_VERSION,
-        });
+          last_seen: new Date().toISOString()
+        }, { onConflict: "device_id,product_id" });
       } catch (e) { }
     };
 
@@ -473,7 +474,7 @@ export function useSecurity() {
 
           // Si NO existe, registrarla ahora
           if (!existing) {
-            await supabase.from("licenses").insert({
+            await supabase.from("licenses").upsert({
               device_id: currentDeviceId,
               product_id: PRODUCT_ID,
               type: confirmedDemo ? "demo7" : "permanent",
@@ -483,7 +484,7 @@ export function useSecurity() {
                 : null,
               code: "MIGRADA-PRESUPABASE",
               last_seen_at: new Date().toISOString(),
-            });
+            }, { onConflict: "device_id,product_id", ignoreDuplicates: true });
           } else {
             // Si ya existe, solo actualizar last_seen
             await supabase
