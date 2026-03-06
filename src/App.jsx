@@ -179,7 +179,7 @@ export default function App() {
     { id: "cocina", label: "Cocina", icon: Flame },
     {
       id: "inbox",
-      label: "Pedidos Web",
+      label: "Pedidos",
       icon: BellRing,
       badge: pendingWebCount,
     },
@@ -313,73 +313,73 @@ export default function App() {
         >
           {(activeTab === "catalogo" ||
             document.querySelector('[data-view="catalogo"]')) && (
-            <div
-              data-view="catalogo"
-              className={`flex-1 flex flex-col ${activeTab === "catalogo" ? "" : "hidden"}`}
-            >
-              <ErrorBoundary>
-                <ProductsView rates={rates} triggerHaptic={triggerHaptic} />
-              </ErrorBoundary>
-            </div>
-          )}
+              <div
+                data-view="catalogo"
+                className={`flex-1 flex flex-col ${activeTab === "catalogo" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <ProductsView rates={rates} triggerHaptic={triggerHaptic} />
+                </ErrorBoundary>
+              </div>
+            )}
           {(activeTab === "inbox" ||
             document.querySelector('[data-view="inbox"]')) && (
-            <div
-              data-view="inbox"
-              className={`flex-1 flex flex-col ${activeTab === "inbox" ? "" : "hidden"}`}
-            >
-              <ErrorBoundary>
-                <PremiumGuard featureName="Pedidos en Línea" isShop={true}>
-                  <InboxView rates={rates} storeConfig={storeConfig} />
-                </PremiumGuard>
-              </ErrorBoundary>
-            </div>
-          )}
+              <div
+                data-view="inbox"
+                className={`flex-1 flex flex-col ${activeTab === "inbox" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <PremiumGuard featureName="Pedidos en Línea" isShop={true}>
+                    <InboxView rates={rates} storeConfig={storeConfig} />
+                  </PremiumGuard>
+                </ErrorBoundary>
+              </div>
+            )}
           {(activeTab === "clientes" ||
             document.querySelector('[data-view="clientes"]')) && (
-            <div
-              data-view="clientes"
-              className={`flex-1 flex flex-col ${activeTab === "clientes" ? "" : "hidden"}`}
-            >
-              <ErrorBoundary>
-                <PremiumGuard featureName="Gestión de Clientes">
-                  <CustomersView
-                    triggerHaptic={triggerHaptic}
-                    onNavigate={setActiveTab}
-                  />
-                </PremiumGuard>
-              </ErrorBoundary>
-            </div>
-          )}
+              <div
+                data-view="clientes"
+                className={`flex-1 flex flex-col ${activeTab === "clientes" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <PremiumGuard featureName="Gestión de Clientes">
+                    <CustomersView
+                      triggerHaptic={triggerHaptic}
+                      onNavigate={setActiveTab}
+                    />
+                  </PremiumGuard>
+                </ErrorBoundary>
+              </div>
+            )}
           {(activeTab === "reportes" ||
             document.querySelector('[data-view="reportes"]')) && (
-            <div
-              data-view="reportes"
-              className={`flex-1 flex flex-col ${activeTab === "reportes" ? "" : "hidden"}`}
-            >
-              <ErrorBoundary>
-                <PremiumGuard featureName="Reportes Históricos">
-                  <ReportsView rates={rates} triggerHaptic={triggerHaptic} />
-                </PremiumGuard>
-              </ErrorBoundary>
-            </div>
-          )}
+              <div
+                data-view="reportes"
+                className={`flex-1 flex flex-col ${activeTab === "reportes" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <PremiumGuard featureName="Reportes Históricos">
+                    <ReportsView rates={rates} triggerHaptic={triggerHaptic} />
+                  </PremiumGuard>
+                </ErrorBoundary>
+              </div>
+            )}
           {(activeTab === "cocina" ||
             document.querySelector('[data-view="cocina"]')) && (
-            <div
-              data-view="cocina"
-              className={`flex-1 flex flex-col ${activeTab === "cocina" ? "" : "hidden"}`}
-            >
-              <ErrorBoundary>
-                <PremiumGuard featureName="Pantalla de Cocina / KDS">
-                  <KitchenView
-                    triggerHaptic={triggerHaptic}
-                    onNavigate={setActiveTab}
-                  />
-                </PremiumGuard>
-              </ErrorBoundary>
-            </div>
-          )}
+              <div
+                data-view="cocina"
+                className={`flex-1 flex flex-col ${activeTab === "cocina" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <PremiumGuard featureName="Pantalla de Cocina / KDS">
+                    <KitchenView
+                      triggerHaptic={triggerHaptic}
+                      onNavigate={setActiveTab}
+                    />
+                  </PremiumGuard>
+                </ErrorBoundary>
+              </div>
+            )}
         </Suspense>
       </main>
 
