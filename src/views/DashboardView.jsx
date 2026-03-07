@@ -188,7 +188,7 @@ export default function DashboardView({
   };
 
   const handleShareWhatsApp = (sale) => {
-    let text = `*COMPROBANTE DE VENTA | COMIDA RÁPIDA*\n`;
+    let text = `*COMPROBANTE DE VENTA | PRECIOSALDÍA COMIDA RÁPIDA*\n`;
     text += `--------------------------------\n`;
     text += `*Orden:* #${sale.id.substring(0, 6).toUpperCase()}\n`;
     text += `Cliente: ${sale.customerName || "Consumidor Final"}\n`;
@@ -537,12 +537,12 @@ export default function DashboardView({
         <div className="flex flex-col items-start gap-0.5">
           <img
             src={theme === "dark" ? "/logodark.png" : "/logoprincipal.png"}
-            alt="Comida Rápida"
+            alt="PreciosAlDía Comida Rápida"
             className="h-14 w-auto object-contain drop-shadow-sm"
           />
           <div className="flex items-center gap-1.5 pl-3">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] leading-none">
-              Comida Rápida
+              PreciosAlDía Comida Rápida
             </span>
             <button
               onClick={() => {
@@ -783,11 +783,10 @@ export default function DashboardView({
                   </p>
                 </div>
                 <span
-                  className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                    (p.stock ?? 0) === 0
+                  className={`text-xs font-black px-2 py-0.5 rounded-full ${(p.stock ?? 0) === 0
                       ? "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                       : "bg-amber-100 text-red-600 dark:bg-amber-900/20 dark:text-red-400"
-                  }`}
+                    }`}
                 >
                   {p.stock ?? 0}{" "}
                   {p.unit === "kg" ? "kg" : p.unit === "litro" ? "lt" : "ud"}
@@ -808,13 +807,12 @@ export default function DashboardView({
             {topProducts.map((p, i) => (
               <div key={p.name} className="flex items-center gap-3">
                 <span
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${
-                    i === 0
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${i === 0
                       ? "bg-amber-100 text-red-600"
                       : i === 1
                         ? "bg-slate-200 text-slate-500"
                         : "bg-orange-50 text-orange-400"
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </span>

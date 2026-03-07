@@ -61,7 +61,7 @@ export default function TermsOverlay() {
           style={{ scrollbarWidth: "thin" }}
         >
           <h1 className="text-2xl font-black text-slate-900 mb-4">
-            Términos y Condiciones - Comida Rápida POS
+            Términos y Condiciones - PreciosAlDía Comida Rápida POS
           </h1>
           <p className="text-xs text-slate-500 font-bold mb-6">
             Última actualización: Febrero 2026
@@ -73,7 +73,7 @@ export default function TermsOverlay() {
             1. Aceptación de los Términos
           </h2>
           <p className="text-sm text-slate-700 leading-relaxed mb-4">
-            Al acceder y utilizar la aplicación <strong>Comida Rápida POS</strong>{" "}
+            Al acceder y utilizar la aplicación <strong>PreciosAlDía Comida Rápida POS</strong>{" "}
             (en adelante, "la Aplicación"), usted acepta estar sujeto a estos
             Términos y Condiciones. Si no está de acuerdo con alguna parte de
             estos términos, no debe utilizar la Aplicación.
@@ -83,7 +83,7 @@ export default function TermsOverlay() {
             2. Descripción del Servicio
           </h2>
           <p className="text-sm text-slate-700 leading-relaxed mb-2">
-            Comida Rápida POS es una aplicación web y móvil diseñada para la
+            PreciosAlDía Comida Rápida POS es una aplicación web y móvil diseñada para la
             gestión de locales de comida rápida, restaurantes y food trucks que proporciona:
           </p>
           <ul className="text-sm text-slate-700 space-y-1 mb-4">
@@ -120,7 +120,7 @@ export default function TermsOverlay() {
               TODA LA INFORMACIÓN PROPORCIONADA EN LA APLICACIÓN ES
               ESTRICTAMENTE INFORMATIVA Y DE REFERENCIA.
             </strong>{" "}
-            Comida Rápida no garantiza la exactitud, integridad o
+            PreciosAlDía Comida Rápida no garantiza la exactitud, integridad o
             vigencia de las tasas de cambio mostradas que se usan para cobros en bolívares.
           </p>
 
@@ -142,7 +142,7 @@ export default function TermsOverlay() {
           </h3>
           <p className="text-sm text-slate-700 leading-relaxed mb-2">
             <strong>
-              Comida Rápida y sus desarrolladores NO se hacen responsables por:
+              PreciosAlDía Comida Rápida y sus desarrolladores NO se hacen responsables por:
             </strong>
           </p>
           <ul className="text-sm text-slate-700 space-y-1 mb-4">
@@ -162,7 +162,7 @@ export default function TermsOverlay() {
             3.4 Uso Bajo Propio Riesgo
           </h3>
           <p className="text-sm text-slate-700 leading-relaxed mb-4">
-            Al usar Comida Rápida, usted acepta que lo hace{" "}
+            Al usar PreciosAlDía Comida Rápida, usted acepta que lo hace{" "}
             <strong>bajo su propio riesgo y responsabilidad</strong>.
           </p>
 
@@ -170,7 +170,7 @@ export default function TermsOverlay() {
             4. Funcionalidades Premium
           </h2>
           <p className="text-sm text-slate-700 leading-relaxed mb-2">
-            Comida Rápida ofrece funciones gratuitas y funciones exclusivas para
+            PreciosAlDía Comida Rápida ofrece funciones gratuitas y funciones exclusivas para
             usuarios con <strong>Licencia Premium</strong>:
           </p>
           <ul className="text-sm text-slate-700 space-y-1 mb-2">
@@ -194,7 +194,7 @@ export default function TermsOverlay() {
             5. Privacidad y Datos
           </h2>
           <p className="text-sm text-slate-700 leading-relaxed mb-4">
-            Comida Rápida opera con principios de{" "}
+            PreciosAlDía Comida Rápida opera con principios de{" "}
             <strong>privacidad por diseño</strong>. Los datos de su caja, órdenes y menú se almacenan
             localmente o en la nube privada y{" "}
             <strong>NO se venden ni comparten con terceros</strong>.
@@ -212,7 +212,7 @@ export default function TermsOverlay() {
             7. Código de Conducta
           </h2>
           <p className="text-sm text-slate-700 leading-relaxed mb-2">
-            Al utilizar Comida Rápida, usted se compromete a:
+            Al utilizar PreciosAlDía Comida Rápida, usted se compromete a:
           </p>
           <ul className="text-sm text-slate-700 space-y-1 mb-4">
             <li>
@@ -246,7 +246,7 @@ export default function TermsOverlay() {
           </div>
 
           <p className="text-center text-sm font-bold text-slate-900 mt-8 mb-4">
-            Comida Rápida POS - Tu restaurante en control 🍔
+            PreciosAlDía Comida Rápida POS - Tu restaurante en control 🍔
           </p>
           <p className="text-center text-xs text-slate-500 mb-8">
             Punto de venta, menú QR y pantalla de cocina
@@ -261,8 +261,8 @@ export default function TermsOverlay() {
             onClick={handleAccept}
             disabled={!canAccept}
             className={`w-full py-4 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2 ${canAccept
-                ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20 active:scale-95"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20 active:scale-95"
+              : "bg-slate-200 text-slate-400 cursor-not-allowed"
               }`}
           >
             <Check size={20} strokeWidth={2.5} />

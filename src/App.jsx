@@ -68,7 +68,7 @@ export default function App() {
     dismissExpiredMsg,
   } = useSecurity();
   const { isOnline, cacheRates } = useOfflineQueue();
-  const storeConfig = { name: "Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
+  const storeConfig = { name: "PreciosAlDía Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
 
   // Global web orders hook for bottom nav badge
   const { orders: webOrders } = useWebOrders();
@@ -242,7 +242,7 @@ export default function App() {
             </p>
             <button
               onClick={() => {
-                const msg = `Hola! Quiero adquirir la licencia Premium de Comida Rápida. Acabo de terminar mi prueba gratuita.`;
+                const msg = `Hola! Quiero adquirir la licencia Premium de PreciosAlDía Comida Rápida. Acabo de terminar mi prueba gratuita.`;
                 window.open(
                   `https://wa.me/584124051793?text=${encodeURIComponent(msg)}`,
                   "_blank",

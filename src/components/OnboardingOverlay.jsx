@@ -40,9 +40,9 @@ const STEPS = [
     title: "Menú",
     headline: "Tu Menú Digital",
     descriptionFree:
-      "Comida Rápida Free incluye gestión básica de platillos. Añade fotos, descripciones y precios en USD que se convierten solos.",
+      "PreciosAlDía Comida Rápida Free incluye gestión básica de platillos. Añade fotos, descripciones y precios en USD que se convierten solos.",
     descriptionPremium:
-      "Con Comida Rápida Premium: Menú digital QR, sincronización con mesas, opciones de combos y variaciones ilimitadas.",
+      "Con PreciosAlDía Comida Rápida Premium: Menú digital QR, sincronización con mesas, opciones de combos y variaciones ilimitadas.",
     tipPremium:
       "💡 Tus clientes pueden ver el menú escaneando un código QR.",
     tipFree: "👑 Activa tu licencia para sincronizar pedidos web en tiempo real.",
@@ -133,7 +133,7 @@ export default function OnboardingOverlay({ isPremium = false }) {
               <div className="relative mx-auto mb-5">
                 <img
                   src="/logo.png"
-                  alt="Comida Rápida"
+                  alt="PreciosAlDía Comida Rápida"
                   className="w-44 h-auto mx-auto drop-shadow-lg"
                 />
                 <div className="absolute inset-0 bg-red-500/15 rounded-full blur-2xl -z-10 scale-150" />
@@ -227,10 +227,10 @@ export default function OnboardingOverlay({ isPremium = false }) {
               <div
                 key={i}
                 className={`h-2 rounded-full transition-all duration-300 ${i === step
-                    ? "w-6 bg-red-500"
-                    : i < step
-                      ? "w-2 bg-red-500/40"
-                      : "w-2 bg-slate-600"
+                  ? "w-6 bg-red-500"
+                  : i < step
+                    ? "w-2 bg-red-500/40"
+                    : "w-2 bg-slate-600"
                   }`}
               />
             ))}

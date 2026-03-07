@@ -94,7 +94,7 @@ export default function PremiumGuard({
   };
 
   const openWhatsApp = () => {
-    const message = `Hola! Quiero adquirir una licencia Premium para Comida Rápida POS. Mi ID de instalación es: ${deviceId}`;
+    const message = `Hola! Quiero adquirir una licencia Premium para PreciosAlDía Comida Rápida POS. Mi ID de instalación es: ${deviceId}`;
     const url = `https://wa.me/584124051793?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -105,7 +105,7 @@ export default function PremiumGuard({
   if (isShop) {
     title = (
       <span>
-        Comida Rápida <span className="text-red-500">Business</span> 👑
+        PreciosAlDía Comida Rápida <span className="text-red-500">Business</span> 👑
       </span>
     );
     message = "Desbloquea el potencial completo para tu bodega.";
@@ -142,7 +142,7 @@ export default function PremiumGuard({
   } else {
     title = (
       <span>
-        Comida Rápida <span className="text-red-500">Premium</span> 👑
+        PreciosAlDía Comida Rápida <span className="text-red-500">Premium</span> 👑
       </span>
     );
     message = (

@@ -666,7 +666,7 @@ export default function WalletView({ rates }) {
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
               Obtén acceso a esta función y cobra pagos en divisas con múltiples billeteras. Con
-              <strong>Comida Rápida Business</strong> puedes agregar cuentas
+              <strong>PreciosAlDía Comida Rápida Business</strong> puedes agregar cuentas
               ilimitadas.
             </p>
             <div className="flex gap-2">
@@ -678,7 +678,7 @@ export default function WalletView({ rates }) {
               </button>
               <button
                 onClick={() => {
-                  const msg = `Hola! Me interesa la licencia Premium de Comida Rápida para agregar más cuentas de pago.`;
+                  const msg = `Hola! Me interesa la licencia Premium de PreciosAlDía Comida Rápida para agregar más cuentas de pago.`;
                   window.open(
                     `https://wa.me/584124051793?text=${encodeURIComponent(msg)}`,
                     "_blank",

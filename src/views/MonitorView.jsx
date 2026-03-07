@@ -157,7 +157,7 @@ export default function MonitorView({
         <div className="flex flex-col items-center mt-12 gap-4">
           <img
             src="/logodark.png"
-            alt="Comida Rápida"
+            alt="PreciosAlDía Comida Rápida"
             className="h-20 w-auto object-contain drop-shadow-lg"
           />
           <div className="bg-slate-800/60 px-4 py-1.5 rounded-full border border-slate-700/50 backdrop-blur-md">
@@ -274,13 +274,13 @@ export default function MonitorView({
           >
             <img
               src={theme === "dark" ? "/logodark.png" : "/logoprincipal.png"}
-              alt="Comida Rápida" Rápida"
-            className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm"
+              alt="PreciosAlDía Comida Rápida"
+              className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm"
             />
           </button>
           <div className="flex items-center gap-1.5 pl-3">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] leading-none">
-              Comida Rápida
+              PreciosAlDía Comida Rápida
             </span>
             <button
               onClick={() => {
