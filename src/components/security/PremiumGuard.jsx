@@ -94,7 +94,7 @@ export default function PremiumGuard({
   };
 
   const openWhatsApp = () => {
-    const message = `Hola! Quiero adquirir una licencia Premium para PreciosAlDía Bodega. Mi ID de instalación es: ${deviceId}`;
+    const message = `Hola! Quiero adquirir una licencia Premium para Comida Rápida POS. Mi ID de instalación es: ${deviceId}`;
     const url = `https://wa.me/584124051793?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -105,7 +105,7 @@ export default function PremiumGuard({
   if (isShop) {
     title = (
       <span>
-        PreciosAlDía <span className="text-red-500">Business</span> 👑
+        Comida Rápida <span className="text-red-500">Business</span> 👑
       </span>
     );
     message = "Desbloquea el potencial completo para tu bodega.";
@@ -142,7 +142,7 @@ export default function PremiumGuard({
   } else {
     title = (
       <span>
-        PreciosAlDía <span className="text-red-500">Premium</span> 👑
+        Comida Rápida <span className="text-red-500">Premium</span> 👑
       </span>
     );
     message = (
@@ -230,11 +230,10 @@ export default function PremiumGuard({
           onClick={handleActivateDemo}
           disabled={demoUsed || demoLoading}
           className={`w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 mb-3 text-sm font-bold transition-all active:scale-95
-                        ${
-                          demoUsed
-                            ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                            : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-red-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                        }`}
+                        ${demoUsed
+              ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+              : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-red-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+            }`}
         >
           <Gift size={16} />
           <span>

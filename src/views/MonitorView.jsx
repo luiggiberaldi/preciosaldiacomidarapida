@@ -118,7 +118,7 @@ export default function MonitorView({
         .toLocaleTimeString("es-VE", { hour12: false })
         .replace(/:/g, "");
 
-      link.download = `PreciosAlDía_${dateStr}_${timeStr}.jpg`;
+      link.download = `ComidaRápida_${dateStr}_${timeStr}.jpg`;
       link.href = image;
       document.body.appendChild(link);
       link.click();
@@ -157,7 +157,7 @@ export default function MonitorView({
         <div className="flex flex-col items-center mt-12 gap-4">
           <img
             src="/logodark.png"
-            alt="PreciosAlDía"
+            alt="Comida Rápida"
             className="h-20 w-auto object-contain drop-shadow-lg"
           />
           <div className="bg-slate-800/60 px-4 py-1.5 rounded-full border border-slate-700/50 backdrop-blur-md">
@@ -203,18 +203,18 @@ export default function MonitorView({
             <p className="text-lg font-medium text-brand">
               {rates.lastUpdate
                 ? new Date(rates.lastUpdate).toLocaleDateString("es-VE", {
-                    day: "numeric",
-                    month: "long",
-                  })
+                  day: "numeric",
+                  month: "long",
+                })
                 : "---"}
             </p>
             <p className="text-sm font-mono">
               {rates.lastUpdate
                 ? new Date(rates.lastUpdate).toLocaleTimeString("es-VE", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
                 : "--:--"}
             </p>
           </div>
@@ -274,8 +274,8 @@ export default function MonitorView({
           >
             <img
               src={theme === "dark" ? "/logodark.png" : "/logoprincipal.png"}
-              alt="PreciosAlDía"
-              className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm"
+              alt="Comida Rápida" Rápida"
+            className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm"
             />
           </button>
           <div className="flex items-center gap-1.5 pl-3">
@@ -409,10 +409,10 @@ export default function MonitorView({
             Actualizado:{" "}
             {rates.lastUpdate
               ? new Date(rates.lastUpdate).toLocaleTimeString("es-VE", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
               : "--:--"}
           </span>
         </div>

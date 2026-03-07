@@ -281,11 +281,10 @@ export const ManualMode = ({
                 <button
                   key={t}
                   onClick={() => setMessageTone(t)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
-                    messageTone === t
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${messageTone === t
                       ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
                       : "text-slate-400 hover:text-slate-600"
-                  }`}
+                    }`}
                 >
                   {t === "direct" ? "Directo" : t}
                 </button>
@@ -374,8 +373,8 @@ export const ManualMode = ({
       >
         <div className="text-center py-2">
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
-            El envío directo a WhatsApp es una función exclusiva de{" "}
-            <strong>PreciosAlDía Business</strong>.
+            Comparte tus cálculos de ventas con{" "}
+            <strong>Comida Rápida Business</strong>.
           </p>
           <p className="text-xs text-slate-400 mb-5">
             Puedes seguir usando <strong>Copiar</strong> para pegar manualmente
@@ -383,7 +382,7 @@ export const ManualMode = ({
           </p>
           <button
             onClick={() => {
-              const msg = `Hola! Me interesa la licencia Premium de PreciosAlDía para enviar cotizaciones por WhatsApp.`;
+              const msg = `Hola! Me interesa la licencia Premium de Comida Rápida para enviar cotizaciones por WhatsApp.`;
               window.open(
                 `https://wa.me/584124051793?text=${encodeURIComponent(msg)}`,
                 "_blank",

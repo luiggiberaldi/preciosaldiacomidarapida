@@ -18,47 +18,47 @@ const STEPS = [
     color: "text-red-500",
     bg: "bg-amber-100",
     title: "Inicio",
-    headline: "Tu bodega de un vistazo",
+    headline: "Tu restaurante de un vistazo",
     description:
-      "Dashboard con resumen de ventas del día, productos con stock bajo y accesos rápidos a todas las funciones.",
-    tip: "💡 Las tasas de cambio se actualizan automáticamente para calcular precios en Bolívares.",
+      "Dashboard con resumen de ventas del día, productos más vendidos y accesos rápidos a todas las funciones de tu local.",
+    tip: "💡 Las tasas de cambio se actualizan automáticamente para cobrar exacto.",
   },
   {
     icon: ShoppingCart,
     color: "text-blue-500",
     bg: "bg-blue-100",
     title: "Vender",
-    headline: "Punto de venta rápido",
+    headline: "Punto de Venta Rápido",
     description:
-      "Agrega productos al carrito, aplica descuentos y cobra en efectivo, pago móvil o transferencia. El sistema calcula automáticamente el precio en Bs.",
-    tip: "💡 Toca + en un producto para agregarlo al carrito directamente.",
+      "Toma pedidos en mostrador, agrega extras y cobra en múltiples monedas simultáneamente (Efectivo, Pago Móvil, etc).",
+    tip: "💡 Toca sobre un ítem en el carrito para agregar notas (ej: sin cebolla).",
   },
   {
     icon: Store,
     color: "text-indigo-500",
     bg: "bg-indigo-100",
-    title: "Inventario",
-    headline: "Tu inventario de productos",
+    title: "Menú",
+    headline: "Tu Menú Digital",
     descriptionFree:
-      "PreciosAlDía Free incluye uso ilimitado y gratis para siempre. Guarda hasta 50 productos, convierte precios y consulta la tasa del día al instante.",
+      "Comida Rápida Free incluye gestión básica de platillos. Añade fotos, descripciones y precios en USD que se convierten solos.",
     descriptionPremium:
-      "Con PreciosAlDía Premium puedes gestionar un inventario ilimitado, cobrar con POS y compartir tu inventario.",
+      "Con Comida Rápida Premium: Menú digital QR, sincronización con mesas, opciones de combos y variaciones ilimitadas.",
     tipPremium:
-      "💡 Comparte tu inventario con otros usando un código de 6 dígitos.",
-    tipFree: "👑 Activa tu licencia para desbloquear todas las funciones.",
+      "💡 Tus clientes pueden ver el menú escaneando un código QR.",
+    tipFree: "👑 Activa tu licencia para sincronizar pedidos web en tiempo real.",
   },
   {
     icon: Users,
     color: "text-red-500",
     bg: "bg-amber-100",
-    title: "Clientes",
-    headline: "Gestiona tus clientes",
+    title: "Cocina",
+    headline: "Pantalla de Preparación",
     descriptionPremium:
-      "Registra a tus clientes frecuentes, lleva control de fiados y pagos parciales. Todo offline y seguro.",
+      "Tus cocineros verán los pedidos en vivo. Marca platos como 'Listos' o 'En preparación', optimizando los tiempos del local.",
     descriptionFree:
-      "Con PreciosAlDía Premium puedes gestionar tu cartera de clientes y control de deudas.",
-    tipPremium: "💡 Toca un cliente para ver su historial completo de fiados.",
-    tipFree: "👑 Activa tu licencia para gestionar clientes.",
+      "La versión Premium incluye la Pantalla de Cocina (KDS) para que nunca se te pierda una comanda y trabajes más rápido.",
+    tipPremium: "💡 Usa una tablet en cocina conectada a tu cuenta para máxima eficiencia.",
+    tipFree: "👑 Activa tu licencia para agilizar tu cocina.",
   },
 ];
 
@@ -133,23 +133,22 @@ export default function OnboardingOverlay({ isPremium = false }) {
               <div className="relative mx-auto mb-5">
                 <img
                   src="/logo.png"
-                  alt="PreciosAlDía Bodega"
+                  alt="Comida Rápida"
                   className="w-44 h-auto mx-auto drop-shadow-lg"
                 />
                 <div className="absolute inset-0 bg-red-500/15 rounded-full blur-2xl -z-10 scale-150" />
               </div>
               <p className="text-xs font-bold text-red-500 uppercase tracking-[0.2em] mb-5">
-                Tu bodega inteligente
+                Punto de Venta para Locales
               </p>
 
               <p className="text-sm text-slate-500 leading-relaxed mb-6 max-w-[260px] mx-auto">
-                Menú, ventas y gestión de clientes en una sola app, diseñada
-                para negocios rápidos.
+                Menú QR, toma de pedidos en barra, pantalla de cocina y ventas. Todo en tiempo real.
               </p>
 
               {/* Feature pills */}
               <div className="flex flex-wrap justify-center gap-2 mb-2">
-                {["Menú", "Punto de Venta", "Clientes", "Reportes"].map(
+                {["Menú QR", "POS Rápido", "Cocina en Vivo", "Reportes"].map(
                   (label) => (
                     <span
                       key={label}
@@ -227,13 +226,12 @@ export default function OnboardingOverlay({ isPremium = false }) {
             {STEPS.map((_, i) => (
               <div
                 key={i}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  i === step
+                className={`h-2 rounded-full transition-all duration-300 ${i === step
                     ? "w-6 bg-red-500"
                     : i < step
                       ? "w-2 bg-red-500/40"
                       : "w-2 bg-slate-600"
-                }`}
+                  }`}
               />
             ))}
           </div>

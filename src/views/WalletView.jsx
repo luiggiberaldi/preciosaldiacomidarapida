@@ -387,34 +387,34 @@ export default function WalletView({ rates }) {
               {/* ✅ SELECTOR DE BANCOS */}
               {(newAccount.type === "pago_movil" ||
                 newAccount.type === "transferencia") && (
-                <div>
-                  <label className={labelClass}>Banco</label>
-                  <div className="relative">
-                    <select
-                      required
-                      value={newAccount.bank}
-                      onChange={(e) =>
-                        setNewAccount({ ...newAccount, bank: e.target.value })
-                      }
-                      className="input-std appearance-none"
-                    >
-                      <option value="" disabled>
-                        Selecciona un banco
-                      </option>
-                      {VENEZUELA_BANKS.map((b) => (
-                        <option key={b.code} value={b.name}>
-                          {b.code} - {b.name}
+                  <div>
+                    <label className={labelClass}>Banco</label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={newAccount.bank}
+                        onChange={(e) =>
+                          setNewAccount({ ...newAccount, bank: e.target.value })
+                        }
+                        className="input-std appearance-none"
+                      >
+                        <option value="" disabled>
+                          Selecciona un banco
                         </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                      </svg>
+                        {VENEZUELA_BANKS.map((b) => (
+                          <option key={b.code} value={b.name}>
+                            {b.code} - {b.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {newAccount.type === "transferencia" && (
                 <div>
@@ -455,41 +455,41 @@ export default function WalletView({ rates }) {
 
               {(newAccount.type === "pago_movil" ||
                 newAccount.type === "transferencia") && (
-                <div>
-                  <label className={labelClass}>
-                    Cédula de Identidad / RIF
-                  </label>
-                  <input
-                    required
-                    placeholder="Ej: V12345678"
-                    value={newAccount.id}
-                    onChange={(e) =>
-                      setNewAccount({ ...newAccount, id: e.target.value })
-                    }
-                    className="input-std"
-                  />
-                </div>
-              )}
+                  <div>
+                    <label className={labelClass}>
+                      Cédula de Identidad / RIF
+                    </label>
+                    <input
+                      required
+                      placeholder="Ej: V12345678"
+                      value={newAccount.id}
+                      onChange={(e) =>
+                        setNewAccount({ ...newAccount, id: e.target.value })
+                      }
+                      className="input-std"
+                    />
+                  </div>
+                )}
 
               {(newAccount.type === "zelle" ||
                 newAccount.type === "binance") && (
-                <div>
-                  <label className={labelClass}>
-                    {newAccount.type === "zelle"
-                      ? "Correo Electrónico"
-                      : "Correo o Binance ID"}
-                  </label>
-                  <input
-                    required
-                    placeholder="usuario@email.com"
-                    value={newAccount.email}
-                    onChange={(e) =>
-                      setNewAccount({ ...newAccount, email: e.target.value })
-                    }
-                    className="input-std"
-                  />
-                </div>
-              )}
+                  <div>
+                    <label className={labelClass}>
+                      {newAccount.type === "zelle"
+                        ? "Correo Electrónico"
+                        : "Correo o Binance ID"}
+                    </label>
+                    <input
+                      required
+                      placeholder="usuario@email.com"
+                      value={newAccount.email}
+                      onChange={(e) =>
+                        setNewAccount({ ...newAccount, email: e.target.value })
+                      }
+                      className="input-std"
+                    />
+                  </div>
+                )}
 
               <div>
                 <label className={labelClass}>Nombre del Titular</label>
@@ -665,8 +665,8 @@ export default function WalletView({ rates }) {
               Límite Alcanzado
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-              La versión gratuita permite <strong>2 cuentas</strong>. Con{" "}
-              <strong>PreciosAlDía Business</strong> puedes agregar cuentas
+              Obtén acceso a esta función y cobra pagos en divisas con múltiples billeteras. Con
+              <strong>Comida Rápida Business</strong> puedes agregar cuentas
               ilimitadas.
             </p>
             <div className="flex gap-2">
@@ -678,7 +678,7 @@ export default function WalletView({ rates }) {
               </button>
               <button
                 onClick={() => {
-                  const msg = `Hola! Me interesa la licencia Premium de PreciosAlDía para agregar más cuentas de pago.`;
+                  const msg = `Hola! Me interesa la licencia Premium de Comida Rápida para agregar más cuentas de pago.`;
                   window.open(
                     `https://wa.me/584124051793?text=${encodeURIComponent(msg)}`,
                     "_blank",

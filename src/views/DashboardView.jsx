@@ -537,7 +537,7 @@ export default function DashboardView({
         <div className="flex flex-col items-start gap-0.5">
           <img
             src={theme === "dark" ? "/logodark.png" : "/logoprincipal.png"}
-            alt="PreciosAlDía"
+            alt="Comida Rápida"
             className="h-14 w-auto object-contain drop-shadow-sm"
           />
           <div className="flex items-center gap-1.5 pl-3">
