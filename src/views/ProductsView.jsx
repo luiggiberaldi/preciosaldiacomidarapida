@@ -251,23 +251,18 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           updated_at: new Date().toISOString(),
         }));
 
+      // 1. Borrar todos los productos existentes en la web para este tenant
+      await webSupabase
+        .from("web_catalog")
+        .delete()
+        .eq("tenant_id", tenantId);
+
+      // 2. Insertar/Actualizar los productos activos actuales
       if (activeProducts.length > 0) {
         const { error } = await webSupabase
           .from("web_catalog")
           .upsert(activeProducts, { onConflict: "id" });
         if (error) console.warn("Auto-sync web_catalog:", error.message);
-      }
-
-      // Borrar productos que ya no están activos (solo de ESTE tenant)
-      const activeWebIds = activeProducts.map((p) => p.id);
-      if (activeWebIds.length > 0) {
-        await webSupabase
-          .from("web_catalog")
-          .delete()
-          .eq("tenant_id", tenantId)
-          .not("id", "in", `(${activeWebIds.join(",")})`);
-      } else {
-        await webSupabase.from("web_catalog").delete().eq("tenant_id", tenantId);
       }
     } catch (error) {
       console.error("Error auto-syncing web catalog:", error);
@@ -505,8 +500,14 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       // Sync. Upsert the active products.
       // NOTE: For a real production app we'd probably soft-delete others,
       // but upsert covers the active ones. We could also truncate the table first if we strictly want ONLY local ones.
-      // A safer approach for this phase is upserting.
 
+      // 1. Borrar todos los productos existentes en la web para este tenant
+      await webSupabase
+        .from("web_catalog")
+        .delete()
+        .eq("tenant_id", tenantId);
+
+      // 2. Insertar/Actualizar los productos activos actuales
       if (activeProducts.length > 0) {
         const { error } = await webSupabase
           .from("web_catalog")
