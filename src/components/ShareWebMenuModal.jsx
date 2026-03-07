@@ -7,7 +7,7 @@ import { showToast } from "./Toast";
 
 const WEB_BASE_URL = import.meta.env.VITE_WEB_BASE_URL || "https://paginacomidarapida.vercel.app";
 
-export default function ShareWebMenuModal({ isOpen, onClose }) {
+export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
     const [slug, setSlug] = useState("");
     const [businessName, setBusinessName] = useState("");
     const [editSlug, setEditSlug] = useState("");
@@ -70,18 +70,23 @@ export default function ShareWebMenuModal({ isOpen, onClose }) {
                 return;
             }
 
+            // Helper to capitalize first letters
+            const formatName = (str) => str.replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
+            const formattedName = formatName(editName.trim());
+
             const { error } = await webSupabase
                 .from("web_config")
                 .upsert({
                     tenant_id: tenantId,
                     slug: rawSlug,
-                    business_name: editName.trim(),
+                    business_name: formattedName,
+                    exchange_rate: effectiveRate || 1,
                 }, { onConflict: "tenant_id" });
 
             if (error) throw error;
 
             setSlug(rawSlug);
-            setBusinessName(editName.trim());
+            setBusinessName(formattedName);
             setIsEditing(false);
             showToast("Pagina configurada con exito", "success");
         } catch (err) {

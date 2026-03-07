@@ -22,6 +22,7 @@ import {
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
 import ShareWebMenuModal from "../components/ShareWebMenuModal";
+import PublishWebModal from "../components/PublishWebModal";
 import SettingsModal from "../components/SettingsModal";
 import ShareInventoryModal from "../components/ShareInventoryModal";
 import {
@@ -75,7 +76,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const [deleteCategoryConfirmId, setDeleteCategoryConfirmId] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isShareWebOpen, setIsShareWebOpen] = useState(false);
-  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [isPublishWebModalOpen, setIsPublishWebModalOpen] = useState(false);
 
   // Share State
   const [shareProduct, setShareProduct] = useState(null);
@@ -234,7 +235,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     try {
       const tenantId = getTenantId();
       const activeProducts = updatedProducts
-        .filter((p) => p.available !== false)
+        .filter((p) => p.available !== false && p.publishWeb !== false)
         .map((p) => ({
           id: generateProductId(tenantId, p.id),
           local_id: Number(p.id) || 0,
@@ -564,15 +565,10 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
             {products.length > 0 && (
               <button
                 onClick={handlePublishWeb}
-                disabled={isPublishing}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 font-bold text-sm"
                 title="Actualizar / Publicar a la Web"
               >
-                {isPublishing ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <UploadCloud size={16} strokeWidth={2.5} />
-                )}
+                <UploadCloud size={16} strokeWidth={2.5} />
                 <span className="hidden sm:inline">Publicar Web</span>
               </button>
             )}
@@ -948,18 +944,18 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       <ShareWebMenuModal
         isOpen={isShareWebOpen}
         onClose={() => setIsShareWebOpen(false)}
+        effectiveRate={effectiveRate}
       />
 
-      {/* Publish Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={showPublishConfirm}
-        title="Publicar menu en linea"
-        message="Los productos actuales reemplazaran el menu visible para tus clientes en la pagina web."
-        confirmText="Publicar"
-        cancelText="Cancelar"
-        variant="success"
-        onConfirm={executePublish}
-        onCancel={() => setShowPublishConfirm(false)}
+      {/* Publish Web Menu Modal (Live Toggle) */}
+      <PublishWebModal
+        isOpen={isPublishWebModalOpen}
+        onClose={() => setIsPublishWebModalOpen(false)}
+        products={products}
+        tenantId={getTenantId()}
+        onUpdateProductPublish={handleUpdateProductPublish}
+        triggerHaptic={triggerHaptic}
+        effectiveRate={effectiveRate}
       />
     </div>
   );
