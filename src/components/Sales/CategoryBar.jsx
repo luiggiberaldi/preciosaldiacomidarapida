@@ -17,7 +17,6 @@ export default function CategoryBar({
       <div className="shrink-0 flex gap-2 overflow-x-auto pb-2 pt-1 px-1 scrollbar-hide">
         {BODEGA_CATEGORIES.map((cat) => {
           const isActive = selectedCategory === cat.id;
-          const CatIcon = CATEGORY_ICONS[cat.id];
           return (
             <button
               key={cat.id}
@@ -28,11 +27,10 @@ export default function CategoryBar({
                 );
               }}
               className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all active:scale-95 ${isActive
-                  ? "bg-red-500 text-white shadow-md shadow-red-500/20"
-                  : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-300"
+                ? "bg-red-500 text-white shadow-md shadow-red-500/20"
+                : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-300"
                 }`}
             >
-              {CatIcon ? <CatIcon size={14} /> : <span>{cat.icon}</span>}
               {cat.label}
             </button>
           );

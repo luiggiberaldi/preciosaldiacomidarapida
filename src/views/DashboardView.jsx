@@ -542,7 +542,7 @@ export default function DashboardView({
           />
           <div className="flex items-center gap-1.5 pl-3">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] leading-none">
-              PreciosAlDía Comida Rápida
+              Comida Rápida
             </span>
             <button
               onClick={() => {
