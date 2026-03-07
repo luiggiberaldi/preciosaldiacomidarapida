@@ -22,6 +22,8 @@ export default function CheckoutModal({
   cartTotalUsd,
   cartTotalBs,
   effectiveRate,
+  tasaBcv,
+  customerName,
   customers,
   selectedCustomerId,
   setSelectedCustomerId,
@@ -163,9 +165,16 @@ export default function CheckoutModal({
     }
   };
 
-  // Agrupar métodos por moneda
-  const methodsUsd = paymentMethods.filter((m) => m.currency === "USD");
-  const methodsBs = paymentMethods.filter((m) => m.currency === "BS");
+  // Agrupar métodos por moneda y reordenarlos (Pago Móvil > Efectivo Bs > Efectivo USD)
+  const sortMethods = (a, b) => {
+    const order = { pago_movil: 1, efectivo_bs: 2, efectivo_usd: 3, punto_venta: 4 };
+    const aOrder = order[a.id] || 99;
+    const bOrder = order[b.id] || 99;
+    return aOrder - bOrder;
+  };
+
+  const methodsUsd = paymentMethods.filter((m) => m.currency === "USD").sort(sortMethods);
+  const methodsBs = paymentMethods.filter((m) => m.currency === "BS").sort(sortMethods);
 
   // ── Estilos de barra por moneda ──
   const sectionStyles = {
@@ -232,19 +241,17 @@ export default function CheckoutModal({
               inputMode="decimal"
               value={val}
               onChange={(e) => handleBarChange(method.id, e.target.value)}
-              placeholder="0.00"
-              className={`w-full py-3 px-4 pr-14 rounded-xl border-2 text-lg font-bold outline-none transition-all ${
-                hasValue
+              placeholder={method.id.includes("efectivo") ? "Monto recibido" : "0.00"}
+              className={`w-full py-3 px-4 pr-14 rounded-xl border-2 text-lg font-bold outline-none transition-all ${hasValue
                   ? styles.inputActive
                   : `bg-white dark:bg-slate-900 ${styles.inputBorder}`
-              } text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 focus:ring-4`}
+                } text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 focus:ring-4`}
             />
             <span
-              className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black px-2 py-0.5 rounded-md border ${
-                hasValue
+              className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black px-2 py-0.5 rounded-md border ${hasValue
                   ? `${styles.titleBg} ${styles.title} ${styles.border}`
                   : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
-              }`}
+                }`}
             >
               {method.currency === "USD" ? "$" : "Bs"}
             </span>
@@ -279,7 +286,7 @@ export default function CheckoutModal({
           COBRAR
         </h2>
         <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 px-2.5 py-1 rounded-lg">
-          {formatBs(effectiveRate)} Bs/$
+          {formatBs(tasaBcv || effectiveRate)} Bs/$
         </span>
       </div>
 
@@ -290,12 +297,20 @@ export default function CheckoutModal({
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">
             Total a Pagar
           </p>
-          <div className="text-center mb-4">
-            <span className="text-3xl font-black text-slate-900 dark:text-white">
-              ${cartTotalUsd.toFixed(2)}
+          {customerName && (
+            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 text-center mb-2 px-2 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg inline-block mx-auto">
+              Pedido para: {customerName}
+            </p>
+          )}
+          <div className="text-center mb-4 flex flex-col items-center">
+            <span className="text-4xl font-black text-red-600 dark:text-red-500 leading-none tracking-tighter mb-1">
+              {formatBs(cartTotalBs)} Bs
             </span>
-            <span className="block text-sm font-bold text-red-600 dark:text-red-400 mt-0.5">
-              Bs {formatBs(cartTotalBs)}
+            <span className="text-sm font-bold text-slate-400 block mb-1">
+              {cartTotalUsd.toFixed(2)} USD ref.
+            </span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Tasa BCV: {formatBs(tasaBcv || effectiveRate)} Bs/$
             </span>
           </div>
 
@@ -378,37 +393,38 @@ export default function CheckoutModal({
         {/* ── BANNER VUELTO / RESTANTE ── */}
         <div className="px-3 py-2">
           <div
-            className={`p-3.5 rounded-xl border-2 transition-all ${
-              isPaid
-                ? "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800"
-                : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800"
-            }`}
-          >
-            <p
-              className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
-                isPaid ? "text-red-500" : "text-orange-500"
+            className={`p-4 rounded-xl border-2 transition-all ${isPaid
+                ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
+                : "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800"
               }`}
-            >
-              {isPaid ? "Vuelto" : "Resta por Cobrar"}
-            </p>
-            <div className="flex items-end justify-between">
-              <span
-                className={`text-2xl font-black ${
-                  isPaid
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-orange-600 dark:text-orange-400"
-                }`}
-              >
-                ${isPaid ? changeUsd.toFixed(2) : remainingUsd.toFixed(2)}
-              </span>
-              <span
-                className={`text-sm font-bold ${
-                  isPaid ? "text-red-500" : "text-orange-500"
-                }`}
-              >
-                Bs {formatBs(isPaid ? changeBs : remainingBs)}
-              </span>
-            </div>
+          >
+            {isPaid ? (
+              <div className="text-center">
+                <p className="text-[11px] font-black uppercase tracking-widest text-green-600 dark:text-green-400 mb-1">
+                  SU VUELTO ES:
+                </p>
+                <p className="text-4xl font-black text-green-700 dark:text-green-400 tracking-tighter">
+                  {changeUsd.toFixed(2)} USD
+                </p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-500 mt-1">
+                  · {formatBs(changeBs)} Bs ·
+                </p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-[11px] font-black uppercase tracking-widest text-red-500 mb-1">
+                  {totalPaidUsd > 0 ? "⚠️ Monto insuficiente, faltan:" : "Resta por Cobrar"}
+                </p>
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <span className="text-3xl font-black text-red-600 dark:text-red-400 tracking-tighter leading-none">
+                    Bs {formatBs(remainingBs)}
+                  </span>
+                  <span className="text-sm font-bold text-slate-500 mt-0.5">
+                    ({remainingUsd.toFixed(2)} USD)
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* DESGLOSE DE VUELTO — solo visible cuando hay vuelto */}
             {isPaid && changeUsd > 0.009 && (
@@ -649,13 +665,12 @@ export default function CheckoutModal({
         <button
           onClick={handleConfirm}
           disabled={!selectedCustomerId && remainingUsd > 0.01}
-          className={`w-full py-4 text-white font-black text-base rounded-2xl shadow-lg transition-all tracking-wide flex items-center justify-center gap-2 ${
-            isPaid
+          className={`w-full py-4 text-white font-black text-base rounded-2xl shadow-lg transition-all tracking-wide flex items-center justify-center gap-2 ${isPaid
               ? "bg-red-500 hover:bg-red-600 shadow-red-500/25 active:scale-[0.98]"
               : selectedCustomerId
                 ? "bg-red-500 hover:bg-red-600 shadow-red-500/25 active:scale-[0.98]"
                 : "bg-slate-300 dark:bg-slate-800 text-slate-500 shadow-none cursor-not-allowed"
-          }`}
+            }`}
         >
           {isPaid ? (
             <>

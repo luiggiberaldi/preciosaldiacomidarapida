@@ -8,24 +8,20 @@ import {
   LayoutGrid,
 } from "lucide-react";
 
-// Categorías predefinidas para el Menú
-export const BODEGA_CATEGORIES = [
-  { id: "todos", label: "Todos", icon: "◉", color: "slate" },
-  { id: "perros", label: "Perros", icon: "🌭", color: "fast_red" },
-  {
-    id: "hamburguesas",
-    label: "Hamburguesas",
-    icon: "🍔",
-    color: "fast_yellow",
-  },
-  { id: "pepitos", label: "Pepitos", icon: "🥖", color: "fast_orange" },
-  { id: "arepas", label: "Arepas", icon: "🫓", color: "fast_amber" },
-  { id: "raciones", label: "Raciones", icon: "🍟", color: "fast_amber" },
+// Categorías de comida rápida
+export const FOOD_CATEGORIES = [
+  { id: "todos", label: "Todos", icon: "🍔", color: "slate" }, // Emoji temporal, se sobreescribe con icon de lucide
+  { id: "hamburguesas", label: "Hamburguesas", icon: "🍔", color: "fast_yellow" },
+  { id: "perros", label: "Perros Calientes", icon: "🌭", color: "fast_red" },
+  { id: "combos", label: "Combos", icon: "🎁", color: "fast_orange" },
   { id: "bebidas", label: "Bebidas", icon: "🥤", color: "fast_blue" },
-  { id: "otros", label: "Extras", icon: "🧀", color: "fast_green" },
+  { id: "extras", label: "Extras", icon: "🧀", color: "fast_amber" },
+  { id: "postres", label: "Postres", icon: "🍦", color: "fast_green" },
 ];
 
-// Lucide icon map for factory categories (only for exceptions)
+export { FOOD_CATEGORIES as BODEGA_CATEGORIES };
+
+// Lucide icon map for factory categories (if you prefer rendering SVGs over Emojis for specific IDs)
 export const CATEGORY_ICONS = {
   todos: LayoutGrid,
 };

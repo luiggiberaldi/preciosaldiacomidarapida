@@ -1,9 +1,28 @@
 import React from "react";
 import { CheckCircle, Wallet, Send, X } from "lucide-react";
 import { formatBs } from "../../utils/calculatorUtils";
+import { buildReceiptWhatsAppUrl } from "./ReceiptShareHelper";
 
 export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
   if (!receipt) return null;
+
+  const tenantName = localStorage.getItem("bodega_store_name") || "PreciosAlDía Comida Rápida";
+  const fecha = new Date(receipt.timestamp).toLocaleString("es-VE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const handleWhatsApp = () => {
+    // Si viene onShareWhatsApp por prop lo usamos, sino generamos el link aquí mismo
+    if (onShareWhatsApp) {
+      onShareWhatsApp(receipt);
+    } else {
+      window.open(buildReceiptWhatsAppUrl(receipt), "_blank");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -29,41 +48,44 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
             }}
           ></div>
 
-          <div className="p-6 sm:p-8 pt-8 sm:pt-10 text-center bg-white border-b-2 border-dashed border-slate-200">
+          <div className="p-6 sm:p-8 pt-6 text-center bg-white border-b-2 border-dashed border-slate-200">
+            <h2 className="text-sm font-black text-slate-500 tracking-widest uppercase mb-4">
+              {tenantName}
+            </h2>
+
             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 relative">
               <CheckCircle size={36} className="text-red-500 relative z-10" />
               <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-20"></div>
             </div>
-            <h3 className="text-4xl font-black text-slate-800 tracking-tighter mb-1">
-              Orden #{String(receipt.saleNumber).padStart(2, "0")}
+
+            {receipt.customerName && receipt.customerName !== "Consumidor Final" && (
+              <p className="text-base font-bold text-blue-600 mb-1">
+                Pedido para: {receipt.customerName}
+              </p>
+            )}
+
+            <h3 className="text-3xl font-black text-slate-800 tracking-tighter mb-1">
+              Orden #{String(receipt.saleNumber).padStart(4, "0")}
             </h3>
+
+            <p className="text-xs font-bold text-slate-500 mb-4">{fecha}</p>
+
             <div
-              className={`inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest mb-3 ${receipt.deliveryType === "LLEVAR" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
+              className={`inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest mb-4 ${receipt.deliveryType === "LLEVAR" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
             >
               {receipt.deliveryType === "LLEVAR"
                 ? "🛍️ Para Llevar"
                 : "🍽️ Comer Aquí"}
             </div>
-            {receipt.customerName && (
-              <p className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-tight">
-                {receipt.customerName}
-              </p>
-            )}
-            <p className="text-4xl font-black text-slate-900 mb-1 tracking-tighter">
-              ${receipt.totalUsd.toFixed(2)}
-            </p>
-            <p className="text-lg font-bold text-slate-500 mb-2">
-              {formatBs(receipt.totalBs)} Bs
-            </p>
 
-            <div className="inline-flex items-center flex-wrap justify-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-600 mt-2">
-              {receipt.payments &&
-                receipt.payments.map((p, i) => (
-                  <span key={p.id} className="flex items-center gap-1">
-                    <Wallet size={12} /> {p.methodLabel}{" "}
-                    {i < receipt.payments.length - 1 ? " • " : ""}
-                  </span>
-                ))}
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total a Pagar</p>
+              <p className="text-4xl font-black text-red-600 mb-1 tracking-tighter leading-none">
+                {formatBs(receipt.totalBs)} Bs
+              </p>
+              <p className="text-lg font-bold text-slate-500">
+                ${receipt.totalUsd.toFixed(2)} USD
+              </p>
             </div>
           </div>
 
@@ -71,7 +93,7 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
               Detalle de Consumo
             </p>
-            <div className="space-y-3">
+            <div className="space-y-3 mb-6">
               {receipt.items.map((item, i) => (
                 <div
                   key={i}
@@ -79,87 +101,86 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
                 >
                   <div className="flex-1 pr-4">
                     <span className="font-bold text-slate-700 block leading-tight">
-                      {item.name}
+                      {item.qty}x {item.name}
                     </span>
                     {item.note && (
                       <span className="block text-[11px] font-bold text-red-600 my-0.5">
                         💬 {item.note}
                       </span>
                     )}
-                    <span className="text-xs text-slate-400">
-                      {item.isWeight
-                        ? `${item.qty.toFixed(3)} Kg`
-                        : `${item.qty} u`}{" "}
-                      × ${item.priceUsd.toFixed(2)}
+                    <span className="text-xs text-slate-400 flex gap-2">
+                      <span>${parseFloat(item.priceUsd).toFixed(2)} c/u</span>
+                      <span>·</span>
+                      <span>{formatBs(item.priceUsd * receipt.rate)} Bs</span>
                     </span>
                   </div>
-                  <span className="font-black text-slate-900">
-                    ${(item.priceUsd * item.qty).toFixed(2)}
-                  </span>
+                  <div className="text-right">
+                    <span className="font-black text-slate-900 block">
+                      ${(item.priceUsd * item.qty).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
 
-            {receipt.payments && receipt.payments.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200 text-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                  Pagos Recibidos
-                </p>
-                {receipt.payments.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex justify-between text-slate-600 mb-1"
-                  >
-                    <span>{p.methodLabel}:</span>
-                    <span className="font-bold">
-                      {p.amountInputCurrency === "USD" ? "$" : "Bs"}{" "}
-                      {p.amountInput}
-                    </span>
-                  </div>
-                ))}
-
-                {receipt.changeUsd > 0 && (
-                  <div className="flex justify-between text-red-600 font-bold mt-2 pt-2 border-t border-slate-200">
-                    <span>Vuelto Emitido:</span>
-                    <span>
-                      ${receipt.changeUsd.toFixed(2)} /{" "}
-                      {formatBs(receipt.changeBs)} Bs
-                    </span>
-                  </div>
-                )}
-
-                {receipt.fiadoUsd > 0 && (
-                  <div className="flex justify-between text-red-600 font-bold mt-2 pt-2 border-t border-slate-200">
-                    <span>Pendiente (Fiado):</span>
-                    <span>
-                      ${receipt.fiadoUsd.toFixed(2)} /{" "}
-                      {formatBs(receipt.fiadoUsd * receipt.rate)} Bs
-                    </span>
-                  </div>
-                )}
+            <div className="border-t border-slate-200 pt-4 text-sm space-y-2">
+              <div className="flex justify-between text-slate-500 font-bold mb-3">
+                <span>Tasa BCV Aplicada:</span>
+                <span>{formatBs(receipt.rate)} Bs/$</span>
               </div>
-            )}
 
-            <p className="text-center text-[10px] text-slate-400 mt-6 uppercase tracking-wider font-bold">
-              Tasa BCV Aplicada: {formatBs(receipt.rate)} Bs/$
-            </p>
-            <p className="text-center text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-bold">
-              {new Date(receipt.timestamp).toLocaleString()}
-            </p>
+              {receipt.payments && receipt.payments.length > 0 && (
+                <>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">
+                    Métodos de Pago
+                  </p>
+                  {receipt.payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex justify-between text-slate-700 mb-1 items-center"
+                    >
+                      <span className="flex items-center gap-1.5"><Wallet size={14} /> {p.methodLabel}</span>
+                      <span className="font-black">
+                        {p.amountInputCurrency === "USD" ? "$" : "Bs"} {formatBs(p.amountInput)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {receipt.changeUsd > 0.009 && (
+                <div className="flex justify-between text-green-600 font-black mt-3 pt-3 border-t border-slate-200">
+                  <span>VUELTO EMITIDO:</span>
+                  <div className="text-right">
+                    <span className="block">${receipt.changeUsd.toFixed(2)}</span>
+                    <span className="block text-xs">{formatBs(receipt.changeBs)} Bs</span>
+                  </div>
+                </div>
+              )}
+
+              {receipt.fiadoUsd > 0.009 && (
+                <div className="flex justify-between text-red-600 font-bold mt-2 pt-2 border-t border-slate-200">
+                  <span>Pendiente (Fiado):</span>
+                  <span>
+                    ${receipt.fiadoUsd.toFixed(2)} / {formatBs(receipt.fiadoUsd * receipt.rate)} Bs
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Botones sticky en la parte inferior */}
-        <div className="p-4 bg-slate-50 flex gap-2 relative z-20 shrink-0 border-t border-slate-200/50">
+        <div className="p-4 bg-slate-50 flex gap-2 relative z-20 shrink-0 border-t border-slate-200/50 flex-col">
           <button
-            onClick={() => onShareWhatsApp(receipt)}
-            className="flex-1 py-4 bg-amber-100 text-amber-700 font-black rounded-xl hover:bg-amber-200 transition-colors uppercase tracking-widest text-xs sm:text-sm flex items-center justify-center gap-1.5 focus:outline-none active:scale-95"
+            onClick={handleWhatsApp}
+            className="w-full py-3.5 bg-amber-100 text-amber-700 font-black rounded-xl hover:bg-amber-200 transition-colors tracking-wide text-sm flex items-center justify-center gap-2 focus:outline-none active:scale-95 shadow-sm"
           >
-            <Send size={16} /> WhatsApp
+            <Send size={18} /> Compartir ticket por WhatsApp
           </button>
           <button
             onClick={onClose}
-            className="flex-1 sm:flex-[1.5] py-4 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition-colors uppercase tracking-widest text-xs sm:text-sm focus:outline-none active:scale-95"
+            className="w-full py-3.5 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition-colors tracking-wide text-sm focus:outline-none active:scale-95 shadow-sm"
           >
             Nueva Venta
           </button>

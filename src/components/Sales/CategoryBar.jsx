@@ -14,7 +14,7 @@ export default function CategoryBar({
       className={`${selectedCategory !== "todos" && searchTerm.length === 0 ? "flex-1 overflow-hidden flex flex-col min-h-0" : ""}`}
     >
       {/* Category Chips */}
-      <div className="shrink-0 flex gap-1.5 overflow-x-auto pb-2 pt-1 px-1 scrollbar-hide">
+      <div className="shrink-0 flex gap-2 overflow-x-auto pb-2 pt-1 px-1 scrollbar-hide">
         {BODEGA_CATEGORIES.map((cat) => {
           const isActive = selectedCategory === cat.id;
           const CatIcon = CATEGORY_ICONS[cat.id];
@@ -27,13 +27,12 @@ export default function CategoryBar({
                   isActive && cat.id !== "todos" ? "todos" : cat.id,
                 );
               }}
-              className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95 ${
-                isActive
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all active:scale-95 ${isActive
                   ? "bg-red-500 text-white shadow-md shadow-red-500/20"
                   : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-300"
-              }`}
+                }`}
             >
-              {CatIcon ? <CatIcon size={12} /> : <span>{cat.icon}</span>}
+              {CatIcon ? <CatIcon size={14} /> : <span>{cat.icon}</span>}
               {cat.label}
             </button>
           );
@@ -53,9 +52,8 @@ export default function CategoryBar({
                   key={p.id}
                   onClick={() => addToCart(p)}
                   disabled={isOut}
-                  className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex flex-col items-center text-center transition-all active:scale-95 hover:border-amber-300 hover:shadow-sm ${
-                    isOut ? "opacity-40 cursor-not-allowed" : ""
-                  }`}
+                  className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex flex-col items-center text-center transition-all active:scale-95 hover:border-amber-300 hover:shadow-sm ${isOut ? "opacity-40 cursor-not-allowed" : ""
+                    }`}
                 >
                   <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1.5 overflow-hidden">
                     {p.image ? (

@@ -1,3 +1,5 @@
+import { formatBs } from "../../utils/calculatorUtils";
+
 /**
  * Builds a WhatsApp-ready receipt URL for sharing a sale.
  * @param {object} receipt - The sale/receipt object
@@ -5,90 +7,64 @@
  */
 export function buildReceiptWhatsAppUrl(receipt) {
   const r = receipt;
-  const fecha = new Date(r.timestamp).toLocaleDateString("es-VE", {
+  // Format dates consistently
+  const dateObj = new Date(r.timestamp);
+  const dateStr = dateObj.toLocaleDateString("es-VE", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  });
+  const timeStr = dateObj.toLocaleTimeString("es-VE", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
-  const saleNum = String(r.saleNumber || 0).padStart(2, "0");
-  const sep = "================================";
-  const sep2 = "--------------------------------";
+  const fecha = `${dateStr} · ${timeStr}`;
+
+  const saleNum = String(r.saleNumber || 0).padStart(4, "0");
 
   // Items
   const itemsLines = (r.items ?? [])
     .map((item) => {
       const qty = item.isWeight
-        ? `${parseFloat(item.qty).toFixed(3)} kg`
-        : `${item.qty} und`;
-      const sub = (item.priceUsd * item.qty).toFixed(2);
-      const noteLine = item.note ? `\n  💬 Nota: ${item.note}` : "";
-      return `- ${item.name}${noteLine}\n  ${qty} x $${parseFloat(item.priceUsd).toFixed(2)} = $${sub}`;
-    })
-    .join("\n\n");
-
-  // Pagos
-  const paymentsLines = (r.payments ?? [])
-    .map((p) => {
-      const isBs = p.currency === "BS";
-      const val = isBs
-        ? `Bs ${Math.ceil(p.amountBs ?? p.amountUsd * r.rate)}`
-        : `$${parseFloat(p.amountUsd).toFixed(2)}`;
-      return `  ${p.methodLabel}: ${val}`;
+        ? `${parseFloat(item.qty).toFixed(3)}kg`
+        : `${item.qty}x`;
+      const subUsd = (item.priceUsd * item.qty).toFixed(2);
+      const subBs = formatBs(item.priceUsd * item.qty * r.rate);
+      const noteLine = item.note ? `\n   💬 ${item.note}` : "";
+      return `• ${qty} ${item.name} — $${subUsd} · ${subBs} Bs${noteLine}`;
     })
     .join("\n");
 
   // Totales
   const totalBs = r.totalBs ?? r.totalUsd * r.rate;
   const totalUsdStr = `$${parseFloat(r.totalUsd).toFixed(2)}`;
-  const totalBsStr = `Bs ${Math.ceil(totalBs)}`;
+  const totalBsStr = `${formatBs(totalBs)} Bs`;
 
-  // Vuelto
-  const changeLines =
-    r.changeUsd > 0.005
-      ? `\nVUELTO: $${parseFloat(r.changeUsd).toFixed(2)}`
-      : "";
+  // Pagos
+  const paymentsStr = (r.payments ?? [])
+    .map((p) => p.methodLabel)
+    .join(", ");
 
-  // Fiado
-  const fiadoLine =
-    r.fiadoUsd > 0.005
-      ? `\nPENDIENTE (fiado): $${parseFloat(r.fiadoUsd).toFixed(2)}`
-      : "";
-
-  // Cliente
   const clienteLine =
     r.customerName && r.customerName !== "Consumidor Final"
-      ? `Cliente: ${r.customerName}\n`
-      : "";
+      ? `📋 Cliente: ${r.customerName}`
+      : null;
 
-  const deliveryLine =
-    r.deliveryType === "LLEVAR"
-      ? `TIPO: 🛍️ PARA LLEVAR`
-      : `TIPO: 🍽️ COMER AQUÍ`;
-
-  const text = [
-    `COMPROBANTE DE ORDEN | FAST FOOD`,
-    sep2,
-    `ORDEN: #${saleNum}`,
-    deliveryLine,
-    `${clienteLine}Fecha: ${fecha}`,
-    sep,
+  // Construcción del texto
+  const textBlocks = [
+    `🍔 *Pedido #${saleNum}*`,
+    clienteLine,
+    `📅 ${fecha}`,
     ``,
-    `DETALLE DE PEDIDO:`,
     itemsLines,
     ``,
-    sep,
-    `TOTAL: ${totalUsdStr}  /  ${totalBsStr}`,
-    paymentsLines ? `\nPAGOS:\n${paymentsLines}` : "",
-    changeLines,
-    fiadoLine,
-    sep,
-    `Gracias por su compra!`,
-    `Precios Al Dia - Sistema POS`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `💵 Total: ${totalUsdStr} · ${totalBsStr}`,
+    `🏦 Tasa BCV: ${formatBs(r.rate)} Bs/$`,
+    paymentsStr ? `💳 Pago: ${paymentsStr}` : null,
+  ];
+
+  const text = textBlocks.filter((line) => line !== null).join("\n");
 
   const formatVzlaPhone = (phone) => {
     if (!phone) return null;

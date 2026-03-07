@@ -156,12 +156,14 @@ export default function CartPanel({
   onEditNote,
   triggerHaptic,
 }) {
+  const [customerName, setCustomerName] = useState("");
+
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
       {/* Header */}
       <div className="shrink-0 px-4 pb-2 pt-3 sm:py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/50 rounded-t-2xl sm:rounded-t-3xl">
         <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider">
-          Cesta de Compra
+          Pedido actual
         </span>
         <div className="flex items-center gap-3">
           {cart.length > 0 && (
@@ -173,7 +175,7 @@ export default function CartPanel({
             </button>
           )}
           <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-            {cartItemCount} items
+            {cartItemCount} platos
           </span>
         </div>
       </div>
@@ -194,7 +196,7 @@ export default function CartPanel({
               Cesta vacía
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              Busca un producto para empezar a vender.
+              Toca un plato del menú para agregarlo al pedido.
             </p>
           </div>
         ) : (
@@ -214,39 +216,38 @@ export default function CartPanel({
       </div>
 
       {/* Footer — shrink-0, always visible at bottom of flex container */}
-      <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl sm:rounded-b-3xl space-y-2 sm:space-y-3">
-        <div className="flex justify-between items-end px-1 sm:px-0">
-          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest hidden sm:inline">
-            Total Venta
+      <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl sm:rounded-b-3xl space-y-3">
+
+        {/* Total Bimonetario */}
+        <div className="flex justify-between items-center px-1 sm:px-2">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Total a Cobrar
           </span>
-          <div className="text-right flex items-center gap-3 sm:block w-full sm:w-auto justify-between">
-            <div className="flex flex-col items-start sm:items-end">
-              <span className="text-[10px] font-black text-red-600 dark:text-red-500 tracking-widest uppercase sm:hidden">
-                Total (Ref)
-              </span>
-              <span className="text-[11px] font-bold text-slate-500 sm:hidden">
-                {formatBs(cartTotalBs)} Bs
-              </span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
-              ${cartTotalUsd.toFixed(2)}
-            </p>
+          <div className="text-right flex flex-col items-end">
+            <span className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-500 leading-none tracking-tight">
+              {formatBs(cartTotalBs)} Bs
+            </span>
+            <span className="text-sm font-bold text-slate-400 mt-1">
+              {cartTotalUsd.toFixed(2)} USD ref.
+            </span>
           </div>
         </div>
 
-        <div className="hidden sm:flex justify-between items-center px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-xl">
-          <span className="text-[11px] font-black text-red-600 dark:text-red-500 tracking-widest uppercase">
-            Bolívares
-          </span>
-          <span className="text-xl font-black text-red-600 dark:text-red-400">
-            {formatBs(cartTotalBs)} Bs
-          </span>
+        {/* Input Nombre de Cliente */}
+        <div className="px-1 pt-1">
+          <input
+            type="text"
+            placeholder="Nombre del cliente (opcional)"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-medium text-sm text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-400"
+          />
         </div>
 
         <button
           disabled={cart.length === 0}
-          onClick={onCheckout}
-          className="w-full relative group disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => onCheckout(customerName)}
+          className="w-full relative group disabled:opacity-50 disabled:cursor-not-allowed mt-1"
         >
           <div className="absolute inset-0 bg-red-500 rounded-xl sm:rounded-2xl shadow-red-500/30 shadow-lg blur-[2px] opacity-70 group-active:opacity-100 group-hover:blur-[4px] transition-all"></div>
           <div className="relative w-full py-3 sm:py-4 bg-red-500 text-white font-black text-sm sm:text-lg rounded-xl sm:rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-wide">
@@ -254,7 +255,7 @@ export default function CartPanel({
               size={18}
               className="sm:w-[22px] sm:h-[22px] opacity-80"
             />
-            PROCESAR COBRO
+            COBRAR PEDIDO
           </div>
         </button>
       </div>

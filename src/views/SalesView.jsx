@@ -56,6 +56,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   const [weightPending, setWeightPending] = useState(null);
   const [notePending, setNotePending] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [cartCustomerName, setCartCustomerName] = useState("");
 
   // Rate config
   const [showRateConfig, setShowRateConfig] = useState(false);
@@ -93,12 +94,12 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     () =>
       searchTerm.length >= 1
         ? products
-            .filter(
-              (p) =>
-                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.barcode?.includes(searchTerm),
-            )
-            .slice(0, 6)
+          .filter(
+            (p) =>
+              p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.barcode?.includes(searchTerm),
+          )
+          .slice(0, 6)
         : [],
     [searchTerm, products],
   );
@@ -420,7 +421,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       customerId: selectedCustomerId || null,
       customerName: selectedCustomer
         ? selectedCustomer.name
-        : "Consumidor Final",
+        : cartCustomerName || "Consumidor Final",
       customerPhone: selectedCustomer?.phone || null,
       fiadoUsd: fiadoAmountUsd,
       deliveryType: checkoutInfo?.deliveryType || "LOCAL",
@@ -551,8 +552,9 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         cartItemCount={cartItemCount}
         updateQty={updateQty}
         removeFromCart={removeFromCart}
-        onCheckout={() => {
+        onCheckout={(name) => {
           triggerHaptic && triggerHaptic();
+          setCartCustomerName(name);
           setShowCheckout(true);
         }}
         onClearCart={() => {
@@ -576,6 +578,8 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           cartTotalUsd={cartTotalUsd}
           cartTotalBs={cartTotalBs}
           effectiveRate={effectiveRate}
+          tasaBcv={effectiveRate}
+          customerName={cartCustomerName}
           customers={customers}
           selectedCustomerId={selectedCustomerId}
           setSelectedCustomerId={setSelectedCustomerId}
