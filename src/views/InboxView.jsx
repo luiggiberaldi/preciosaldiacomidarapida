@@ -27,10 +27,11 @@ export const InboxView = ({ rates, storeConfig }) => {
 
     order.items.forEach((item) => {
       let itemDesc = `- ${item.qty}x ${item.name} ($${(item.priceUsd * item.qty).toFixed(2)})`;
-      if (item.size && item.size !== "Sencillo") itemDesc += ` [${item.size}]`;
+      if (item.size) itemDesc += ` [${item.size}]`;
       item.selectedExtras?.forEach((ext) => {
         itemDesc += `\n  + ${ext.name}`;
       });
+      if (item.note) itemDesc += `\n  📝 Nota: ${item.note}`;
       text += `${itemDesc}\n`;
     });
 
@@ -231,12 +232,17 @@ const OrderCard = ({ order, rates, isConfirmed, actions }) => {
               <span className="font-medium">
                 <span className="text-red-500 font-bold mr-1">{item.qty}x</span>
                 {item.name}{" "}
-                {item.size && item.size !== "Sencillo" ? `[${item.size}]` : ""}
+                {item.size ? `[${item.size}]` : ""}
               </span>
             </div>
             {item.selectedExtras && item.selectedExtras.length > 0 && (
               <p className="text-xs text-gray-500 ml-5 mt-0.5">
                 + {item.selectedExtras.map((e) => e.name).join(", ")}
+              </p>
+            )}
+            {item.note && (
+              <p className="text-xs text-amber-600 ml-5 mt-0.5 italic">
+                📝 Nota: {item.note}
               </p>
             )}
           </div>

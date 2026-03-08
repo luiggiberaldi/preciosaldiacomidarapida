@@ -72,7 +72,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             const noteText = [extras, instrucciones].filter(Boolean).join(" | ");
             return {
               id: wi.id,
-              name: wi.name + (wi.size && wi.size !== "Sencillo" ? ` [${wi.size}]` : ""),
+              name: wi.name + (wi.size ? ` [${wi.size}]` : ""),
               qty: wi.qty,
               note: noteText,
             };
