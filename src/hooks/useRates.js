@@ -77,22 +77,31 @@ export function useRates() {
         isAutoUpdate ? "--- Auto-Update ---" : "--- Actualización Manual ---",
       );
 
-      const fetchGeneric = async (url) => {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 8000);
-        try {
-          const res = await fetch(url, { signal: controller.signal });
-          clearTimeout(id);
-          if (!res.ok) return null;
-          return await res.json();
-        } catch (e) {
-          clearTimeout(id);
-          // Only log if it's not a generic abort/connection error
-          if (e.name !== "AbortError" && !e.message.includes("Failed to fetch")) {
-            console.debug("Silent fetch error:", e.message);
+      const fetchGeneric = async (url, retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 8000 + i * 2000); // Incrementar timeout en reintentos
+          try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(id);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            return await res.json();
+          } catch (e) {
+            clearTimeout(id);
+            const isLastAttempt = i === retries - 1;
+
+            if (isLastAttempt) {
+              if (e.name !== "AbortError" && !e.message.includes("Failed to fetch")) {
+                console.debug("Silent fetch error after retries:", e.message);
+              }
+              return null;
+            }
+
+            // Wait briefly before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
           }
-          return null;
         }
+        return null;
       };
 
       const getEuroFactorFallback = async () => {
@@ -102,7 +111,9 @@ export function useRates() {
           );
           if (data?.result === "success" && data.conversion_rates?.EUR)
             return 1 / data.conversion_rates.EUR;
-        } catch (e) { }
+        } catch (e) {
+          console.debug("Error obteniendo factor EUR/USD", e.message);
+        }
         return DEFAULT_EUR_USD_RATIO;
       };
 
