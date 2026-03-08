@@ -139,7 +139,7 @@ export default function ProductOptionsModal({
                                                 : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-red-300"
                                                 }`}
                                         >
-                                            <span className="font-bold text-base mb-1">{size.name}</span>
+                                            <span className="font-bold text-base mb-1 capitalize">{size.name}</span>
                                             <span className="text-sm font-black">${price.toFixed(2)}</span>
                                             {isSelected && (
                                                 <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5">
@@ -172,7 +172,7 @@ export default function ProductOptionsModal({
                                                 : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
                                                 }`}
                                         >
-                                            <span className={`font-bold text-sm ${isSelected ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
+                                            <span className={`font-bold text-sm capitalize ${isSelected ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
                                                 {extra.name}
                                             </span>
                                             <div className="flex items-center gap-3">
