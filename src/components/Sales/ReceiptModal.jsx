@@ -101,8 +101,13 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
                 >
                   <div className="flex-1 pr-4">
                     <span className="font-bold text-slate-700 block leading-tight">
-                      {item.qty}x {item.name}
+                      {item.qty}x {item.name} {item.size && <span className="opacity-70 font-medium">[{item.size}]</span>}
                     </span>
+                    {item.selectedExtras?.length > 0 && (
+                      <span className="block text-[11px] text-slate-500 my-0.5">
+                        + {item.selectedExtras.map(e => e.name).join(", ")}
+                      </span>
+                    )}
                     {item.note && (
                       <span className="block text-[11px] font-bold text-red-600 my-0.5">
                         💬 {item.note}

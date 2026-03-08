@@ -24,32 +24,31 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
     try {
       console.log("handleConfirmWhatsApp clicked for order:", order);
       // Construct the WhatsApp message
-      let text = `Hola ${order.customer_name || 'Cliente'}, recibimos tu pedido en *${storeConfig?.name || "Comida Rapida"}*.\n\n`;
-      text += `*Resumen de tu Orden:*\n`;
+      let text = `Hola *${order.customer_name || 'Cliente'}*, hemos recibido tu pedido en *${storeConfig?.name || "nuestro local"}*.\n\n`;
+      text += `*🛍️ Resumen de tu Orden:*\n\n`;
 
       const safeItems = order.items || [];
       safeItems.forEach((item) => {
-        let itemDesc = `- ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
+        let itemDesc = `▶ ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
         if (item.size) itemDesc += ` [${item.size}]`;
         item.selectedExtras?.forEach((ext) => {
-          itemDesc += `\n  + ${ext.name}`;
+          itemDesc += `\n   + ${ext.name}`;
         });
-        if (item.note) itemDesc += `\n  📝 Nota: ${item.note}`;
+        if (item.note) itemDesc += `\n   📝 Nota: ${item.note}`;
         text += `${itemDesc}\n`;
       });
 
       text += `\n*TOTAL: $${Number(order.total_usd || 0).toFixed(2)}*`;
       if (rates?.euro?.price) {
-        // We use a clean replace to avoid breaking URL encodings with rare spaces from Intl locales
         const totalBs = (Number(order.total_usd || 0) * rates.euro.price).toFixed(2);
         text += ` / *Bs ${totalBs}*`;
       }
 
       if (order.customer_notes) {
-        text += `\n*Notas:* ${order.customer_notes}`;
+        text += `\n\n*Tipo de Entrega y Notas:* \n${order.customer_notes}`;
       }
 
-      text += `\n\nPor favor indicanos tu metodo de pago para procesarlo.`;
+      text += `\n\n💳 Por favor, indícanos tu método de pago preferido para procesarlo de inmediato.`;
 
       // We open the chat with the CUSTOMER's phone
       const cleanPhone = (order.customer_phone || "").replace(/\D/g, "");

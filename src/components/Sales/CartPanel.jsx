@@ -17,6 +17,7 @@ const SwipeableCartItem = ({
   updateQty,
   removeFromCart,
   onEditNote,
+  onEditOptions,
 }) => {
   const qtyDisplay = item.isWeight ? `${item.qty.toFixed(3)} Kg` : item.qty;
   const [offset, setOffset] = useState(0);
@@ -79,26 +80,72 @@ const SwipeableCartItem = ({
               />
             )}
           </div>
-          <div
-            className="flex-1 min-w-0 pr-1 cursor-pointer"
-            onClick={() => onEditNote && onEditNote(item)}
-          >
-            <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight mb-0.5 sm:mb-1 truncate">
-              {item.name}
-            </p>
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap mt-1">
-              <p className="text-[10px] sm:text-[11px] font-black text-red-600 bg-amber-50 dark:bg-amber-900/30 px-1 sm:px-1.5 rounded">
-                ${parseFloat(item.priceUsd || item.priceUsdt || item.price || 0).toFixed(2)}
-              </p>
-              <p className="text-[10px] sm:text-[11px] font-medium text-slate-400">
-                {formatBs(item.priceUsd * effectiveRate)} Bs
-              </p>
+          <div className="flex-1 min-w-0 pr-1 flex flex-col justify-center py-0.5">
+            {/* Top row: Name and Unit Price */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight truncate">
+                  {item.name}
+                </p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                  ${parseFloat(item.priceUsd || item.priceUsdt || item.price || 0).toFixed(2)} c/u
+                </p>
+              </div>
             </div>
-            {item.note && (
-              <div className="mt-1.5 text-[10px] sm:text-[11px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded-md inline-block">
-                💬 {item.note}
+
+            {/* Middle row: Badges (Size and Extras) */}
+            {((item.size) || (item.selectedExtras?.length > 0)) && (
+              <div className="flex flex-wrap gap-1.5 mb-1.5">
+                {item.size && (
+                  <button
+                    onClick={() => onEditOptions && onEditOptions(item)}
+                    className="group flex items-center gap-1 text-[10px] sm:text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 px-2 py-0.5 rounded-md border border-amber-200/50 dark:border-amber-800/50 transition-colors"
+                    title="Editar opciones"
+                  >
+                    {item.size}
+                  </button>
+                )}
+                {item.selectedExtras?.length > 0 && (
+                  <button
+                    onClick={() => onEditOptions && onEditOptions(item)}
+                    className="group flex items-center gap-1 text-[10px] sm:text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 px-2 py-0.5 rounded-md border border-emerald-200/50 dark:border-emerald-800/50 transition-colors"
+                    title="Editar opciones"
+                  >
+                    <span className="opacity-60 group-hover:opacity-100 transition-opacity">✨</span> {item.selectedExtras.length} xtra
+                  </button>
+                )}
               </div>
             )}
+
+            {/* Bottom row: Note and Action Links */}
+            <div className="flex flex-wrap items-center gap-3">
+              {item.note ? (
+                <button
+                  onClick={() => onEditNote && onEditNote(item)}
+                  className="text-[10px] sm:text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors line-clamp-1 max-w-[140px] text-left"
+                  title={item.note}
+                >
+                  <span className="opacity-60 mr-1">📝</span>{item.note}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onEditNote && onEditNote(item)}
+                  className="text-[10px] sm:text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors flex items-center gap-1"
+                >
+                  + Nota
+                </button>
+              )}
+
+              {/* Opciones link (Only if the product has configurable options) */}
+              {((item.sizes && item.sizes.length > 0) || (item.extras && item.extras.length > 0)) && (
+                <button
+                  onClick={() => onEditOptions && onEditOptions(item)}
+                  className="text-[10px] sm:text-[11px] font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  Editar opciones
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-col items-end shrink-0 gap-1.5 sm:gap-2">
@@ -157,8 +204,11 @@ export default function CartPanel({
   onEditNote,
   onOpenTab,
   triggerHaptic,
+  activeTabName,
+  onEditOptions,
 }) {
   const [customerName, setCustomerName] = useState("");
+  const [showError, setShowError] = useState(false);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -203,14 +253,16 @@ export default function CartPanel({
           </div>
         ) : (
           <div className="space-y-2">
-            {cart.map((item) => (
+            {cart.map((item, index) => (
               <SwipeableCartItem
-                key={item.id}
+                key={index}
                 item={item}
                 effectiveRate={effectiveRate}
                 updateQty={updateQty}
                 removeFromCart={removeFromCart}
                 onEditNote={onEditNote}
+                onEditOptions={onEditOptions}
+                triggerHaptic={triggerHaptic}
               />
             ))}
           </div>
@@ -241,17 +293,34 @@ export default function CartPanel({
             type="text"
             placeholder="Nombre del cliente (opcional)"
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-medium text-sm text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-400"
+            onChange={(e) => {
+              setCustomerName(e.target.value);
+              if (showError) setShowError(false);
+            }}
+            className={`w-full bg-slate-50 dark:bg-slate-800 border ${showError
+                ? "border-red-400 dark:border-red-500 ring-2 ring-red-500/20"
+                : "border-slate-200 dark:border-slate-700"
+              } rounded-xl px-4 py-2 font-medium text-sm text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-400`}
           />
+          {showError && (
+            <p className="text-xs text-red-500 font-medium px-2 py-1 flex items-center gap-1 mt-1 transition-opacity animate-in fade-in slide-in-from-top-1">
+              ⚠️ Ingresa un nombre para poder aplazar la cuenta
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2 w-full mt-2">
           {/* Botón Dejar Abierta */}
           <button
             disabled={cart.length === 0}
-            onClick={() => onOpenTab && onOpenTab(customerName)}
-            className="w-1/3 relative group disabled:opacity-50 disabled:cursor-not-allowed border-2 border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 hover:bg-amber-50 active:scale-95 transition-all"
+            onClick={() => {
+              if (!customerName.trim()) {
+                setShowError(true);
+                return;
+              }
+              onOpenTab && onOpenTab(customerName);
+            }}
+            className="w-1/3 relative group disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/50 hover:border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20 active:scale-95 transition-all"
             title="Guardar cuenta sin cobrar"
           >
             <Clock size={20} strokeWidth={2.5} />

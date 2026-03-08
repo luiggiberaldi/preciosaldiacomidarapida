@@ -84,6 +84,9 @@ export default function ProductCard({
         {/* Sizes preview */}
         {(p.sizes || []).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
+            <span className="text-[9px] font-bold bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+              {p.baseSizeName || "Normal"} ${parseFloat(p.priceUsdt || p.priceUsd || p.price || 0).toFixed(2)}
+            </span>
             {p.sizes.map((s) => (
               <span
                 key={s.id}

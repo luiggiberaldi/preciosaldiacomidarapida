@@ -29,10 +29,12 @@ export function buildReceiptWhatsAppUrl(receipt) {
       const qty = item.isWeight
         ? `${parseFloat(item.qty).toFixed(3)}kg`
         : `${item.qty}x`;
+      const nameWithSize = item.size ? `${item.name} [${item.size}]` : item.name;
       const subUsd = (item.priceUsd * item.qty).toFixed(2);
       const subBs = formatBs(item.priceUsd * item.qty * r.rate);
+      const extrasLine = item.selectedExtras?.length > 0 ? `\n   + ${item.selectedExtras.map(e => e.name).join(", ")}` : "";
       const noteLine = item.note ? `\n   💬 ${item.note}` : "";
-      return `• ${qty} ${item.name} — $${subUsd} · ${subBs} Bs${noteLine}`;
+      return `• ${qty} ${nameWithSize} — $${subUsd} · ${subBs} Bs${extrasLine}${noteLine}`;
     })
     .join("\n");
 

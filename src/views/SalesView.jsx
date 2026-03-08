@@ -14,6 +14,7 @@ import SearchBar from "../components/Sales/SearchBar";
 import CategoryBar from "../components/Sales/CategoryBar";
 import OpenTabsPanel from "../components/Sales/OpenTabsPanel";
 import CartPanel from "../components/Sales/CartPanel";
+import ProductOptionsModal from "../components/Sales/ProductOptionsModal";
 import ReceiptModal from "../components/Sales/ReceiptModal";
 import CheckoutModal from "../components/Sales/CheckoutModal";
 import MiniNav from "../components/Sales/MiniNav";
@@ -58,11 +59,14 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   // Modals
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReceipt, setShowReceipt] = useState(null);
+  const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
   const [hierarchyPending, setHierarchyPending] = useState(null);
   const [weightPending, setWeightPending] = useState(null);
   const [notePending, setNotePending] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [editingCartId, setEditingCartId] = useState(null);
   const [cartCustomerName, setCartCustomerName] = useState("");
+  const [pendingWebOrderId, setPendingWebOrderId] = useState(null);
 
   // Rate config
   const [showRateConfig, setShowRateConfig] = useState(false);
@@ -257,10 +261,22 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
 
   // ── Callbacks ─────────────────────────────────
   const addToCart = useCallback(
-    (product, qtyOverride = null, forceMode = null) => {
+    (product, qtyOverride = null, forceMode = null, size = "", selectedExtras = [], customNote = "") => {
       triggerHaptic && triggerHaptic();
+
+      // Verificar si el producto tiene opciones configuradas que requieran del Modal
+      // Si el evento addToCart viene DEL modal, size o selectedExtras vendrán definidos (o entra forzado).
+      // Si ambos están vacíos (no lo mandó el modal), procedemos a interceptar:
+      const hasComplexOptions = product?.sizes?.length > 0 || product?.extras?.length > 0;
+      if (hasComplexOptions && !size && selectedExtras.length === 0 && !forceMode) {
+        // En lugar de añadir directo, abrimos el modal
+        setSelectedProductForOptions(product);
+        return;
+      }
+
       playAdd();
 
+      // Old logic for unit/weight products
       if (
         product.sellByUnit &&
         product.unitPriceUsd &&
@@ -275,10 +291,14 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         return;
       }
 
+      const itemQty = qtyOverride !== null ? qtyOverride : 1;
+      // Para productos complejos generamos un ID unico uniendo ID real + el tamaño seleccionado
+      // (si piden 2 hamburguesas de dif tamaño, son items separados en carrito)
+      const uniqueId = size ? `${product.id}_${size}` : product.id;
+
       let priceToUse = product.priceUsdt;
       let cartId = product.id;
       let cartName = product.name;
-      let qtyToAdd = qtyOverride || 1;
 
       if (forceMode === "unit") {
         priceToUse = product.unitPriceUsd;
@@ -295,23 +315,23 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         if (existing && qtyOverride)
           return prev.map((i) =>
             i.id === cartId ? { ...i, qty: i.qty + qtyOverride } : i,
+            i.cartId === uniqueId ? { ...i, qty: i.qty + qtyOverride } : i,
           );
         return [
           ...prev,
           {
             ...product,
-            id: cartId,
-            name: cartName,
-            priceUsd: priceToUse,
-            costBs:
-              forceMode === "unit"
-                ? (product.costBs || 0) / (product.unitsPerPackage || 1)
-                : product.costBs || 0,
-            qty: qtyToAdd,
-            isWeight: !!qtyOverride,
-            _originalId: product.id,
-            _mode: forceMode || "package",
-            _unitsPerPackage: product.unitsPerPackage || 1,
+            id: product.id, // Keep original product ID
+            cartId: uniqueId, // Unique ID for cart item
+            qty: itemQty,
+            size: size || null,
+            selectedExtras: selectedExtras,
+            note: customNote || "",
+            isWeight: false,
+            // Forzamos que si tiene size o extras se sobreescriba el precio
+            // La UI del modal ya calcula internamente los totals, pero aquí el POS
+            // recalcula TODO basado en `priceUsd`
+            priceUsd: product.priceUsdt || product.priceUsd || product.price || 0, // Fallback, el modal te lo dará calculado abajo si quieres.
           },
         ];
       });
@@ -319,8 +339,40 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       setHierarchyPending(null);
       searchInputRef.current?.focus();
     },
-    [triggerHaptic, effectiveRate],
+    [triggerHaptic, effectiveRate, playAdd],
   );
+
+  const handleAddToCartWithOptions = (product, qty, size, selectedExtras, note) => {
+    // Calculamos el precio base correcto según si eligió tamaño:
+    const combinedSizes = product?.sizes?.length > 0 ? [
+      {
+        name: product.baseSizeName || "Normal",
+        price: parseFloat(product.priceUsdt || product.priceUsd || product.price || 0)
+      },
+      ...product.sizes
+    ] : [];
+
+    const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0);
+    const sizeObj = combinedSizes.find((s) => s.name === size);
+    const finalBasePrice = sizeObj ? parseFloat(sizeObj.priceUsdt || sizeObj.priceUsd || sizeObj.price) : basePrice;
+
+    // Sumamos los extras
+    const extrasTotal = selectedExtras.reduce((sum, extra) => {
+      return sum + parseFloat(extra.priceUsdt || extra.priceUsd || extra.price || 0);
+    }, 0);
+
+    const fullUnitPrice = finalBasePrice + extrasTotal;
+
+    // Hacemos deep clone del producto y le sobreescribimos el precio para que cart-panel no sufra
+    const customizedProduct = {
+      ...product,
+      priceUsdt: fullUnitPrice,
+      priceUsd: fullUnitPrice,
+      price: fullUnitPrice
+    };
+
+    addToCart(customizedProduct, qty, "from_modal", size, selectedExtras, note);
+  };
 
   const updateQty = (id, delta) => {
     triggerHaptic && triggerHaptic();
@@ -477,12 +529,20 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     };
 
     const existingSales = await storageService.getItem(SALES_KEY, []);
-    const maxSaleNumber = existingSales.reduce(
+
+    // Calcular correlativo diario para la venta local
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const todaySales = existingSales.filter((s) => new Date(s.timestamp) >= startOfDay);
+
+    const maxSaleNumber = todaySales.reduce(
       (mx, s) => Math.max(mx, s.saleNumber || 0),
       0,
     );
-    sale.saleNumber = (maxSaleNumber % 99) + 1;
+    sale.saleNumber = maxSaleNumber + 1;
+
     await storageService.setItem(SALES_KEY, [sale, ...existingSales]);
+
 
     // Deduct stock
     const updatedProducts = products.map((p) => {
@@ -638,6 +698,11 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           triggerHaptic && triggerHaptic();
           setNotePending(item);
         }}
+        onEditOptions={(item) => {
+          triggerHaptic && triggerHaptic();
+          setEditingCartId(item.cartId || item.id);
+          setSelectedProductForOptions(item);
+        }}
         triggerHaptic={triggerHaptic}
         activeTabName={activeTabId ? cartCustomerName : null}
       />
@@ -653,7 +718,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           cartTotalBs={cartTotalBs}
           effectiveRate={effectiveRate}
           tasaBcv={effectiveRate}
-          customerName={cartCustomerName}
+          customerName={cartCustomerName} // Creado desde CartPanel
           customers={customers}
           selectedCustomerId={selectedCustomerId}
           setSelectedCustomerId={setSelectedCustomerId}
@@ -664,6 +729,56 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           triggerHaptic={triggerHaptic}
         />
       )}
+
+      {/* Product Options Modal (Para Tamaños y Extras) */}
+      <ProductOptionsModal
+        isOpen={!!selectedProductForOptions}
+        onClose={() => {
+          setSelectedProductForOptions(null);
+          setEditingCartId(null);
+        }}
+        product={selectedProductForOptions}
+        onAddToCart={(product, qty, size, extras, note) => {
+          if (editingCartId) {
+            // Replace item inside cart instead of creating new payload initially
+            // Recalculate full unit price with edited options
+            const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0);
+            const combinedSizes = product?.sizes?.length > 0 ? [
+              { name: product.baseSizeName || "Normal", price: basePrice },
+              ...product.sizes
+            ] : [];
+            const sizeObj = combinedSizes.find((s) => s.name === size);
+            const finalBasePrice = sizeObj ? parseFloat(sizeObj.priceUsdt || sizeObj.priceUsd || sizeObj.price) : basePrice;
+            const extrasTotal = extras.reduce((sum, extra) => sum + parseFloat(extra.priceUsdt || extra.priceUsd || extra.price || 0), 0);
+            const fullUnitPrice = finalBasePrice + extrasTotal;
+
+            const newUniqueId = size ? `${product.id}_${size}` : product.id;
+
+            setCart((prev) => prev.map((item) => {
+              if (item.cartId === editingCartId || item.id === editingCartId) {
+                return {
+                  ...product,
+                  id: product.id,
+                  cartId: newUniqueId,
+                  qty: qty,
+                  size: size || null,
+                  selectedExtras: extras,
+                  note: note || "",
+                  isWeight: false,
+                  priceUsd: fullUnitPrice,
+                };
+              }
+              return item;
+            }));
+          } else {
+            handleAddToCartWithOptions(product, qty, size, extras, note);
+          }
+          setSelectedProductForOptions(null);
+          setEditingCartId(null);
+        }}
+        exchangeRate={effectiveRate}
+        triggerHaptic={triggerHaptic}
+      />
 
       {/* Receipt Modal */}
       <ReceiptModal

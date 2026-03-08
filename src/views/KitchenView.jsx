@@ -10,6 +10,7 @@ import {
   ChefHat,
   UtensilsCrossed,
   Globe,
+  MessageCircle,
 } from "lucide-react";
 import { showToast } from "../components/Toast";
 import { useSounds } from "../hooks/useSounds";
@@ -30,55 +31,66 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     const sales = await storageService.getItem(SALES_KEY, []);
     const localPending = sales
       .filter((s) => s.kitchenStatus === "PENDING" && s.status !== "ANULADA")
-      .map((s) => ({ ...s, source: "LOCAL", orderNotes: s.notes || "" }));
+      .map((s) => ({ ...s, source: "LOCAL", orderNotes: s.notes || "", customerPhone: s.customerPhone || "" }));
 
     // 2. Fetch Web Orders
     let webPending = [];
     try {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
       const { data, error } = await webSupabase
         .from("web_orders")
         .select("*")
         .eq("tenant_id", getTenantId())
-        .eq("status", "kitchen");
+        .gte("created_at", startOfDay.toISOString())
+        .order("created_at", { ascending: true }); // Important to maintain index
       if (error) throw error;
 
       // Map web_orders to the expected structure
-      webPending = (data || []).map((wo) => {
-        const notes = wo.customer_notes || "";
-        let dType = "LLEVAR";
-        let cleanNotes = notes;
+      webPending = (data || [])
+        .map((wo, index) => {
+          wo._dailySequence = index + 1;
+          return wo;
+        })
+        .filter((wo) => wo.status === "kitchen")
+        .map((wo) => {
+          const notes = wo.customer_notes || "";
+          let dType = "LLEVAR";
+          let cleanNotes = notes;
 
-        if (notes.includes("[EN EL LOCAL]")) {
-          dType = "LOCAL";
-          cleanNotes = notes.replace("[EN EL LOCAL]", "").trim();
-        } else if (notes.includes("[PARA LLEVAR]")) {
-          dType = "LLEVAR";
-          cleanNotes = notes.replace("[PARA LLEVAR]", "").trim();
-        }
+          if (notes.includes("[EN EL LOCAL]")) {
+            dType = "LOCAL";
+            cleanNotes = notes.replace("[EN EL LOCAL]", "").trim();
+          } else if (notes.includes("[PARA LLEVAR]")) {
+            dType = "LLEVAR";
+            cleanNotes = notes.replace("[PARA LLEVAR]", "").trim();
+          }
 
-        return {
-          id: wo.id,
-          source: "WEB",
-          saleNumber: "WEB",
-          customerName: wo.customer_name,
-          deliveryType: dType,
-          orderNotes: cleanNotes,
-          timestamp: wo.updated_at || wo.created_at,
-          items: wo.items.map((wi) => {
-            const extras = wi.selectedExtras?.length
-              ? "Extras: " + wi.selectedExtras.map((e) => e.name).join(", ")
-              : "";
-            const instrucciones = wi.note ? `📝 ${wi.note}` : "";
-            const noteText = [extras, instrucciones].filter(Boolean).join(" | ");
-            return {
-              id: wi.id,
-              name: wi.name + (wi.size ? ` [${wi.size}]` : ""),
-              qty: wi.qty,
-              note: noteText,
-            };
-          }),
-        };
-      });
+          return {
+            id: wo.id,
+            source: "WEB",
+            saleNumber: `W${String(wo._dailySequence).padStart(2, "0")}`,
+            customerName: wo.customer_name,
+            customerPhone: wo.customer_phone || "",
+            deliveryType: dType,
+            orderNotes: cleanNotes,
+            timestamp: wo.updated_at || wo.created_at,
+            items: wo.items.map((wi) => {
+              const extras = wi.selectedExtras?.length
+                ? "Extras: " + wi.selectedExtras.map((e) => e.name).join(", ")
+                : "";
+              const instrucciones = wi.note ? `📝 ${wi.note}` : "";
+              const noteText = [extras, instrucciones].filter(Boolean).join(" | ");
+              return {
+                id: wi.id,
+                name: wi.name + (wi.size ? ` [${wi.size}]` : ""),
+                qty: wi.qty,
+                note: noteText,
+              };
+            }),
+          };
+        });
     } catch (error) {
       console.error("Error fetching web orders for kitchen:", error);
     }
@@ -107,6 +119,25 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleNotifyWhatsApp = (order) => {
+    let phoneToUse = order.customerPhone;
+    if (!phoneToUse) {
+      phoneToUse = window.prompt("Ingresa el número de WhatsApp (ej: 04141234567):");
+    }
+    if (!phoneToUse) return;
+
+    const cleanPhone = phoneToUse.replace(/\D/g, "");
+    if (!cleanPhone) {
+      showToast("Número inválido", "error");
+      return;
+    }
+
+    const correlative = order.source === "WEB" ? order.saleNumber : `#${String(order.saleNumber).padStart(2, "0")}`;
+    const text = `¡Hola ${order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "amigo"}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya está LISTO ✅🚀.\n\n¡Te esperamos!`;
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, "_blank");
+  };
 
   const handleMarkAsReady = async (orderId, source) => {
     if (triggerHaptic) triggerHaptic();
@@ -407,7 +438,16 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                   </div>
 
                   {/* Action */}
-                  <div className="px-4 pb-4">
+                  <div className="px-4 pb-4 flex flex-col gap-2">
+                    {(order.source === "WEB" || order.deliveryType === "LLEVAR") && (
+                      <button
+                        onClick={() => handleNotifyWhatsApp(order)}
+                        className="w-full py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-emerald-200 dark:border-emerald-800/50 flex justify-center gap-2 items-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                      >
+                        <MessageCircle size={16} />
+                        Avisar por WhatsApp
+                      </button>
+                    )}
                     <button
                       onClick={() => handleMarkAsReady(order.id, order.source)}
                       className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-black text-sm uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] flex justify-center gap-2 items-center shadow-lg shadow-emerald-500/20"
