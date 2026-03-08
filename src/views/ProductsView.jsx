@@ -468,7 +468,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const handleUpdateProductPublish = (productId, isPublished) => {
     setProducts((prev) =>
       prev.map((p) =>
-        p.id === productId ? { ...p, publish_web: isPublished } : p
+        p.id === productId ? { ...p, publishWeb: isPublished } : p
       )
     );
   };
