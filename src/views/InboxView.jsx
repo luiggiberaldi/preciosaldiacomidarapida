@@ -215,6 +215,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
                   order={order}
                   rates={rates}
                   isConfirmed={true}
+                  onResendWhatsApp={handleConfirmWhatsApp}
                   actions={
                     <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
                       {/* ACCIÓN SECUNDARIA: Cancelar Venta */}
@@ -266,7 +267,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 };
 
 // Internal sub-component for repeated order structure
-const OrderCard = ({ order, rates, isConfirmed, actions }) => {
+const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => {
   return (
     <div
       className={`bg-white rounded-2xl p-4 shadow-sm border ${isConfirmed ? "border-green-100" : "border-orange-100"}`}
@@ -331,11 +332,22 @@ const OrderCard = ({ order, rates, isConfirmed, actions }) => {
             minute: "2-digit",
           })}
         </span>
-        <span
-          className={`px-2 py-0.5 rounded-full font-medium ${isConfirmed ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}
-        >
-          {isConfirmed ? "WhatsApp Enviado" : "Recién llegado"}
-        </span>
+        {isConfirmed ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onResendWhatsApp && onResendWhatsApp(order);
+            }}
+            className="px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center gap-1 active:scale-95"
+            title="Reenviar mensaje de WhatsApp"
+          >
+            <MessageCircle size={12} /> WhatsApp Enviado
+          </button>
+        ) : (
+          <span className="px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+            Recién llegado
+          </span>
+        )}
       </div>
 
       {actions}
