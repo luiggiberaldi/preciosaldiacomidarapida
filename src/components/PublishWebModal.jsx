@@ -43,7 +43,16 @@ export default function PublishWebModal({
                     image_url: product.image || "",
                     is_available: product.available !== false,
                     prep_time: String(product.prepTime ?? "10"),
-                    sizes: product.sizes?.length > 0 ? [{ id: "base", name: product.baseSizeName || "Normal", price: parseFloat(product.priceUsdt || product.priceUsd || product.price || 0) || 0 }, ...product.sizes] : [],
+                    sizes: (() => {
+                        if (!product.sizes || product.sizes.length === 0) return [];
+                        const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0) || 0;
+                        const userSetBaseName = product.baseSizeName && product.baseSizeName.trim() !== "" && product.baseSizeName !== "Normal";
+                        const sizeHasBasePrice = product.sizes.some(s => parseFloat(s.priceUsdt || s.priceUsd || s.price || 0) === basePrice);
+                        if (userSetBaseName || !sizeHasBasePrice) {
+                            return [{ id: "base", name: product.baseSizeName || "Normal", price: basePrice }, ...product.sizes];
+                        }
+                        return product.sizes;
+                    })(),
                     extras: product.extras || [],
                     updated_at: new Date().toISOString(),
                 };

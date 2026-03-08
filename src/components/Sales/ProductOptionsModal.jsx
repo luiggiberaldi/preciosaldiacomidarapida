@@ -15,14 +15,21 @@ export default function ProductOptionsModal({
     const [note, setNote] = useState("");
 
     // Generar array unificado de tamaños (Base + Adicionales)
-    // Generar array unificado de tamaños (Base + Adicionales) solo si existen tamaños explícitamente registrados
-    const combinedSizes = product?.sizes && product.sizes.length > 0 ? [
-        {
-            name: product.baseSizeName || "Normal",
-            price: parseFloat(product.priceUsdt || product.priceUsd || product.price || 0)
-        },
-        ...product.sizes
-    ] : [];
+    // Filtramos el tamaño base 'Normal' si se detecta que el pricing es engañoso o ya cubierto
+    const combinedSizes = (() => {
+        if (!product?.sizes || product.sizes.length === 0) return [];
+        const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0);
+        const userSetBaseName = product.baseSizeName && product.baseSizeName.trim() !== "" && product.baseSizeName !== "Normal";
+        const getPriceValue = (obj) => parseFloat(obj?.priceUsdt || obj?.priceUsd || obj?.price_usd || obj?.price || 0);
+
+        // Retiramos el tamaño "Normal" si existe otro tamaño con el mismo precio (presumiblemente el usuario re-definió el base)
+        const sizeHasBasePrice = product.sizes.some(s => getPriceValue(s) === basePrice);
+
+        if (userSetBaseName || !sizeHasBasePrice) {
+            return [{ name: product.baseSizeName || "Normal", price: basePrice }, ...product.sizes];
+        }
+        return [...product.sizes];
+    })();
 
     // Reset state when product changes or modal opens
     useEffect(() => {
