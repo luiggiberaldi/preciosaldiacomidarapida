@@ -65,6 +65,9 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
           } else if (notes.includes("[PARA LLEVAR]")) {
             dType = "LLEVAR";
             cleanNotes = notes.replace("[PARA LLEVAR]", "").trim();
+          } else if (notes.includes("[DELIVERY]")) {
+            dType = "DELIVERY";
+            cleanNotes = notes.replace("[DELIVERY]", "").trim();
           }
 
           return {
@@ -365,6 +368,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                       <div className="flex flex-col gap-1">
                         <span
                           className={`text-[10px] font-black px-2 py-0.5 rounded-md ${order.deliveryType === "LLEVAR" ||
+                            order.deliveryType === "DELIVERY" ||
                             order.source === "WEB"
                             ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                             : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
@@ -372,9 +376,11 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                         >
                           {order.source === "WEB"
                             ? "🌐 PEDIDO WEB"
-                            : order.deliveryType === "LLEVAR"
-                              ? "📦 LLEVAR"
-                              : "🍽️ LOCAL"}
+                            : order.deliveryType === "DELIVERY"
+                              ? "🛵 DELIVERY"
+                              : order.deliveryType === "LLEVAR"
+                                ? "📦 LLEVAR"
+                                : "🍽️ LOCAL"}
                         </span>
                         {order.customerName &&
                           order.customerName !== "Consumidor Final" && (
@@ -439,15 +445,17 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
                   {/* Action */}
                   <div className="px-4 pb-4 flex flex-col gap-2">
-                    {(order.source === "WEB" || order.deliveryType === "LLEVAR") && (
-                      <button
-                        onClick={() => handleNotifyWhatsApp(order)}
-                        className="w-full py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-emerald-200 dark:border-emerald-800/50 flex justify-center gap-2 items-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                      >
-                        <MessageCircle size={16} />
-                        Avisar por WhatsApp
-                      </button>
-                    )}
+                    {(order.source === "WEB" ||
+                      order.deliveryType === "LLEVAR" ||
+                      order.deliveryType === "DELIVERY") && (
+                        <button
+                          onClick={() => handleNotifyWhatsApp(order)}
+                          className="w-full py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-emerald-200 dark:border-emerald-800/50 flex justify-center gap-2 items-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                        >
+                          <MessageCircle size={16} />
+                          Avisar por WhatsApp
+                        </button>
+                      )}
                     <button
                       onClick={() => handleMarkAsReady(order.id, order.source)}
                       className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-black text-sm uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] flex justify-center gap-2 items-center shadow-lg shadow-emerald-500/20"
