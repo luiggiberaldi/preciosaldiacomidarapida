@@ -51,7 +51,7 @@ export default function ProductCard({
           </div>
         )}
         {/* Prep time badge */}
-        {p.prepTime && !isUnavailable && (
+        {p.prepTime !== undefined && p.prepTime !== "0" && p.prepTime !== 0 && !isUnavailable && (
           <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
             <Clock size={8} /> {p.prepTime} min
           </div>

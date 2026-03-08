@@ -112,6 +112,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const [available, setAvailable] = useState(true);
   const [sizes, setSizes] = useState([]);
   const [extras, setExtras] = useState([]);
+  const [baseSizeName, setBaseSizeName] = useState("");
 
   // Form State (Category create)
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -247,7 +248,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           image_url: p.image || "",
           is_available: true,
           prep_time: String(p.prepTime || "10"),
-          sizes: p.sizes || [],
+          sizes: p.sizes?.length > 0 ? [{ id: "base", name: p.baseSizeName || "Normal", price: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0 }, ...p.sizes] : [],
           extras: p.extras || [],
           updated_at: new Date().toISOString(),
         }));
@@ -312,6 +313,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       available: available !== false,
       sizes: sizes || [],
       extras: extras || [],
+      baseSizeName: baseSizeName || "",
     };
 
     let newProducts;
@@ -374,6 +376,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     setAvailable(product.available !== false);
     setSizes(product.sizes || []);
     setExtras(product.extras || []);
+    setBaseSizeName(product.baseSizeName || "");
 
     setIsModalOpen(true);
   };
@@ -413,6 +416,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     setAvailable(true);
     setSizes([]);
     setExtras([]);
+    setBaseSizeName("");
   };
 
   // Gestionar Categorias
@@ -744,6 +748,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         setSizes={setSizes}
         extras={extras}
         setExtras={setExtras}
+        baseSizeName={baseSizeName}
+        setBaseSizeName={setBaseSizeName}
         handleImageUpload={handleImageUpload}
         handleSave={handleSave}
         categories={categories}

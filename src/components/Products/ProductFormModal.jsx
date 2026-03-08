@@ -21,6 +21,7 @@ import {
 import { Modal } from "../Modal";
 
 const PREP_TIMES = [
+  { value: 0, label: "No aplica" },
   { value: 5, label: "5 min" },
   { value: 10, label: "10 min" },
   { value: 15, label: "15 min" },
@@ -60,6 +61,8 @@ export default function ProductFormModal({
   setSizes,
   extras,
   setExtras,
+  baseSizeName,
+  setBaseSizeName,
 
   handleImageUpload,
   handleSave,
@@ -286,9 +289,18 @@ export default function ProductFormModal({
             <DollarSign size={10} /> {(sizes || []).length > 0 ? "Precio Base (Tamaño Principal)" : "Precio de venta"}
           </label>
           {(sizes || []).length > 0 && (
-            <p className="text-[10px] text-amber-500 mb-2 ml-1 leading-tight">
-              Al tener tamaños configurados, este precio actúa como la opción por defecto. Los otros tamaños reemplazarán este valor en el carrito.
-            </p>
+            <div className="mb-3">
+              <input
+                type="text"
+                value={baseSizeName}
+                onChange={(e) => setBaseSizeName(e.target.value)}
+                placeholder="Nombre del Tamaño (Ej: Sencillo, Normal)"
+                className="w-full bg-amber-50 dark:bg-amber-900/10 border-2 border-amber-200 dark:border-amber-800/40 p-3 rounded-xl font-bold text-amber-700 dark:text-amber-400 outline-none focus:border-amber-500 text-sm transition-colors"
+              />
+              <p className="text-[10px] text-amber-500 mt-1.5 ml-1 leading-tight">
+                Al tener tamaños configurados, este precio actúa como la opción por defecto. Los otros tamaños reemplazarán este valor en el carrito.
+              </p>
+            </div>
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="relative">
