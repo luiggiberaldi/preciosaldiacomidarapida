@@ -374,7 +374,7 @@ export default function ProductFormModal({
           >
             <span className="flex items-center gap-1.5">
               <Ruler size={12} className="opacity-50" />
-              Tamanos
+              Tamaños
               {(sizes || []).length > 0 && (
                 <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md text-[10px] font-black">
                   {(sizes || []).length}
