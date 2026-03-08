@@ -479,60 +479,10 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       return showToast("No hay productos para publicar", "warning");
 
     triggerHaptic && triggerHaptic();
-    setShowPublishConfirm(true);
+    setIsPublishWebModalOpen(true);
   };
 
-  const executePublish = async () => {
-    setShowPublishConfirm(false);
-    setIsPublishing(true);
-    try {
-      // First, get all web-ready products (that are active)
-      const tenantId = getTenantId();
-      const activeProducts = products
-        .filter((p) => p.available !== false)
-        .map((p) => ({
-          id: generateProductId(tenantId, p.id),
-          local_id: Number(p.id) || 0,
-          tenant_id: tenantId,
-          name: p.name,
-          description: p.description || "",
-          price_usd: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0,
-          category: p.category || "otros",
-          image_url: p.image || "",
-          is_available: true,
-          prep_time: String(p.prepTime || "10"),
-          sizes: p.sizes || [],
-          extras: p.extras || [],
-          updated_at: new Date().toISOString(),
-        }));
 
-      // Sync. Upsert the active products.
-      // NOTE: For a real production app we'd probably soft-delete others,
-      // but upsert covers the active ones. We could also truncate the table first if we strictly want ONLY local ones.
-
-      // 1. Borrar todos los productos existentes en la web para este tenant
-      await webSupabase
-        .from("web_catalog")
-        .delete()
-        .eq("tenant_id", tenantId);
-
-      // 2. Insertar/Actualizar los productos activos actuales
-      if (activeProducts.length > 0) {
-        const { error } = await webSupabase
-          .from("web_catalog")
-          .upsert(activeProducts, { onConflict: "id" });
-
-        if (error) throw error;
-      }
-
-      showToast("🌐 Menú publicado con éxito", "success");
-    } catch (error) {
-      console.error("Error publicando menú:", error);
-      showToast("Hubo un error al publicar en la web", "error");
-    } finally {
-      setIsPublishing(false);
-    }
-  };
 
   // ─── RENDER ─────────────────────────────────────────────
 

@@ -389,9 +389,9 @@ export default function ProductFormModal({
                 Ej: Sencillo $2.50, Doble $4.00, Triple $5.50
               </p>
 
-              {(sizes || []).map((s) => (
+              {(sizes || []).map((s, index) => (
                 <div
-                  key={s.id}
+                  key={s.id || s.name || index}
                   className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/10 p-2.5 rounded-lg border border-amber-100 dark:border-amber-800/20"
                 >
                   <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white">
@@ -464,9 +464,9 @@ export default function ProductFormModal({
                 Ej: Queso extra +$0.50, Tocino +$1.00
               </p>
 
-              {(extras || []).map((e) => (
+              {(extras || []).map((e, index) => (
                 <div
-                  key={e.id}
+                  key={e.id || e.name || index}
                   className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/10 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-800/20"
                 >
                   <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white">
