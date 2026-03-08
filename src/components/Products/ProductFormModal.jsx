@@ -296,7 +296,7 @@ export default function ProductFormModal({
                 value={baseSizeName}
                 onChange={(e) => setBaseSizeName(e.target.value)}
                 placeholder="Nombre del Tamaño (Ej: Sencillo, Normal)"
-                className="w-full bg-amber-50 dark:bg-amber-900/10 border-2 border-amber-200 dark:border-amber-800/40 p-3 rounded-xl font-bold text-amber-700 dark:text-amber-400 outline-none focus:border-amber-500 text-sm transition-colors"
+                className="w-full bg-amber-50 dark:bg-amber-900/10 border-2 border-amber-200 dark:border-amber-800/40 p-3 rounded-xl font-bold text-amber-700 dark:text-amber-400 outline-none focus:border-amber-500 text-sm capitalize transition-colors"
               />
               <p className="text-[10px] text-amber-500 mt-1.5 ml-1 leading-tight">
                 Al tener tamaños configurados, este precio actúa como la opción por defecto. Los otros tamaños reemplazarán este valor en el carrito.
@@ -363,7 +363,7 @@ export default function ProductFormModal({
                   key={s.id || s.name || index}
                   className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/10 p-2.5 rounded-lg border border-amber-100 dark:border-amber-800/20"
                 >
-                  <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white">
+                  <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white capitalize">
                     {s.name}
                   </span>
                   <span className="text-sm font-black text-amber-600">
@@ -383,7 +383,7 @@ export default function ProductFormModal({
                   value={newSizeName}
                   onChange={(e) => setNewSizeName(e.target.value)}
                   placeholder="Nombre"
-                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 transition-colors"
+                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 capitalize transition-colors"
                 />
                 <input
                   type="number"
@@ -487,7 +487,7 @@ export default function ProductFormModal({
                   key={e.id || e.name || index}
                   className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/10 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-800/20"
                 >
-                  <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white">
+                  <span className="flex-1 text-sm font-bold text-slate-700 dark:text-white capitalize">
                     {e.name}
                   </span>
                   <span className="text-sm font-black text-emerald-600">
@@ -507,7 +507,7 @@ export default function ProductFormModal({
                   value={newExtraName}
                   onChange={(e) => setNewExtraName(e.target.value)}
                   placeholder="Nombre"
-                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-colors"
+                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 capitalize transition-colors"
                 />
                 <input
                   type="number"
