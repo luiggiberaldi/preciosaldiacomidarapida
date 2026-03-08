@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Package,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { formatBs } from "../../utils/calculatorUtils";
 
@@ -154,6 +155,7 @@ export default function CartPanel({
   onCheckout,
   onClearCart,
   onEditNote,
+  onOpenTab,
   triggerHaptic,
 }) {
   const [customerName, setCustomerName] = useState("");
@@ -244,20 +246,30 @@ export default function CartPanel({
           />
         </div>
 
-        <button
-          disabled={cart.length === 0}
-          onClick={() => onCheckout(customerName)}
-          className="w-full relative group disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-        >
-          <div className="absolute inset-0 bg-red-500 rounded-xl sm:rounded-2xl shadow-red-500/30 shadow-lg blur-[2px] opacity-70 group-active:opacity-100 group-hover:blur-[4px] transition-all"></div>
-          <div className="relative w-full py-3 sm:py-4 bg-red-500 text-white font-black text-sm sm:text-lg rounded-xl sm:rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-wide">
-            <CheckCircle
-              size={18}
-              className="sm:w-[22px] sm:h-[22px] opacity-80"
-            />
-            COBRAR PEDIDO
-          </div>
-        </button>
+        <div className="flex gap-2 w-full mt-2">
+          {/* Botón Dejar Abierta */}
+          <button
+            disabled={cart.length === 0}
+            onClick={() => onOpenTab && onOpenTab(customerName)}
+            className="w-1/3 relative group disabled:opacity-50 disabled:cursor-not-allowed border-2 border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 hover:bg-amber-50 active:scale-95 transition-all"
+            title="Guardar cuenta sin cobrar"
+          >
+            <Clock size={20} strokeWidth={2.5} />
+          </button>
+
+          {/* Botón Cobrar */}
+          <button
+            disabled={cart.length === 0}
+            onClick={() => onCheckout(customerName)}
+            className="w-2/3 relative group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="absolute inset-0 bg-red-500 rounded-xl sm:rounded-2xl shadow-red-500/30 shadow-lg blur-[2px] opacity-70 group-active:opacity-100 group-hover:blur-[4px] transition-all"></div>
+            <div className="relative w-full py-3 sm:py-4 bg-red-500 text-white font-black text-sm sm:text-lg rounded-xl sm:rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-wide">
+              <CheckCircle size={18} className="sm:w-[22px] sm:h-[22px] opacity-80" />
+              COBRAR
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

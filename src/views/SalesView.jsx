@@ -4,6 +4,7 @@ import { webSupabase } from "../utils/supabase";
 import { useSounds } from "../hooks/useSounds";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { useNotifications } from "../hooks/useNotifications";
+import { useOpenTabs } from "../hooks/useOpenTabs";
 import { getActivePaymentMethods } from "../config/paymentMethods";
 import { showToast } from "../components/Toast";
 
@@ -11,6 +12,7 @@ import { showToast } from "../components/Toast";
 import SalesHeader from "../components/Sales/SalesHeader";
 import SearchBar from "../components/Sales/SearchBar";
 import CategoryBar from "../components/Sales/CategoryBar";
+import OpenTabsPanel from "../components/Sales/OpenTabsPanel";
 import CartPanel from "../components/Sales/CartPanel";
 import ReceiptModal from "../components/Sales/ReceiptModal";
 import CheckoutModal from "../components/Sales/CheckoutModal";
@@ -33,9 +35,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   const [isLoading, setIsLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
-  const [pendingWebOrderId, setPendingWebOrderId] = useState(null);
 
-  // Cart
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem("pending_cart");
@@ -44,6 +44,10 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       return [];
     }
   });
+
+  // Open Tabs
+  const { openTabs, addTab, removeTab, updateTab } = useOpenTabs();
+  const [activeTabId, setActiveTabId] = useState(null);
 
   // Search
   const searchInputRef = useRef(null);
@@ -347,6 +351,38 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     searchInputRef.current?.focus();
   };
 
+  const handleOpenTab = (customerName) => {
+    if (cart.length === 0) return;
+    triggerHaptic && triggerHaptic();
+
+    if (activeTabId) {
+      updateTab(activeTabId, cart);
+      showToast(`Cuenta actualizada: ${customerName || activeTabId}`, "success");
+    } else {
+      const tabName = customerName || `Mesa/Cuenta #${openTabs.length + 1}`;
+      addTab(tabName, cart);
+      showToast(`Cuenta guardada: ${tabName}`, "success");
+    }
+
+    setCart([]);
+    setCartCustomerName("");
+    setActiveTabId(null);
+  };
+
+  const handleSelectOpenTab = (tab) => {
+    // Si la caja actual tiene cosas sin guardar, habría que avisar, pero por ahora asumimos que 
+    // lo cargan de golpe (para evitar perder items, si hay carrito lo tiramos a guardar primero o lo borramos).
+    // Implementación robusta: reescribimos `cart` y guardamos su ID
+    setCart(tab.items);
+    setCartCustomerName(tab.name || "");
+    setActiveTabId(tab.id);
+  };
+
+  const handleRemoveOpenTab = (tabId) => {
+    removeTab(tabId);
+    showToast("Cuenta eliminada permanentemente.", "error");
+  };
+
   const handleSearchKeyDown = (e) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -571,6 +607,14 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         />
       )}
 
+      {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
+      <OpenTabsPanel
+        openTabs={openTabs}
+        onSelectTab={handleSelectOpenTab}
+        onRemoveTab={handleRemoveOpenTab}
+        triggerHaptic={triggerHaptic}
+      />
+
       {/* Cart */}
       <CartPanel
         cart={cart}
@@ -585,6 +629,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           setCartCustomerName(name);
           setShowCheckout(true);
         }}
+        onOpenTab={handleOpenTab}
         onClearCart={() => {
           triggerHaptic && triggerHaptic();
           setShowClearCartConfirm(true);
@@ -594,6 +639,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
           setNotePending(item);
         }}
         triggerHaptic={triggerHaptic}
+        activeTabName={activeTabId ? cartCustomerName : null}
       />
 
       {/* Checkout Modal */}
