@@ -18,7 +18,7 @@ export const webSupabase = createClient(webSupaUrl, webSupaAnonKey, {
 // Multi-Tenant: ID del negocio actual (se asigna al activar licencia)
 const DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001";
 export const getTenantId = () =>
-  localStorage.getItem("tenant_id") || DEFAULT_TENANT;
+  localStorage.getItem("pda_device_id") || DEFAULT_TENANT;
 
 // Utilidad para convertir el ID int local (ej: 1001) a un UUID de Supabase
 // Usamos UUID v5 basado en un namespace del tenant, para que siempre sea igual.
