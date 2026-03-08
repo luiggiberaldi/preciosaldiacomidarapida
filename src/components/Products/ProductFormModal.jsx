@@ -383,7 +383,7 @@ export default function ProductFormModal({
                   value={newSizeName}
                   onChange={(e) => setNewSizeName(e.target.value)}
                   placeholder="Nombre"
-                  className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 transition-colors"
+                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 transition-colors"
                 />
                 <input
                   type="number"
@@ -391,11 +391,11 @@ export default function ProductFormModal({
                   value={newSizePrice}
                   onChange={(e) => setNewSizePrice(e.target.value)}
                   placeholder="$"
-                  className="w-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 transition-colors"
+                  className="w-[4.5rem] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-amber-500 transition-colors"
                 />
                 <button
                   onClick={handleAddSize}
-                  className="px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg active:scale-95 transition-all"
+                  className="px-3 shrink-0 bg-amber-500 hover:bg-amber-600 text-white rounded-lg active:scale-95 transition-all"
                 >
                   <Plus size={16} />
                 </button>
@@ -507,7 +507,7 @@ export default function ProductFormModal({
                   value={newExtraName}
                   onChange={(e) => setNewExtraName(e.target.value)}
                   placeholder="Nombre"
-                  className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-colors"
+                  className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-colors"
                 />
                 <input
                   type="number"
@@ -515,11 +515,11 @@ export default function ProductFormModal({
                   value={newExtraPrice}
                   onChange={(e) => setNewExtraPrice(e.target.value)}
                   placeholder="$"
-                  className="w-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-colors"
+                  className="w-[4.5rem] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-colors"
                 />
                 <button
                   onClick={handleAddExtra}
-                  className="px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg active:scale-95 transition-all"
+                  className="px-3 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg active:scale-95 transition-all"
                 >
                   <Plus size={16} />
                 </button>
