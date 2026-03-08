@@ -15,7 +15,8 @@ export default function ProductOptionsModal({
     const [note, setNote] = useState("");
 
     // Generar array unificado de tamaños (Base + Adicionales)
-    const combinedSizes = product?.sizes?.length > 0 ? [
+    // Generar array unificado de tamaños (Base + Adicionales) solo si existen tamaños explícitamente registrados
+    const combinedSizes = product?.sizes && product.sizes.length > 0 ? [
         {
             name: product.baseSizeName || "Normal",
             price: parseFloat(product.priceUsdt || product.priceUsd || product.price || 0)
