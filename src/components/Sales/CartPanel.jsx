@@ -41,7 +41,7 @@ const SwipeableCartItem = ({
 
   const handleTouchEnd = () => {
     if (offset < -50) {
-      removeFromCart(item.id);
+      removeFromCart(item.cartId || item.id);
     } else {
       setOffset(0);
     }
@@ -156,7 +156,7 @@ const SwipeableCartItem = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                updateQty(item.id, item.isWeight ? -0.1 : -1);
+                updateQty(item.cartId || item.id, item.isWeight ? -0.1 : -1);
               }}
               className="w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors rounded-l-md active:bg-slate-200 dark:active:bg-slate-700"
             >
@@ -168,7 +168,7 @@ const SwipeableCartItem = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                updateQty(item.id, item.isWeight ? 0.1 : 1);
+                updateQty(item.cartId || item.id, item.isWeight ? 0.1 : 1);
               }}
               className="w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors rounded-r-md active:bg-slate-200 dark:active:bg-slate-700"
             >
@@ -180,7 +180,7 @@ const SwipeableCartItem = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            removeFromCart(item.id);
+            removeFromCart(item.cartId || item.id);
           }}
           className="absolute -top-1 -right-1 sm:top-2 sm:right-2 p-1.5 bg-red-50 dark:bg-red-900/40 text-red-500 sm:bg-transparent sm:text-slate-300 sm:hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-full sm:rounded-lg"
         >
@@ -298,8 +298,8 @@ export default function CartPanel({
               if (showError) setShowError(false);
             }}
             className={`w-full bg-slate-50 dark:bg-slate-800 border ${showError
-                ? "border-red-400 dark:border-red-500 ring-2 ring-red-500/20"
-                : "border-slate-200 dark:border-slate-700"
+              ? "border-red-400 dark:border-red-500 ring-2 ring-red-500/20"
+              : "border-slate-200 dark:border-slate-700"
               } rounded-xl px-4 py-2 font-medium text-sm text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-400`}
           />
           {showError && (

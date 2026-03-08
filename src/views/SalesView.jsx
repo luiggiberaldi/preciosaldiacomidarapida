@@ -292,9 +292,15 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       }
 
       const itemQty = qtyOverride !== null ? qtyOverride : 1;
-      // Para productos complejos generamos un ID unico uniendo ID real + el tamaño seleccionado
-      // (si piden 2 hamburguesas de dif tamaño, son items separados en carrito)
-      const uniqueId = size ? `${product.id}_${size}` : product.id;
+
+      const extrasKey = selectedExtras
+        .map((e) => e.name)
+        .sort()
+        .join("|");
+
+      // Para productos complejos generamos un ID unico uniendo ID real + el tamaño seleccionado + extras + nota
+      // (si piden 2 hamburguesas de dif tamaño o extras, son items separados en carrito)
+      const uniqueId = `${product.id}_${size || 'base'}_${extrasKey || 'noext'}_${customNote.replace(/\s+/g, '') || 'nonote'}`;
 
       let priceToUse = product.priceUsdt;
       let cartId = product.id;
@@ -307,16 +313,20 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       }
 
       setCart((prev) => {
-        const existing = prev.find((i) => i.id === cartId);
-        if (existing && !qtyOverride)
-          return prev.map((i) =>
-            i.id === cartId ? { ...i, qty: i.qty + 1 } : i,
-          );
-        if (existing && qtyOverride)
-          return prev.map((i) =>
-            i.id === cartId ? { ...i, qty: i.qty + qtyOverride } : i,
-            i.cartId === uniqueId ? { ...i, qty: i.qty + qtyOverride } : i,
-          );
+        const existingIndex = prev.findIndex((i) => i.cartId === uniqueId);
+
+        if (existingIndex >= 0 && !qtyOverride) {
+          const newCart = [...prev];
+          newCart[existingIndex].qty += 1;
+          return newCart;
+        }
+
+        if (existingIndex >= 0 && qtyOverride) {
+          const newCart = [...prev];
+          newCart[existingIndex].qty += qtyOverride;
+          return newCart;
+        }
+
         return [
           ...prev,
           {
@@ -380,7 +390,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     setCart((prev) =>
       prev
         .map((i) => {
-          if (i.id !== id) return i;
+          if (i.cartId !== id && i.id !== id) return i; // Support either ID type
           let newQty = Math.round((i.qty + delta) * 1000) / 1000;
           if (newQty < 0) newQty = 0;
           return newQty === 0 ? null : { ...i, qty: newQty };
@@ -393,12 +403,12 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   const removeFromCart = (id) => {
     triggerHaptic && triggerHaptic();
     playRemove();
-    setCart((prev) => prev.filter((i) => i.id !== id));
+    setCart((prev) => prev.filter((i) => i.cartId !== id && i.id !== id));
     searchInputRef.current?.focus();
   };
 
   const updateItemNote = (id, note) => {
-    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, note } : i)));
+    setCart((prev) => prev.map((i) => (i.cartId === id || i.id === id ? { ...i, note } : i)));
     setNotePending(null);
     searchInputRef.current?.focus();
   };
