@@ -247,7 +247,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           category: p.category || "otros",
           image_url: p.image || "",
           is_available: true,
-          prep_time: String(p.prepTime || "10"),
+          prep_time: String(p.prepTime ?? "10"),
           sizes: p.sizes?.length > 0 ? [{ id: "base", name: p.baseSizeName || "Normal", price: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0 }, ...p.sizes] : [],
           extras: p.extras || [],
           updated_at: new Date().toISOString(),
@@ -309,7 +309,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
       unit: "unidad",
       category: category,
       description: description || "",
-      prepTime: prepTime || 10,
+      prepTime: prepTime ?? 10,
       available: available !== false,
       sizes: sizes || [],
       extras: extras || [],
@@ -372,7 +372,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
 
     // Food-specific fields
     setDescription(product.description || "");
-    setPrepTime(product.prepTime || 10);
+    setPrepTime(product.prepTime ?? 10);
     setAvailable(product.available !== false);
     setSizes(product.sizes || []);
     setExtras(product.extras || []);

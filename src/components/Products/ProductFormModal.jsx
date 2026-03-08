@@ -230,7 +230,7 @@ export default function ProductFormModal({
                 <Clock size={10} /> Preparacion
               </label>
               <select
-                value={prepTime || 10}
+                value={prepTime ?? 10}
                 onChange={(e) => setPrepTime(parseInt(e.target.value))}
                 className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none focus:border-red-500 transition-colors text-sm"
               >
