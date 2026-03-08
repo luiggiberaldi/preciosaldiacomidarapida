@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { storageService } from "../utils/storageService";
+import { webSupabase } from "../utils/supabase";
 import { useSounds } from "../hooks/useSounds";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { useNotifications } from "../hooks/useNotifications";
@@ -32,6 +33,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   const [isLoading, setIsLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
+  const [pendingWebOrderId, setPendingWebOrderId] = useState(null);
 
   // Cart
   const [cart, setCart] = useState(() => {
@@ -203,11 +205,22 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       searchInputRef.current.focus();
   }, [showCheckout, showReceipt]);
 
-  // Handle cart injection from other views (e.g. 1-Click Reorder in CustomersView)
+  // Handle cart injection from other views (e.g. 1-Click Reorder in CustomersView or Web Orders)
   useEffect(() => {
     const handleInjectCart = (e) => {
-      if (e.detail && Array.isArray(e.detail)) {
-        setCart(e.detail);
+      if (e.detail) {
+        if (Array.isArray(e.detail)) {
+          setCart(e.detail);
+        } else if (e.detail.items && Array.isArray(e.detail.items)) {
+          setCart(e.detail.items);
+          if (e.detail.webOrderId) {
+            setPendingWebOrderId(e.detail.webOrderId);
+            if (e.detail.clientName) setCartCustomerName(e.detail.clientName);
+            if (e.detail.action === "checkout") {
+              setShowCheckout(true);
+            }
+          }
+        }
         playAdd();
       }
     };
@@ -458,6 +471,21 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       );
       setCustomers(updatedCustomers);
       await storageService.setItem("my_customers_v1", updatedCustomers);
+    }
+
+    // Complete Web Order if exists
+    if (pendingWebOrderId) {
+      try {
+        console.log(`Marcando webOrder ${pendingWebOrderId} como completada...`);
+        const { error } = await webSupabase
+          .from("web_orders")
+          .update({ status: "completed" })
+          .eq("id", pendingWebOrderId);
+        if (error) console.error("Error updating web order to completed:", error);
+      } catch (err) {
+        console.error("Failed to update web order", err);
+      }
+      setPendingWebOrderId(null);
     }
 
     setShowReceipt(sale);

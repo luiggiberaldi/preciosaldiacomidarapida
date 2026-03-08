@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Clock, Pencil, Trash2 } from "lucide-react";
+import { Tag, Clock, Pencil, Trash2, CircleFadingPlus } from "lucide-react";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "../../config/categories";
 import { formatUsd, formatBs } from "../../utils/calculatorUtils";
 
@@ -97,8 +97,8 @@ export default function ProductCard({
 
         {/* Extras count */}
         {(p.extras || []).length > 0 && (
-          <p className="text-[9px] font-bold text-green-500 mt-1">
-            🧀 {p.extras.length} extra{p.extras.length > 1 ? "s" : ""}{" "}
+          <p className="text-[10px] font-bold text-emerald-500 mt-1 flex items-center gap-1.5">
+            <CircleFadingPlus size={12} /> {p.extras.length} extra{p.extras.length > 1 ? "s" : ""}{" "}
             disponible{p.extras.length > 1 ? "s" : ""}
           </p>
         )}

@@ -115,10 +115,23 @@ export function useNotifications() {
     [send],
   );
 
+  /** Nuevo pedido web recibido */
+  const notifyNewWebOrder = useCallback(
+    (orderName, orderTotal) => {
+      send(
+        "🍔 ¡Nuevo Pedido Web!",
+        `${orderName} acaba de realizar un pedido por $${Number(orderTotal).toFixed(2)}.`,
+        "new-web-order"
+      );
+    },
+    [send]
+  );
+
   return {
     requestPermission,
     notifyLowStock,
     notifySaleComplete,
     notifyCierrePendiente,
+    notifyNewWebOrder,
   };
 }

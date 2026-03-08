@@ -6,6 +6,12 @@ import {
   Coffee,
   Package,
   LayoutGrid,
+  Beef,
+  CupSoda,
+  Tag,
+  IceCream,
+  CircleFadingPlus,
+  Box,
 } from "lucide-react";
 
 // Categorías de comida rápida
@@ -24,6 +30,13 @@ export { FOOD_CATEGORIES as BODEGA_CATEGORIES };
 // Lucide icon map for factory categories (if you prefer rendering SVGs over Emojis for specific IDs)
 export const CATEGORY_ICONS = {
   todos: LayoutGrid,
+  hamburguesas: Beef,
+  perros: Sandwich,
+  combos: Package,
+  bebidas: CupSoda,
+  extras: CircleFadingPlus,
+  postres: IceCream,
+  otros: Box,
 };
 
 export const UNITS = [

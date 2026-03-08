@@ -87,6 +87,10 @@ export function useRates() {
           return await res.json();
         } catch (e) {
           clearTimeout(id);
+          // Only log if it's not a generic abort/connection error
+          if (e.name !== "AbortError" && !e.message.includes("Failed to fetch")) {
+            console.debug("Silent fetch error:", e.message);
+          }
           return null;
         }
       };
@@ -98,7 +102,7 @@ export function useRates() {
           );
           if (data?.result === "success" && data.conversion_rates?.EUR)
             return 1 / data.conversion_rates.EUR;
-        } catch (e) {}
+        } catch (e) { }
         return DEFAULT_EUR_USD_RATIO;
       };
 
@@ -188,8 +192,8 @@ export function useRates() {
           // Fallback: DolarApi
           const oficial = Array.isArray(bcvFallbackData)
             ? bcvFallbackData.find(
-                (d) => d.fuente === "oficial" || d.nombre === "Oficial",
-              )
+              (d) => d.fuente === "oficial" || d.nombre === "Oficial",
+            )
             : null;
 
           if (oficial?.promedio > 0) {

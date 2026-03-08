@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 import { webSupabase, getTenantId } from "../utils/supabase";
+import { useNotifications } from "./useNotifications";
+import { showToast } from "../components/Toast";
+
+// Keep track of already notified orders to prevent duplicate alerts
+// if useWebOrders is mounted in multiple components
+const notifiedOrders = new Set();
 
 // Sound effect for new orders
 const playOrderSound = () => {
@@ -35,6 +41,7 @@ const playOrderSound = () => {
 export const useWebOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { notifyNewWebOrder } = useNotifications();
 
   const fetchOrders = async () => {
     try {
@@ -71,9 +78,15 @@ export const useWebOrders = () => {
           filter: `tenant_id=eq.${getTenantId()}`,
         },
         (payload) => {
-          // Play sound if it is a NEW order (INSERT)
+          // Play sound and show notifications if it is a NEW order (INSERT)
           if (payload.eventType === "INSERT") {
-            playOrderSound();
+            const newOrder = payload.new;
+            if (newOrder && newOrder.id && !notifiedOrders.has(newOrder.id)) {
+              notifiedOrders.add(newOrder.id);
+              playOrderSound();
+              showToast(`¡Nuevo pedido de ${newOrder.customer_name}!`, "success", 5000);
+              notifyNewWebOrder(newOrder.customer_name, newOrder.total_usd);
+            }
           }
 
           // Refresh the whole list to keep it simple and avoid stale state bugs

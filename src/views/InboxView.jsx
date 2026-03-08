@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { Smartphone, Check, ChefHat, MessageCircle, X } from "lucide-react";
+import { Smartphone, Check, ChefHat, MessageCircle, X, Edit, CreditCard, Trash2 } from "lucide-react";
 import { useWebOrders } from "../hooks/useWebOrders";
 import { formatBs } from "../utils/calculatorUtils";
 import ConfirmDialog from "../components/ConfirmDialog";
 
-export const InboxView = ({ rates, storeConfig }) => {
+export const InboxView = ({ rates, storeConfig, onNavigate }) => {
   const { orders, loading, updateOrderStatus } = useWebOrders();
   const [confirmCancel, setConfirmCancel] = useState(null);
 
@@ -21,47 +21,90 @@ export const InboxView = ({ rates, storeConfig }) => {
   );
 
   const handleConfirmWhatsApp = async (order) => {
-    // Construct the WhatsApp message
-    let text = `Hola ${order.customer_name}, recibimos tu pedido en *${storeConfig?.name || "Comida Rapida"}*.\n\n`;
-    text += `*Resumen de tu Orden:*\n`;
+    try {
+      console.log("handleConfirmWhatsApp clicked for order:", order);
+      // Construct the WhatsApp message
+      let text = `Hola ${order.customer_name || 'Cliente'}, recibimos tu pedido en *${storeConfig?.name || "Comida Rapida"}*.\n\n`;
+      text += `*Resumen de tu Orden:*\n`;
 
-    order.items.forEach((item) => {
-      let itemDesc = `- ${item.qty}x ${item.name} ($${(item.priceUsd * item.qty).toFixed(2)})`;
-      if (item.size) itemDesc += ` [${item.size}]`;
-      item.selectedExtras?.forEach((ext) => {
-        itemDesc += `\n  + ${ext.name}`;
+      const safeItems = order.items || [];
+      safeItems.forEach((item) => {
+        let itemDesc = `- ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
+        if (item.size) itemDesc += ` [${item.size}]`;
+        item.selectedExtras?.forEach((ext) => {
+          itemDesc += `\n  + ${ext.name}`;
+        });
+        if (item.note) itemDesc += `\n  📝 Nota: ${item.note}`;
+        text += `${itemDesc}\n`;
       });
-      if (item.note) itemDesc += `\n  📝 Nota: ${item.note}`;
-      text += `${itemDesc}\n`;
-    });
 
-    text += `\n*TOTAL: $${order.total_usd.toFixed(2)}*`;
-    if (rates?.euro?.price) {
-      text += ` / *Bs ${formatBs(order.total_usd * rates.euro.price)}*`;
+      text += `\n*TOTAL: $${Number(order.total_usd || 0).toFixed(2)}*`;
+      if (rates?.euro?.price) {
+        // We use a clean replace to avoid breaking URL encodings with rare spaces from Intl locales
+        const totalBs = (Number(order.total_usd || 0) * rates.euro.price).toFixed(2);
+        text += ` / *Bs ${totalBs}*`;
+      }
+
+      if (order.customer_notes) {
+        text += `\n*Notas:* ${order.customer_notes}`;
+      }
+
+      text += `\n\nPor favor indicanos tu metodo de pago para procesarlo.`;
+
+      // We open the chat with the CUSTOMER's phone
+      const cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
+      const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+
+      console.log("Updating order to confirmed status...");
+      // Update status to confirmed
+      await updateOrderStatus(order.id, "confirmed");
+
+      console.log("Opening WhatsApp URL:", waUrl);
+      // Open WhatsApp
+      window.open(waUrl, "_blank");
+    } catch (e) {
+      console.error("Error in handleConfirmWhatsApp:", e);
+      alert("Error procesando la accion: " + e.message);
     }
-
-    if (order.customer_notes) {
-      text += `\n*Notas:* ${order.customer_notes}`;
-    }
-
-    text += `\n\nPor favor indicanos tu metodo de pago para procesarlo.`;
-
-    // We open the chat with the CUSTOMER's phone
-    const cleanPhone = order.customer_phone.replace(/\D/g, "");
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
-
-    // Update status to confirmed
-    await updateOrderStatus(order.id, "confirmed");
-
-    // Open WhatsApp
-    window.open(waUrl, "_blank");
   };
 
-  const handleSendToKitchen = async (orderId) => {
-    await updateOrderStatus(orderId, "kitchen");
+  const handlePassToPos = (order, action = "checkout") => {
+    // Convert Web order items to POS cart format
+    const formattedItems = order.items.map((item) => {
+      const notes = [];
+      if (item.note) notes.push(`Nota: ${item.note}`);
+      if (item.selectedExtras?.length > 0) {
+        notes.push(`Extras: ${item.selectedExtras.map(e => e.name).join(", ")}`);
+      }
+
+      return {
+        id: item.local_id || item.id,
+        name: item.name + (item.size ? ` [${item.size}]` : ""),
+        qty: item.qty || 1,
+        priceUsd: parseFloat(item.priceUsd) || parseFloat(item.price) || 0,
+        costBs: item.costBs || 0,
+        isWeight: false,
+        note: notes.join(" | "),
+        _isWebItem: true
+      };
+    });
+
+    const event = new CustomEvent("inject_cart", {
+      detail: {
+        items: formattedItems,
+        webOrderId: order.id,
+        action: action,
+        clientName: order.customer_name,
+        deliveryType: order.customer_notes?.includes("DELIVERY") ? "LLEVAR" : "LOCAL"
+      }
+    });
+
+    window.dispatchEvent(event);
+    if (onNavigate) onNavigate("ventas");
   };
 
   const handleCancel = (orderId) => {
+    console.log("handleCancel clicked for orderId:", orderId);
     setConfirmCancel(orderId);
   };
 
@@ -120,17 +163,30 @@ export const InboxView = ({ rates, storeConfig }) => {
                   rates={rates}
                   actions={
                     <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                      {/* ACCIÓN SECUNDARIA: Ignorar */}
                       <button
-                        onClick={() => handleCancel(order.id)}
-                        className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-600 rounded-xl font-bold active:scale-95 transition-transform text-sm"
+                        onClick={(e) => { e.stopPropagation(); handleCancel(order.id); }}
+                        className="p-2.5 bg-gray-100 text-gray-400 hover:text-red-500 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        title="Ignorar Pedido"
                       >
-                        Ignorar
+                        <Trash2 size={20} />
                       </button>
+
+                      {/* ACCIÓN SECUNDARIA: Editar Localmente */}
                       <button
-                        onClick={() => handleConfirmWhatsApp(order)}
-                        className="flex-[2] flex justify-center items-center gap-2 py-2.5 px-4 bg-green-500 text-white rounded-xl font-bold shadow-lg shadow-green-500/30 active:scale-95 transition-transform"
+                        onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "edit"); }}
+                        className="py-2.5 px-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition-colors active:scale-95 flex items-center justify-center gap-2 pointer-events-auto"
+                        title="Pasar a Caja para Editar"
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <Edit size={16} /> Editar
+                      </button>
+
+                      {/* ACCIÓN PRIMARIA: Whatsapp Confirmación */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleConfirmWhatsApp(order); }}
+                        className="flex-[2] flex justify-center items-center gap-2 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/30 active:scale-95 transition-transform pointer-events-auto"
+                      >
+                        <MessageCircle size={18} />
                         Confirmar WhatsApp
                       </button>
                     </div>
@@ -162,18 +218,31 @@ export const InboxView = ({ rates, storeConfig }) => {
                   isConfirmed={true}
                   actions={
                     <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                      {/* ACCIÓN SECUNDARIA: Cancelar Venta */}
                       <button
-                        onClick={() => handleCancel(order.id)}
-                        className="p-2.5 bg-gray-100 text-gray-500 rounded-xl active:scale-95 transition-transform"
+                        onClick={(e) => { e.stopPropagation(); handleCancel(order.id); }}
+                        className="p-2.5 bg-gray-100 text-gray-400 hover:text-red-500 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        title="Cancelar Venta"
                       >
-                        <X className="w-5 h-5" />
+                        <X size={20} />
                       </button>
+
+                      {/* ACCIÓN SECUNDARIA: Editar Localmente */}
                       <button
-                        onClick={() => handleSendToKitchen(order.id)}
-                        className="flex-1 flex justify-center items-center gap-2 py-2.5 px-4 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
+                        onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "edit"); }}
+                        className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        title="Editar Pedido Libremente"
                       >
-                        <ChefHat className="w-4 h-4" />
-                        Pagado, enviar a Cocina
+                        <Edit size={20} />
+                      </button>
+
+                      {/* ACCIÓN PRIMARIA: Pasar a Caja y Cobrar */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "checkout"); }}
+                        className="flex-1 flex justify-center items-center gap-2 py-2.5 px-4 bg-[#1e293b] hover:bg-black text-white rounded-xl font-bold shadow-lg shadow-slate-900/30 active:scale-95 transition-transform pointer-events-auto"
+                      >
+                        <CreditCard size={18} />
+                        Cobrar en Caja
                       </button>
                     </div>
                   }

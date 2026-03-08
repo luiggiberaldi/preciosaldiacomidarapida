@@ -44,7 +44,7 @@ export default function CategoryBar({
             {filteredByCategory.map((p) => {
               const isOut = (p.stock ?? 0) === 0;
               const catDef = BODEGA_CATEGORIES.find((c) => c.id === p.category);
-              const catEmoji = catDef ? catDef.icon : "📦";
+              const CatIcon = catDef && CATEGORY_ICONS[catDef.id] ? CATEGORY_ICONS[catDef.id] : Package;
               return (
                 <button
                   key={p.id}
@@ -53,7 +53,7 @@ export default function CategoryBar({
                   className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex flex-col items-center text-center transition-all active:scale-95 hover:border-amber-300 hover:shadow-sm ${isOut ? "opacity-40 cursor-not-allowed" : ""
                     }`}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1.5 overflow-hidden">
+                  <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1.5 overflow-hidden text-slate-400">
                     {p.image ? (
                       <img
                         src={p.image}
@@ -62,7 +62,7 @@ export default function CategoryBar({
                         loading="lazy"
                       />
                     ) : (
-                      <span className="text-xl">{catEmoji}</span>
+                      <CatIcon size={20} strokeWidth={1.5} />
                     )}
                   </div>
                   <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight line-clamp-2 mb-1">

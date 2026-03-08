@@ -337,7 +337,7 @@ export default function App() {
               >
                 <ErrorBoundary>
                   <PremiumGuard featureName="Pedidos en Línea" isShop={true}>
-                    <InboxView rates={rates} storeConfig={storeConfig} />
+                    <InboxView rates={rates} storeConfig={storeConfig} onNavigate={setActiveTab} />
                   </PremiumGuard>
                 </ErrorBoundary>
               </div>

@@ -197,11 +197,12 @@ export default function ProductFormModal({
             <label className="text-[11px] font-bold text-slate-400 ml-1 mb-1 block uppercase tracking-widest flex items-center gap-1.5">
               <FileText size={10} /> Descripcion
             </label>
-            <input
+            <textarea
               value={description || ""}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej: Pan, salchicha, queso, papitas"
-              className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-2.5 rounded-xl text-sm text-slate-600 dark:text-slate-300 outline-none focus:border-red-500 transition-colors placeholder:text-slate-300"
+              placeholder="Ej: Pan artesanal, doble carne de res, extra queso y salsa especial de la casa"
+              rows={3}
+              className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-red-500 transition-colors placeholder:text-slate-400 resize-none font-medium leading-relaxed"
             />
           </div>
 

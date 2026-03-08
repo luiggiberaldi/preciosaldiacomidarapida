@@ -93,6 +93,20 @@ export function useSecurity() {
         new Date().getTimezoneOffset(),
       ].join("|");
 
+      const generateActivationCode = async (devId) => {
+        if (!window.crypto || !window.crypto.subtle) {
+          let hash = 5381;
+          const str = devId + MASTER_SECRET_KEY;
+          for (let i = 0; i < str.length; i++) { hash = (hash << 5) + hash + str.charCodeAt(i); }
+          const hex = (hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+          return `ACTIV-${hex.substring(0, 4)}-${hex.substring(4, 8)}`;
+        }
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(devId + MASTER_SECRET_KEY));
+        const hashHex = Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+        return `ACTIV-${hashHex.substring(0, 4)}-${hashHex.substring(4, 8)}`;
+      };
+
       if (!window.crypto || !window.crypto.subtle) {
         // Fallback (solo en http sin SSL)
         let hash = 0;
@@ -119,6 +133,57 @@ export function useSecurity() {
 
     const initDeviceId = async () => {
       let storedId = localStorage.getItem("pda_device_id");
+
+      // Seamless Migration: PDA- to CRP-
+      if (storedId && storedId.startsWith("PDA-")) {
+        const newTempId = await generateFingerprint();
+        if (newTempId.startsWith("CRP-")) {
+          console.log(`[Migración] Actualizando ID de ${storedId} a ${newTempId}...`);
+          // Si el ID antiguo tenía token premium/demo, regenerarlo
+          const oldTokenRaw = localStorage.getItem("pda_premium_token");
+          if (oldTokenRaw) {
+            const decodedOld = decodeToken(oldTokenRaw);
+            // Intenta parsear para ver si es demo o code directo
+            let isDemoToken = false;
+            let expTime = null;
+            try {
+              const obj = JSON.parse(decodedOld);
+              if (obj.isDemo || obj.expires) {
+                isDemoToken = true;
+                expTime = obj.expires;
+              }
+            } catch (e) {
+              // No es JSON, asumimos token permanente texto
+            }
+
+            const newValidCode = await generateActivationCode(newTempId);
+            let newTokenRaw = newValidCode;
+            if (isDemoToken && expTime) {
+              const tokenObj = { code: newValidCode, expires: expTime, isDemo: true };
+              newTokenRaw = JSON.stringify(tokenObj);
+            }
+            localStorage.setItem("pda_premium_token", encodeToken(newTokenRaw));
+
+            // Intento 'best effort' de migrar en backend (Licencia y Demo)
+            // No esperamos a que termine para no bloquear inicio off-line
+            try {
+              if (import.meta.env.VITE_SUPABASE_URL) {
+                supabase.from("licenses").update({ device_id: newTempId, code: newValidCode }).eq("device_id", storedId).eq("product_id", PRODUCT_ID).then();
+                supabase.from("demos").update({ device_id: newTempId }).eq("device_id", storedId).eq("product_id", PRODUCT_ID).then();
+              }
+            } catch (e) { }
+
+            // Actualizar también el backup session (si existiese)
+            try {
+              sessionStorage.setItem("_pda_s", encodeToken(newValidCode + ":" + newTempId));
+            } catch (e) { }
+          }
+
+          localStorage.setItem("pda_device_id", newTempId);
+          storedId = newTempId;
+        }
+      }
+
       if (!storedId) {
         storedId = await generateFingerprint();
         localStorage.setItem("pda_device_id", storedId);
@@ -328,7 +393,8 @@ export function useSecurity() {
     return () => clearInterval(interval);
   }, [deviceId, isPremium]);
 
-  const generateActivationCode = async (devId) => {
+  // Refactored generateActivationCode to be reusable outside of the hook natively without reliance on state
+  const _generateActivationCode = async (devId) => {
     if (!window.crypto || !window.crypto.subtle) {
       console.warn("⚠️ Crypto API no disponible. Usando fallback.");
       let hash = 5381;
@@ -350,6 +416,8 @@ export function useSecurity() {
       .toUpperCase();
     return `ACTIV-${hashHex.substring(0, 4)}-${hashHex.substring(4, 8)}`;
   };
+
+  const generateActivationCode = _generateActivationCode;
 
   const checkLicense = async (currentDeviceId) => {
     // FIX 2: Decodificar token ofuscado
