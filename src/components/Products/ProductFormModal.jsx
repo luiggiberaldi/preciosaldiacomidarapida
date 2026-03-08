@@ -283,8 +283,13 @@ export default function ProductFormModal({
         {/* ─── PRICE SECTION ─── */}
         <div>
           <label className="text-[11px] font-bold text-slate-400 ml-1 mb-2 block uppercase tracking-widest flex items-center gap-1.5">
-            <DollarSign size={10} /> Precio de venta
+            <DollarSign size={10} /> {(sizes || []).length > 0 ? "Precio Base (Tamaño Principal)" : "Precio de venta"}
           </label>
+          {(sizes || []).length > 0 && (
+            <p className="text-[10px] text-amber-500 mb-2 ml-1 leading-tight">
+              Al tener tamaños configurados, este precio actúa como la opción por defecto. Los otros tamaños reemplazarán este valor en el carrito.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400 font-black text-sm">$</span>
@@ -309,55 +314,6 @@ export default function ProductFormModal({
               />
             </div>
           </div>
-        </div>
-
-        {/* ─── COST (collapsible) ─── */}
-        <div className={`border-2 rounded-xl overflow-hidden transition-all ${showCost ? "border-slate-300 dark:border-slate-600" : "border-slate-200 dark:border-slate-700"}`}>
-          <button
-            type="button"
-            onClick={() => setShowCost(!showCost)}
-            className="w-full flex items-center justify-between px-3.5 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <DollarSign size={12} className="opacity-50" />
-              Costo de produccion (opcional)
-            </span>
-            {showCost ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-          {showCost && (
-            <div className="px-3.5 pb-3 space-y-2">
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={costUsd}
-                  onChange={(e) => handleCostUsdChange(e.target.value)}
-                  placeholder="Costo $"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl font-bold text-slate-700 dark:text-white outline-none focus:border-slate-400 text-sm transition-colors"
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={costBs}
-                  onChange={(e) => handleCostBsChange(e.target.value)}
-                  placeholder="Costo Bs"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl font-bold text-slate-700 dark:text-white outline-none focus:border-slate-400 text-sm transition-colors"
-                />
-              </div>
-              {marginPct !== null && (
-                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">
-                    Margen de ganancia
-                  </span>
-                  <span
-                    className={`text-sm font-black ${marginPct >= 0 ? "text-emerald-500" : "text-rose-500"}`}
-                  >
-                    {marginPct.toFixed(0)}% / ${(parsedPrice - parsedCost).toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* ─── SIZES SECTION ─── */}
@@ -431,6 +387,55 @@ export default function ProductFormModal({
                   <Plus size={16} />
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* ─── COST (collapsible) ─── */}
+        <div className={`border-2 rounded-xl overflow-hidden transition-all ${showCost ? "border-slate-300 dark:border-slate-600" : "border-slate-200 dark:border-slate-700"}`}>
+          <button
+            type="button"
+            onClick={() => setShowCost(!showCost)}
+            className="w-full flex items-center justify-between px-3.5 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <DollarSign size={12} className="opacity-50" />
+              Costo de produccion (opcional)
+            </span>
+            {showCost ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {showCost && (
+            <div className="px-3.5 pb-3 space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={costUsd}
+                  onChange={(e) => handleCostUsdChange(e.target.value)}
+                  placeholder="Costo $"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl font-bold text-slate-700 dark:text-white outline-none focus:border-slate-400 text-sm transition-colors"
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={costBs}
+                  onChange={(e) => handleCostBsChange(e.target.value)}
+                  placeholder="Costo Bs"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl font-bold text-slate-700 dark:text-white outline-none focus:border-slate-400 text-sm transition-colors"
+                />
+              </div>
+              {marginPct !== null && (
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">
+                    Margen de ganancia
+                  </span>
+                  <span
+                    className={`text-sm font-black ${marginPct >= 0 ? "text-emerald-500" : "text-rose-500"}`}
+                  >
+                    {marginPct.toFixed(0)}% / ${(parsedPrice - parsedCost).toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
