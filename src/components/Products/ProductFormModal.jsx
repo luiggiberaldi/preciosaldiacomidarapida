@@ -245,8 +245,8 @@ export default function ProductFormModal({
             type="button"
             onClick={() => setAvailable(available === false ? true : false)}
             className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${available !== false
-                ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
-                : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
+              : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
               }`}
           >
             <div
@@ -261,8 +261,8 @@ export default function ProductFormModal({
             <div className="text-left">
               <span
                 className={`text-xs font-bold flex items-center gap-1 ${available !== false
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-slate-500"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-slate-500"
                   }`}
               >
                 {available !== false ? (
@@ -363,8 +363,8 @@ export default function ProductFormModal({
         {/* ─── SIZES SECTION ─── */}
         <div
           className={`border-2 rounded-xl overflow-hidden transition-all ${(sizes || []).length > 0
-              ? "border-amber-200 dark:border-amber-800/40"
-              : "border-slate-200 dark:border-slate-700"
+            ? "border-amber-200 dark:border-amber-800/40"
+            : "border-slate-200 dark:border-slate-700"
             }`}
         >
           <button
@@ -398,7 +398,7 @@ export default function ProductFormModal({
                     {s.name}
                   </span>
                   <span className="text-sm font-black text-amber-600">
-                    ${s.priceUsd.toFixed(2)}
+                    ${parseFloat(s.priceUsdt || s.priceUsd || s.price || 0).toFixed(2)}
                   </span>
                   <button
                     onClick={() => handleRemoveSize(s.id)}
@@ -438,8 +438,8 @@ export default function ProductFormModal({
         {/* ─── EXTRAS SECTION ─── */}
         <div
           className={`border-2 rounded-xl overflow-hidden transition-all ${(extras || []).length > 0
-              ? "border-emerald-200 dark:border-emerald-800/40"
-              : "border-slate-200 dark:border-slate-700"
+            ? "border-emerald-200 dark:border-emerald-800/40"
+            : "border-slate-200 dark:border-slate-700"
             }`}
         >
           <button
@@ -473,7 +473,7 @@ export default function ProductFormModal({
                     {e.name}
                   </span>
                   <span className="text-sm font-black text-emerald-600">
-                    +${e.priceUsd.toFixed(2)}
+                    +${parseFloat(e.priceUsdt || e.priceUsd || e.price || 0).toFixed(2)}
                   </span>
                   <button
                     onClick={() => handleRemoveExtra(e.id)}

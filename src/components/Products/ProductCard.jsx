@@ -74,7 +74,7 @@ export default function ProductCard({
         {/* Prices */}
         <div className="mt-auto">
           <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">
-            {formatUsd(p.priceUsdt)}
+            ${formatUsd(p.priceUsdt)}
           </p>
           <p className="text-[11px] font-bold text-slate-400 mt-1">
             {formatBs(valBs)} Bs
@@ -89,7 +89,7 @@ export default function ProductCard({
                 key={s.id}
                 className="text-[9px] font-bold bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded"
               >
-                {s.name} ${s.priceUsd.toFixed(2)}
+                {s.name} ${parseFloat(s.priceUsdt || s.priceUsd || s.price || 0).toFixed(2)}
               </span>
             ))}
           </div>

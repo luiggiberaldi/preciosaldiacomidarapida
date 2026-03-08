@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ModalBase } from "./ModalBase";
+import { Modal } from "./Modal";
 import { X, Search, Globe, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { webSupabase, generateProductId } from "../utils/supabase";
 
@@ -68,7 +68,7 @@ export default function PublishWebModal({
     const publishedCount = products.filter(p => p.publishWeb !== false).length;
 
     return (
-        <ModalBase isOpen={isOpen} onClose={onClose} title="Menú Web en Vivo">
+        <Modal isOpen={isOpen} onClose={onClose} title="Menú Web en Vivo">
             <div className="flex flex-col h-[80vh] sm:h-[600px] max-h-screen bg-slate-50 relative">
                 {/* Header content */}
                 <div className="p-4 sm:p-5 bg-white border-b border-slate-100 shrink-0 space-y-4">
@@ -145,6 +145,6 @@ export default function PublishWebModal({
                     })}
                 </div>
             </div>
-        </ModalBase>
+        </Modal>
     );
 }

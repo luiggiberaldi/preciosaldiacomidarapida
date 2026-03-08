@@ -87,7 +87,7 @@ const SwipeableCartItem = ({
             </p>
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap mt-1">
               <p className="text-[10px] sm:text-[11px] font-black text-red-600 bg-amber-50 dark:bg-amber-900/30 px-1 sm:px-1.5 rounded">
-                ${item.priceUsd.toFixed(2)}
+                ${parseFloat(item.priceUsd || item.priceUsdt || item.price || 0).toFixed(2)}
               </p>
               <p className="text-[10px] sm:text-[11px] font-medium text-slate-400">
                 {formatBs(item.priceUsd * effectiveRate)} Bs
@@ -102,7 +102,7 @@ const SwipeableCartItem = ({
         </div>
         <div className="flex flex-col items-end shrink-0 gap-1.5 sm:gap-2">
           <p className="text-sm sm:text-base font-black text-slate-800 dark:text-white">
-            ${(item.priceUsd * item.qty).toFixed(2)}
+            ${(parseFloat(item.priceUsd || item.priceUsdt || item.price || 0) * item.qty).toFixed(2)}
           </p>
           <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-100 dark:border-slate-700">
             <button

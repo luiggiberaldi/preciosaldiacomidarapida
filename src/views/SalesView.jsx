@@ -421,7 +421,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       customerId: selectedCustomerId || null,
       customerName: selectedCustomer
         ? selectedCustomer.name
-        : cartCustomerName || "Consumidor Final",
+        : checkoutInfo?.clientName || cartCustomerName || "Consumidor Final",
       customerPhone: selectedCustomer?.phone || null,
       fiadoUsd: fiadoAmountUsd,
       deliveryType: checkoutInfo?.deliveryType || "LOCAL",

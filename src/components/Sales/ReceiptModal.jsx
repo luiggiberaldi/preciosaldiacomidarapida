@@ -109,14 +109,14 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
                       </span>
                     )}
                     <span className="text-xs text-slate-400 flex gap-2">
-                      <span>${parseFloat(item.priceUsd).toFixed(2)} c/u</span>
+                      <span>${parseFloat(item.priceUsd || item.priceUsdt || item.price || 0).toFixed(2)} c/u</span>
                       <span>·</span>
-                      <span>{formatBs(item.priceUsd * receipt.rate)} Bs</span>
+                      <span>{formatBs(parseFloat(item.priceUsd || item.priceUsdt || item.price || 0) * receipt.rate)} Bs</span>
                     </span>
                   </div>
                   <div className="text-right">
                     <span className="font-black text-slate-900 block">
-                      ${(item.priceUsd * item.qty).toFixed(2)}
+                      ${(parseFloat(item.priceUsd || item.priceUsdt || item.price || 0) * item.qty).toFixed(2)}
                     </span>
                   </div>
                 </div>

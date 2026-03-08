@@ -465,6 +465,14 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     setDeleteCategoryConfirmId(null);
   };
 
+  const handleUpdateProductPublish = (productId, isPublished) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId ? { ...p, publish_web: isPublished } : p
+      )
+    );
+  };
+
   // ─── SYNC WEB CATALOG ─────────────────────────────────────
   const handlePublishWeb = async () => {
     if (!products.length)
