@@ -34,6 +34,7 @@ function compressImageForShare(base64) {
       resolve(canvas.toDataURL("image/webp", 0.5));
     };
     img.onerror = () => resolve(null);
+    img.crossOrigin = "anonymous";
     img.src = base64;
   });
 }
@@ -173,11 +174,10 @@ export default function ShareInventoryModal({
               setTab("share");
               setError("");
             }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-              tab === "share"
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${tab === "share"
                 ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
                 : "text-slate-400"
-            }`}
+              }`}
           >
             <Share2 size={14} /> Compartir
           </button>
@@ -186,11 +186,10 @@ export default function ShareInventoryModal({
               setTab("import");
               setError("");
             }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-              tab === "import"
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${tab === "import"
                 ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
                 : "text-slate-400"
-            }`}
+              }`}
           >
             <Download size={14} /> Importar
           </button>
