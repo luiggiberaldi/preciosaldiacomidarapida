@@ -35,7 +35,13 @@ function compressImageForShare(base64) {
     };
     img.onerror = () => resolve(null);
     img.crossOrigin = "anonymous";
-    img.src = base64;
+    // Si es una URL de internet, le agregamos un timestamp para forzar una petición nueva con CORS 
+    // y evitar que use una versión en caché sin CORS que contamina el canvas.
+    if (base64.startsWith('http')) {
+      img.src = `${base64}${base64.includes('?') ? '&' : '?'}t=${new Date().getTime()}`;
+    } else {
+      img.src = base64;
+    }
   });
 }
 
@@ -175,8 +181,8 @@ export default function ShareInventoryModal({
               setError("");
             }}
             className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${tab === "share"
-                ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
-                : "text-slate-400"
+              ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
+              : "text-slate-400"
               }`}
           >
             <Share2 size={14} /> Compartir
@@ -187,8 +193,8 @@ export default function ShareInventoryModal({
               setError("");
             }}
             className={`flex-1 py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${tab === "import"
-                ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
-                : "text-slate-400"
+              ? "bg-white dark:bg-slate-700 text-brand-dark shadow-sm"
+              : "text-slate-400"
               }`}
           >
             <Download size={14} /> Importar
