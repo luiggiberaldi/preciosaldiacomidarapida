@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Smartphone, Check, ChefHat, MessageCircle, X, Edit, CreditCard, Trash2 } from "lucide-react";
+import { Smartphone, Check, ChefHat, MessageCircle, X, Edit, CreditCard, Trash2, Utensils, ShoppingBag, Car } from "lucide-react";
 import { useWebOrders } from "../hooks/useWebOrders";
 import { formatBs } from "../utils/calculatorUtils";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -268,15 +268,41 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 
 // Internal sub-component for repeated order structure
 const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => {
+  let deliveryType = "UNKNOWN";
+  let cleanNotes = order.customer_notes || "";
+
+  if (cleanNotes.includes("[EN EL LOCAL]")) {
+    deliveryType = "LOCAL";
+    cleanNotes = cleanNotes.replace("[EN EL LOCAL]", "").trim();
+  } else if (cleanNotes.includes("[PARA LLEVAR]")) {
+    deliveryType = "LLEVAR";
+    cleanNotes = cleanNotes.replace("[PARA LLEVAR]", "").trim();
+  } else if (cleanNotes.includes("[DELIVERY]")) {
+    deliveryType = "DELIVERY";
+    cleanNotes = cleanNotes.replace("[DELIVERY]", "").trim();
+  }
+
   return (
     <div
       className={`bg-white rounded-2xl p-4 shadow-sm border ${isConfirmed ? "border-green-100" : "border-orange-100"}`}
     >
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="font-bold text-gray-800 text-lg leading-tight">
-            {order.customer_name}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-800 text-lg leading-tight">
+              {order.customer_name}
+            </h3>
+            {deliveryType !== "UNKNOWN" && (
+              <span className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md shadow-sm border ${deliveryType === "LOCAL" ? "bg-emerald-50 text-emerald-600 border-emerald-200/60" :
+                  deliveryType === "LLEVAR" ? "bg-indigo-50 text-indigo-600 border-indigo-200/60" :
+                    "bg-amber-50 text-amber-600 border-amber-200/60"
+                }`}>
+                {deliveryType === "LOCAL" && <><Utensils size={12} strokeWidth={2.5} /> MESA</>}
+                {deliveryType === "LLEVAR" && <><ShoppingBag size={12} strokeWidth={2.5} /> RETIRO</>}
+                {deliveryType === "DELIVERY" && <><Car size={12} strokeWidth={2.5} /> DELIVERY</>}
+              </span>
+            )}
+          </div>
           <p className="text-gray-500 text-sm font-mono mt-0.5">
             {order.customer_phone}
           </p>
@@ -323,14 +349,14 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
         ))}
       </div>
 
-      {order.customer_notes && (
+      {cleanNotes && (
         <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 mb-4 flex gap-2 items-start shadow-sm">
           <div className="mt-0.5 text-amber-500">
             <MessageCircle size={16} />
           </div>
           <div className="text-sm text-amber-900 leading-snug">
             <span className="font-bold uppercase text-[10px] tracking-wider text-amber-700 block mb-0.5">Nota del cliente</span>
-            <span className="font-medium italic">"{order.customer_notes}"</span>
+            <span className="font-medium italic">"{cleanNotes}"</span>
           </div>
         </div>
       )}

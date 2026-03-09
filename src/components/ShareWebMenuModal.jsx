@@ -16,6 +16,8 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+    const [qrMode, setQrMode] = useState("general");
+    const [tableNumber, setTableNumber] = useState("");
     const qrRef = useRef(null);
 
     useEffect(() => {
@@ -97,7 +99,7 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
         }
     };
 
-    const url = slug ? `${WEB_BASE_URL}/${slug}` : "";
+    const url = slug ? (qrMode === "mesa" && tableNumber.trim() ? `${WEB_BASE_URL}/${slug}?mesa=${encodeURIComponent(tableNumber.trim())}` : `${WEB_BASE_URL}/${slug}`) : "";
     const shortUrl = url.replace("https://", "");
 
     const handleCopy = () => {
@@ -109,7 +111,9 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
     };
 
     const handleShareWhatsApp = () => {
-        const text = `Hola, te comparto el menu de ${businessName}. Puedes ver los productos y hacer tu pedido directamente desde aqui:\n\n${url}`;
+        const text = qrMode === "mesa" && tableNumber.trim()
+            ? `¡Pide directamente desde tu mesa (${tableNumber.trim()}) sin hacer fila!\n\n${url}`
+            : `Hola, te comparto el menú de ${businessName}. Puedes ver los productos y hacer tu pedido directamente desde aquí:\n\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     };
 
@@ -131,7 +135,8 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
         const canvas = qrRef.current?.querySelector("canvas");
         if (!canvas) return;
         const link = document.createElement("a");
-        link.download = `QR-${slug}.png`;
+        const suffix = qrMode === "mesa" && tableNumber.trim() ? `-mesa-${tableNumber.trim().replace(/\s+/g, '-')}` : '';
+        link.download = `QR-${slug}${suffix}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
         showToast("QR descargado", "success");
@@ -235,6 +240,36 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
 
                         {/* QR Code Section */}
                         <div className="px-6 -mt-4 relative z-10 w-full flex flex-col items-center">
+
+                            {/* Selector de Modo */}
+                            <div className="w-full bg-white rounded-2xl p-1 shadow-sm mb-4 border border-slate-100 flex gap-1 transform -translate-y-2">
+                                <button
+                                    onClick={() => setQrMode("general")}
+                                    className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all ${qrMode === "general" ? "bg-slate-800 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
+                                >
+                                    QR General
+                                </button>
+                                <button
+                                    onClick={() => setQrMode("mesa")}
+                                    className={`flex-1 flex gap-1.5 items-center justify-center py-2 text-[11px] font-bold rounded-xl transition-all ${qrMode === "mesa" ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" : "text-slate-500 hover:bg-slate-50"}`}
+                                >
+                                    QR por Mesa
+                                </button>
+                            </div>
+
+                            {qrMode === "mesa" && (
+                                <div className="w-full mb-4 animate-in fade-in slide-in-from-top-2">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-2 text-left">Identificador de Mesa</label>
+                                    <input
+                                        type="text"
+                                        value={tableNumber}
+                                        onChange={(e) => setTableNumber(e.target.value)}
+                                        placeholder="Ej: 5, Terraza, VIP..."
+                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 focus:bg-white transition-all text-center placeholder:text-slate-300"
+                                    />
+                                </div>
+                            )}
+
                             <div ref={qrRef} className="bg-white p-4 rounded-2xl shadow-xl shadow-slate-900/10 border border-slate-100 ring-1 ring-slate-900/5">
                                 <QRCodeCanvas
                                     value={url}
