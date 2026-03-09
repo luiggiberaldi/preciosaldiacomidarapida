@@ -216,12 +216,12 @@ export default function App() {
 
       {/* Demo Banner (discreto — bottom, above nav) */}
       {isDemo && demoTimeLeft && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-500 pointer-events-none">
-          <div className="px-3 py-1.5 bg-slate-900/90 dark:bg-white/10 backdrop-blur-md rounded-full border border-white/10 shadow-xl flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-500 pointer-events-none">
+          <div className="px-3 py-1.5 bg-slate-900/80 dark:bg-white/10 backdrop-blur-xl rounded-full border border-white/10 shadow-xl flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-sm shadow-red-500/50"></div>
             <p className="text-[10px] font-semibold text-white tracking-wide">
               Licencia:{" "}
-              <span className="text-red-400 font-bold">{demoTimeLeft}</span>
+              <span className="text-red-400 font-bold drop-shadow-sm">{demoTimeLeft}</span>
             </p>
           </div>
         </div>
@@ -390,10 +390,10 @@ export default function App() {
         </Suspense>
       </main>
 
-      {/* Bottom Nav */}
+      {/* Bottom Nav - Glass Dock */}
       {!isKeyboardOpen && (
-        <div className="fixed bottom-0 left-0 right-0 px-6 pb-[env(safe-area-inset-bottom)] pt-0 mb-6 max-w-md md:max-w-lg mx-auto z-30 pointer-events-none animate-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl rounded-3xl p-1.5 flex justify-between items-center shadow-2xl shadow-slate-900/30 border border-white/10 ring-1 ring-black/5 pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 px-6 pb-[env(safe-area-inset-bottom)] pt-0 mb-6 max-w-md md:max-w-xl mx-auto z-30 pointer-events-none animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-slate-900/80 dark:bg-slate-950/80 backdrop-blur-2xl rounded-[28px] p-2 flex justify-between items-center shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] border border-white/10 ring-1 ring-white/5 pointer-events-auto">
             {TABS.map((tab) => (
               <TabButton
                 key={tab.id}
@@ -537,16 +537,21 @@ function TabButton({ icon, label, isActive, onClick, badge }) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300 ${isActive ? "bg-red-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+      className={`relative flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-2xl transition-all duration-300 ${isActive ? "bg-slate-800 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
     >
       {icon}
       {badge > 0 && (
-        <span className="absolute top-1 right-2 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-slate-900 p-0.5 animate-pulse">
+        <span className="absolute top-1 right-2 flex min-w-[20px] h-[20px] items-center justify-center rounded-full bg-gradient-to-tr from-red-600 to-orange-500 text-[10px] font-black text-white shadow-md ring-[2px] ring-slate-900/80 p-0.5 animate-bounce-slow">
           {badge}
         </span>
       )}
       {isActive && (
-        <span className="text-[9px] font-extrabold animate-in zoom-in duration-200">
+        <span className="text-[10px] font-black tracking-wide animate-in zoom-in duration-200">
+          {label}
+        </span>
+      )}
+      {!isActive && (
+        <span className="text-[10px] font-medium tracking-wide opacity-0 absolute">
           {label}
         </span>
       )}
