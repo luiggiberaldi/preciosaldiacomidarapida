@@ -66,6 +66,7 @@ export default function App() {
     demoTimeLeft,
     demoExpiredMsg,
     dismissExpiredMsg,
+    deviceId,
   } = useSecurity();
   const { isOnline, cacheRates } = useOfflineQueue();
   const storeConfig = { name: "PreciosAlDía Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
@@ -242,7 +243,7 @@ export default function App() {
             </p>
             <button
               onClick={() => {
-                const msg = `Hola! Quiero adquirir la licencia Premium de PreciosAlDía Comida Rápida. Acabo de terminar mi prueba gratuita.`;
+                const msg = `Hola! Quiero adquirir la licencia Premium de PreciosAlDía Comida Rápida. Acabo de terminar mi prueba gratuita.\n\nMi ID de Instalación es: ${deviceId}`;
                 window.open(
                   `https://wa.me/584124051793?text=${encodeURIComponent(msg)}`,
                   "_blank",
