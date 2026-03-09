@@ -14,10 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  AlertTriangle,
   Box,
   Globe,
   UploadCloud,
+  Flame,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
@@ -122,6 +122,36 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [deleteAllConfirmText, setDeleteAllConfirmText] = useState("");
+
+  // Top Sales State
+  const [topSellingIds, setTopSellingIds] = useState([]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchTopSales = async () => {
+      try {
+        const sales = await storageService.getItem("bodega_sales_v1") || [];
+        if (!isMounted) return;
+        const counts = {};
+        sales.forEach(sale => {
+          if (sale.items) {
+            sale.items.forEach(item => {
+              counts[item.id] = (counts[item.id] || 0) + (item.qty || 1);
+            });
+          }
+        });
+        const topIds = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(entry => entry[0]);
+        setTopSellingIds(topIds);
+      } catch (err) {
+        console.error("Error calculating top sales", err);
+      }
+    };
+    fetchTopSales();
+    return () => { isMounted = false; };
+  }, []);
 
   // ─── FILTERING & PAGINATION ─────────────────────────────
 
@@ -672,6 +702,37 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
               </button>
             </div>
           )}
+
+          {/* Top Ventas Section */}
+          {activeCategory === "todos" && searchTerm === "" && topSellingIds.length > 0 && currentPage === 1 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2 px-1">
+                <Flame size={16} className="text-orange-500" />
+                Top Ventas
+              </h3>
+              <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide px-1 snap-x">
+                {topSellingIds.map(id => {
+                  const p = products.find(prod => prod.id === id);
+                  if (!p) return null;
+                  return (
+                    <div key={p.id} className="w-[180px] shrink-0 snap-start">
+                      <ProductCard
+                        product={p}
+                        effectiveRate={effectiveRate}
+                        categories={categories}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 mt-4 flex items-center gap-2 px-1">
+                Todos los productos
+              </h3>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto pb-4 scrollbar-hide">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {paginatedProducts.map((p) => (

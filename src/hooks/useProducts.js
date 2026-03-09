@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { storageService } from "../utils/storageService";
+import { storageService, safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from "../utils/storageService";
 import { BODEGA_CATEGORIES } from "../config/categories";
 
 export function useProducts(rates) {
@@ -9,17 +9,16 @@ export function useProducts(rates) {
 
   // MARKET LOGIC - Street Rate
   const [streetRate, setStreetRate] = useState(() => {
-    const saved = localStorage.getItem("street_rate_bs");
+    const saved = safeGetItem("street_rate_bs");
     return saved ? parseFloat(saved) : 0;
   });
 
   // GLOBAL RATE LOGIC (Sync with SalesView)
   const [useAutoRate, setUseAutoRate] = useState(() => {
-    const saved = localStorage.getItem("bodega_use_auto_rate");
-    return saved !== null ? JSON.parse(saved) : true;
+    return safeGetJSON("bodega_use_auto_rate", true);
   });
   const [customRate, setCustomRate] = useState(() => {
-    const saved = localStorage.getItem("bodega_custom_rate");
+    const saved = safeGetItem("bodega_custom_rate");
     return saved && parseFloat(saved) > 0 ? saved : "";
   });
 
@@ -55,7 +54,7 @@ export function useProducts(rates) {
     if (
       !streetRate &&
       rates.bcv?.price > 0 &&
-      !localStorage.getItem("street_rate_bs")
+      !safeGetItem("street_rate_bs")
     ) {
       setStreetRate(rates.bcv.price);
     }
@@ -75,23 +74,27 @@ export function useProducts(rates) {
 
   useEffect(() => {
     if (streetRate > 0)
-      localStorage.setItem("street_rate_bs", streetRate.toString());
+      safeSetItem("street_rate_bs", streetRate.toString());
   }, [streetRate]);
 
   useEffect(() => {
-    localStorage.setItem("bodega_use_auto_rate", JSON.stringify(useAutoRate));
+    safeSetJSON("bodega_use_auto_rate", useAutoRate);
     if (customRate)
-      localStorage.setItem("bodega_custom_rate", customRate.toString());
+      safeSetItem("bodega_custom_rate", customRate.toString());
   }, [useAutoRate, customRate]);
 
-  // Listener para actualizar si cambia en otra pestaña/componente
+  // Listener para actualizar si cambia en otra pestana/componente
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === "bodega_custom_rate") {
         setCustomRate(e.newValue);
       }
       if (e.key === "bodega_use_auto_rate") {
-        setUseAutoRate(JSON.parse(e.newValue));
+        try {
+          setUseAutoRate(JSON.parse(e.newValue));
+        } catch {
+          // Ignore corrupt storage event
+        }
       }
     };
     window.addEventListener("storage", handleStorageChange);

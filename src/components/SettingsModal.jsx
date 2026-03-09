@@ -9,10 +9,12 @@ import {
   Share2,
   Fingerprint,
   Copy,
+  Truck,
 } from "lucide-react";
 import { storageService } from "../utils/storageService";
 import { showToast } from "../components/Toast";
 import PaymentMethodsManager from "./Settings/PaymentMethodsManager";
+import { webSupabase, getTenantId } from "../utils/supabase";
 
 import { useSecurity } from "../hooks/useSecurity";
 
@@ -28,6 +30,8 @@ export default function SettingsModal({
   const fileInputRef = useRef(null);
   const { deviceId } = useSecurity();
   const [idCopied, setIdCopied] = useState(false);
+  const [hasDelivery, setHasDelivery] = useState(() => localStorage.getItem("has_delivery") !== "false");
+  const [isSyncingDelivery, setIsSyncingDelivery] = useState(false);
 
   if (!isOpen) return null;
 
@@ -78,6 +82,27 @@ export default function SettingsModal({
       console.error(error);
       setStatusMessage("Error al generar backup.");
       setImportStatus("error");
+    }
+  };
+
+  // --- TOGGLE DELIVERY ---
+  const handleDeliveryToggle = async () => {
+    if (triggerHaptic) triggerHaptic();
+    const newValue = !hasDelivery;
+    setHasDelivery(newValue);
+    localStorage.setItem("has_delivery", String(newValue));
+
+    setIsSyncingDelivery(true);
+    try {
+      const tenantId = getTenantId();
+      const { error } = await webSupabase.from("web_config").update({ has_delivery: newValue }).eq("tenant_id", tenantId);
+      if (error) throw error;
+      showToast(newValue ? "Delivery activado en la web" : "Delivery oculto en la web", "info");
+    } catch (e) {
+      console.error("Error updating delivery status:", e);
+      showToast("Error al sincronizar estado de delivery", "error");
+    } finally {
+      setIsSyncingDelivery(false);
     }
   };
 
@@ -257,11 +282,10 @@ export default function SettingsModal({
           {/* Status Feedback */}
           {importStatus && (
             <div
-              className={`mt-1 p-2 rounded-lg text-xs font-bold text-center flex items-center justify-center gap-2 ${
-                importStatus === "success"
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-red-400"
-                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-              }`}
+              className={`mt-1 p-2 rounded-lg text-xs font-bold text-center flex items-center justify-center gap-2 ${importStatus === "success"
+                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-red-400"
+                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                }`}
             >
               {importStatus === "success" ? (
                 <Check size={14} />
@@ -300,6 +324,33 @@ export default function SettingsModal({
             <p className="text-[8px] text-slate-400 mt-1">
               Comparte este ID si necesitas soporte técnico.
             </p>
+          </div>
+
+          {/* Opciones de Tienda Virtual */}
+          <div className="mt-4 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-xl space-y-4">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Opciones Web / Catálogo</h4>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+                  <Truck size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">Activar Delivery</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Muestra la opción al pedir desde la web</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleDeliveryToggle}
+                disabled={isSyncingDelivery}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex items-center px-1 shadow-inner disabled:opacity-50 ${hasDelivery ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${hasDelivery ? 'translate-x-6' : 'translate-x-0'}`}>
+                  {isSyncingDelivery && <div className="w-2 h-2 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />}
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Divider */}

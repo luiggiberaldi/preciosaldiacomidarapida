@@ -2,7 +2,9 @@ import React, { useMemo, useState } from "react";
 import { Smartphone, Check, ChefHat, MessageCircle, X, Edit, CreditCard, Trash2, Utensils, ShoppingBag, Car } from "lucide-react";
 import { useWebOrders } from "../hooks/useWebOrders";
 import { formatBs } from "../utils/calculatorUtils";
+import { parseOrderNotes } from "../utils/parseOrderNotes";
 import ConfirmDialog from "../components/ConfirmDialog";
+import WebOrderStatusBadge from "../components/WebOrderStatusBadge";
 
 export const InboxView = ({ rates, storeConfig, onNavigate }) => {
   const { orders, loading, updateOrderStatus } = useWebOrders();
@@ -22,7 +24,6 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 
   const handleConfirmWhatsApp = async (order) => {
     try {
-      console.log("handleConfirmWhatsApp clicked for order:", order);
       // Construct the WhatsApp message
       let text = `Hola *${order.customer_name || 'Cliente'}*, hemos recibido tu pedido en *${storeConfig?.name || "nuestro local"}*.\n\n`;
       text += `*Resumen de tu Orden:*\n\n`;
@@ -54,11 +55,9 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
       const cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
 
-      console.log("Updating order to confirmed status...");
       // Update status to confirmed
       await updateOrderStatus(order.id, "confirmed");
 
-      console.log("Opening WhatsApp URL:", waUrl);
       // Open WhatsApp
       window.open(waUrl, "_blank");
     } catch (e) {
@@ -94,7 +93,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
         webOrderId: order.id,
         action: action,
         clientName: order.customer_name,
-        deliveryType: order.customer_notes?.includes("DELIVERY") ? "LLEVAR" : "LOCAL"
+        deliveryType: parseOrderNotes(order.customer_notes).deliveryType === "DELIVERY" ? "LLEVAR" : "LOCAL"
       }
     });
 
@@ -103,7 +102,6 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
   };
 
   const handleCancel = (orderId) => {
-    console.log("handleCancel clicked for orderId:", orderId);
     setConfirmCancel(orderId);
   };
 
@@ -268,25 +266,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 
 // Internal sub-component for repeated order structure
 const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => {
-  let deliveryType = "UNKNOWN";
-  let cleanNotes = order.customer_notes || "";
-  let tableNumber = null;
-
-  const mesaMatch = cleanNotes.match(/\[MESA (.*?)\]/);
-  if (mesaMatch) {
-    deliveryType = "MESA_QR";
-    tableNumber = mesaMatch[1];
-    cleanNotes = cleanNotes.replace(mesaMatch[0], "").trim();
-  } else if (cleanNotes.includes("[EN EL LOCAL]")) {
-    deliveryType = "LOCAL";
-    cleanNotes = cleanNotes.replace("[EN EL LOCAL]", "").trim();
-  } else if (cleanNotes.includes("[PARA LLEVAR]")) {
-    deliveryType = "LLEVAR";
-    cleanNotes = cleanNotes.replace("[PARA LLEVAR]", "").trim();
-  } else if (cleanNotes.includes("[DELIVERY]")) {
-    deliveryType = "DELIVERY";
-    cleanNotes = cleanNotes.replace("[DELIVERY]", "").trim();
-  }
+  const { deliveryType, tableNumber, cleanNotes } = parseOrderNotes(order.customer_notes);
 
 
   return (
@@ -299,6 +279,7 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
             <h3 className="font-bold text-gray-800 text-lg leading-tight">
               {order.customer_name}
             </h3>
+            <WebOrderStatusBadge status={order.status} />
             {deliveryType !== "UNKNOWN" && (
               <span className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md shadow-sm border ${(deliveryType === "LOCAL" || deliveryType === "MESA_QR") ? "bg-emerald-50 text-emerald-600 border-emerald-200/60" :
                 deliveryType === "LLEVAR" ? "bg-indigo-50 text-indigo-600 border-indigo-200/60" :
@@ -357,15 +338,14 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
         ))}
       </div>
 
-      {/* Only display notes block if there's actual content left besides hyphens/empty text */}
-      {cleanNotes && cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim() && (
+      {cleanNotes && (
         <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 mb-4 flex gap-2 items-start shadow-sm">
           <div className="mt-0.5 text-amber-500">
             <MessageCircle size={16} />
           </div>
           <div className="text-sm text-amber-900 leading-snug">
             <span className="font-bold uppercase text-[10px] tracking-wider text-amber-700 block mb-0.5">Nota del cliente</span>
-            <span className="font-medium italic">"{cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim()}"</span>
+            <span className="font-medium italic">"{cleanNotes}"</span>
           </div>
         </div>
       )}

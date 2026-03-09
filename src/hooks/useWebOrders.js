@@ -1,47 +1,19 @@
 import { useState, useEffect } from "react";
-import { webSupabase, getTenantId } from "../utils/supabase";
+import { WEB_ORDER_STATUS } from "../utils/constants";
 import { useNotifications } from "./useNotifications";
+import { useSounds } from "./useSounds";
 import { showToast } from "../components/Toast";
+import { webSupabase, getTenantId } from "../utils/supabase";
 
 // Keep track of already notified orders to prevent duplicate alerts
 // if useWebOrders is mounted in multiple components
 const notifiedOrders = new Set();
 
-// Sound effect for new orders
-const playOrderSound = () => {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // High pitch notification
-    oscillator.frequency.exponentialRampToValueAtTime(
-      1200,
-      audioCtx.currentTime + 0.1,
-    );
-
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.01,
-      audioCtx.currentTime + 0.3,
-    );
-
-    oscillator.start(audioCtx.currentTime);
-    oscillator.stop(audioCtx.currentTime + 0.3);
-  } catch (e) {
-    console.log("Audio not supported or blocked");
-  }
-};
-
 export const useWebOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const { notifyNewWebOrder } = useNotifications();
+  const { playNewWebOrder } = useSounds();
 
   const fetchOrders = async () => {
     try {
@@ -51,7 +23,7 @@ export const useWebOrders = () => {
         .from("web_orders")
         .select("*")
         .eq("tenant_id", getTenantId())
-        .in("status", ["pending", "confirmed", "kitchen"])
+        .in("status", [WEB_ORDER_STATUS.PENDING, WEB_ORDER_STATUS.CONFIRMED, WEB_ORDER_STATUS.PREPARING])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -83,7 +55,7 @@ export const useWebOrders = () => {
             const newOrder = payload.new;
             if (newOrder && newOrder.id && !notifiedOrders.has(newOrder.id)) {
               notifiedOrders.add(newOrder.id);
-              playOrderSound();
+              playNewWebOrder();
               showToast(`¡Nuevo pedido de ${newOrder.customer_name}!`, "success", 5000);
               notifyNewWebOrder(newOrder.customer_name, newOrder.total_usd);
             }

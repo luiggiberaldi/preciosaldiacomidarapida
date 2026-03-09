@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { storageService } from "../utils/storageService";
 import { webSupabase, getTenantId } from "../utils/supabase";
+import { parseOrderNotes } from "../utils/parseOrderNotes";
 import {
   Flame,
   CheckCircle2,
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 import { showToast } from "../components/Toast";
 import { useSounds } from "../hooks/useSounds";
+import { WEB_ORDER_STATUS } from "../utils/constants";
+import WebOrderStatusBadge from "../components/WebOrderStatusBadge";
 
 const SALES_KEY = "bodega_sales_v1";
 
@@ -24,6 +27,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [lastCompletedOrder, setLastCompletedOrder] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [filter, setFilter] = useState("TODOS"); // "TODOS", "PENDING", "PREPARING", "READY"
 
   const { playBell, playTap, playSuccess } = useSounds();
   const prevIdsRef = useRef([]);
@@ -32,7 +36,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     // 1. Fetch Local Orders
     const sales = await storageService.getItem(SALES_KEY, []);
     const localPending = sales
-      .filter((s) => s.kitchenStatus === "PENDING" && s.status !== "ANULADA")
+      .filter((s) => (s.kitchenStatus === "PENDING" || s.kitchenStatus === "PREPARING" || s.kitchenStatus === "READY") && s.status !== "ANULADA")
       .map((s) => ({ ...s, source: "LOCAL", orderNotes: s.notes || "", customerPhone: s.customerPhone || "" }));
 
     // 2. Fetch Web Orders
@@ -55,40 +59,25 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
           wo._dailySequence = index + 1;
           return wo;
         })
-        .filter((wo) => wo.status === "kitchen")
+        .filter((wo) => [WEB_ORDER_STATUS.PENDING, WEB_ORDER_STATUS.CONFIRMED, WEB_ORDER_STATUS.PREPARING, WEB_ORDER_STATUS.READY].includes(wo.status))
         .map((wo) => {
-          const notes = wo.customer_notes || "";
-          let dType = "LLEVAR";
-          let cleanNotes = notes;
-          let tableNumber = null;
+          const parsed = parseOrderNotes(wo.customer_notes);
 
-          const mesaMatch = cleanNotes.match(/\[MESA (.*?)\]/);
-          if (mesaMatch) {
-            dType = "MESA_QR";
-            tableNumber = mesaMatch[1];
-            cleanNotes = cleanNotes.replace(mesaMatch[0], "").trim();
-          } else if (notes.includes("[EN EL LOCAL]")) {
-            dType = "LOCAL";
-            cleanNotes = notes.replace("[EN EL LOCAL]", "").trim();
-          } else if (notes.includes("[PARA LLEVAR]")) {
-            dType = "LLEVAR";
-            cleanNotes = notes.replace("[PARA LLEVAR]", "").trim();
-          } else if (notes.includes("[DELIVERY]")) {
-            dType = "DELIVERY";
-            cleanNotes = notes.replace("[DELIVERY]", "").trim();
-          }
-
-          cleanNotes = cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim();
+          // Normalizar status
+          let normalizedStatus = wo.status;
+          if (wo.status === WEB_ORDER_STATUS.CONFIRMED) normalizedStatus = WEB_ORDER_STATUS.PENDING;
 
           return {
             id: wo.id,
             source: "WEB",
+            status: normalizedStatus,
             saleNumber: `W${String(wo._dailySequence).padStart(2, "0")}`,
             customerName: wo.customer_name,
             customerPhone: wo.customer_phone || "",
-            deliveryType: dType,
-            tableNumber: tableNumber,
-            orderNotes: cleanNotes,
+            deliveryType: parsed.deliveryType,
+            tableNumber: parsed.tableNumber,
+            orderNotes: parsed.cleanNotes,
+            _gpsLink: parsed.gpsLink,
             timestamp: wo.updated_at || wo.created_at,
             items: wo.items.map((wi) => {
               const extras = wi.selectedExtras?.length
@@ -134,25 +123,12 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     return () => clearInterval(timer);
   }, []);
 
-  const formatOrderNotes = (notes) => {
-    if (!notes) return { text: "", link: null };
-    const urlRegex = /(https:\/\/maps\.google\.com\/\?q=[^\s]+)/i;
-    const match = notes.match(urlRegex);
-    let link = null;
-    let cleanText = notes;
-
-    if (match) {
-      link = match[1];
-      cleanText = cleanText
-        .replace(link, "")
-        .replace(/Ubicación GPS:/gi, "")
-        .replace(/\(Precisión aprox: [0-9]+m\)/gi, "")
-        .replace(/\(Por favor añade referencias del lugar\)/gi, "")
-        .replace(/^\s*[\r\n]/gm, "")
-        .trim();
-    }
-
-    return { text: cleanText, link };
+  // Use the order-level _gpsLink (set during loadOrders) or fall back to re-parsing notes
+  const getOrderNotesDisplay = (order) => {
+    return {
+      text: order.orderNotes || "",
+      link: order._gpsLink || null,
+    };
   };
 
   const handleNotifyWhatsApp = (order) => {
@@ -183,7 +159,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
   };
 
   const handleNotifyMotorizado = (order) => {
-    const { text: notes, link } = formatOrderNotes(order.orderNotes);
+    const { text: notes, link } = getOrderNotesDisplay(order);
     const correlative = order.source === "WEB" ? order.saleNumber : `#${String(order.saleNumber).padStart(2, "0")}`;
 
     let text = `*NUEVO DELIVERY* ${correlative}\n`;
@@ -292,6 +268,22 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     };
   };
 
+  const filteredOrders = pendingOrders.filter(o => {
+    if (filter === "TODOS") return true;
+
+    // Normalizar estado local a constantes web para el filtro
+    let localStatusToWeb = WEB_ORDER_STATUS.PENDING;
+    if (o.kitchenStatus === "PREPARING") localStatusToWeb = WEB_ORDER_STATUS.PREPARING;
+    if (o.kitchenStatus === "READY") localStatusToWeb = WEB_ORDER_STATUS.READY;
+
+    const currentStatus = o.source === "WEB" ? o.status : localStatusToWeb;
+
+    if (filter === "PENDING") return currentStatus === WEB_ORDER_STATUS.PENDING;
+    if (filter === "PREPARING") return currentStatus === WEB_ORDER_STATUS.PREPARING;
+    if (filter === "READY") return currentStatus === WEB_ORDER_STATUS.READY;
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
@@ -365,6 +357,27 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             })()}
           </div>
         )}
+
+        {/* Filters */}
+        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
+          {["TODOS", "PENDING", "PREPARING", "READY"].map(f => {
+            const labels = {
+              TODOS: "Todos",
+              PENDING: "Nuevos",
+              PREPARING: "Preparando",
+              READY: "Listos"
+            };
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${filter === f ? "bg-slate-800 text-white dark:bg-slate-700" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700"}`}
+              >
+                {labels[f]}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Orders */}
@@ -395,9 +408,13 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
               Escuchando nuevos pedidos...
             </div>
           </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center">
+            <p className="text-sm text-slate-400 text-center">No hay pedidos en esta categoría.</p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {pendingOrders.map((order) => {
+            {filteredOrders.map((order) => {
               const waitMins = getWaitTime(order.timestamp);
               const colors = getWaitColor(waitMins);
               const isUrgent = waitMins >= 15;
@@ -444,6 +461,8 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                                   ? `🍽️ MESA ${order.tableNumber}`
                                   : "🍽️ LOCAL"}
                         </span>
+                        {/* Status Badge */}
+                        <WebOrderStatusBadge status={order.source === "WEB" ? order.status : (order.kitchenStatus === "READY" ? WEB_ORDER_STATUS.READY : order.kitchenStatus === "PREPARING" ? WEB_ORDER_STATUS.PREPARING : WEB_ORDER_STATUS.PENDING)} />
                         {order.customerName &&
                           order.customerName !== "Consumidor Final" && (
                             <span className="text-[10px] font-bold text-slate-400 truncate max-w-[120px]">
@@ -494,7 +513,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
                     {/* Order Level Notes and GPS Map Link */}
                     {(() => {
-                      const { text, link } = formatOrderNotes(order.orderNotes);
+                      const { text, link } = getOrderNotesDisplay(order);
                       return (
                         <>
                           {text && (
@@ -537,7 +556,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                         </button>
                       )}
 
-                    {order.deliveryType === "DELIVERY" && formatOrderNotes(order.orderNotes).link && (
+                    {order.deliveryType === "DELIVERY" && getOrderNotesDisplay(order).link && (
                       <button
                         onClick={() => handleNotifyMotorizado(order)}
                         className="w-full py-2 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-indigo-200 dark:border-indigo-800/50 flex justify-center gap-2 items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40"

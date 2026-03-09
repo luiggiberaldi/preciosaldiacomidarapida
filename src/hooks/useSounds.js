@@ -88,6 +88,12 @@ export function useSounds() {
     beep(1000, 0.03, "sine", 0.06);
   }, [beep]);
 
+  /** Nuevo pedido web */
+  const playNewWebOrder = useCallback(() => {
+    beep(800, 0.1, "sine", 0.3);
+    setTimeout(() => beep(1200, 0.2, "sine", 0.01), 100);
+  }, [beep]);
+
   return {
     playAdd,
     playRemove,
@@ -96,5 +102,6 @@ export function useSounds() {
     playSuccess,
     playTap,
     playBell,
+    playNewWebOrder,
   };
 }

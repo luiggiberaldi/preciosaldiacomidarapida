@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { safeGetJSON, safeSetJSON } from "../utils/storageService";
+import { getPriceUsd } from "../utils/priceHelpers";
 
 export const useOpenTabs = (initialTabs = []) => {
     const [openTabs, setOpenTabs] = useState(() => {
-        try {
-            const saved = localStorage.getItem("bodega_open_tabs_v1");
-            return saved ? JSON.parse(saved) : initialTabs;
-        } catch (e) {
-            console.error("Error cargando openTabs", e);
-            return initialTabs;
-        }
+        return safeGetJSON("bodega_open_tabs_v1", initialTabs);
     });
 
     useEffect(() => {
-        localStorage.setItem("bodega_open_tabs_v1", JSON.stringify(openTabs));
+        safeSetJSON("bodega_open_tabs_v1", openTabs);
     }, [openTabs]);
 
     const addTab = (name, cartItems, customerInfo = null) => {
@@ -23,7 +19,7 @@ export const useOpenTabs = (initialTabs = []) => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             items: [...cartItems],
-            customerInfo: customerInfo, // por si dejan nombre/tlf registrado
+            customerInfo: customerInfo,
         };
         setOpenTabs((prev) => [...prev, newTab]);
         return newTab;
@@ -44,7 +40,7 @@ export const useOpenTabs = (initialTabs = []) => {
     };
 
     const getTabTotal = (items) => {
-        return items.reduce((sum, item) => sum + item.priceUsdt * item.qty, 0);
+        return items.reduce((sum, item) => sum + getPriceUsd(item) * item.qty, 0);
     };
 
     return {

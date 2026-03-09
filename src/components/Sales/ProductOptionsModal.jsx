@@ -246,6 +246,16 @@ export default function ProductOptionsModal({
                     </section>
                 </div>
 
+                {/* Status Summary */}
+                <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+                        <span className="font-black text-slate-800 dark:text-white">Resumen:</span> {qty}x {product.name}
+                        {[selectedSize?.name, ...selectedExtras.map((e) => `+${e.name}`)]
+                            .filter(Boolean)
+                            .join(" • ")}
+                    </p>
+                </div>
+
                 {/* Footer actions */}
                 <div className="p-4 sm:p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0 rounded-b-3xl">
                     <button

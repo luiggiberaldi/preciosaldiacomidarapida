@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { X, Search, Globe, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { webSupabase, generateProductId } from "../utils/supabase";
+import { getPriceUsd } from "../utils/priceHelpers";
 
 export default function PublishWebModal({
     isOpen,
@@ -38,16 +39,16 @@ export default function PublishWebModal({
                     tenant_id: tenantId,
                     name: product.name,
                     description: product.description || "",
-                    price_usd: parseFloat(product.priceUsdt || product.priceUsd || product.price || 0) || 0,
+                    price_usd: getPriceUsd(product),
                     category: product.category || "otros",
                     image_url: product.image || "",
                     is_available: product.available !== false,
                     prep_time: String([0, 5, 10, 15, 20, 30, 45, 60].includes(Number(product.prepTime)) ? Number(product.prepTime) : (product.prepTime === undefined ? 10 : 0)),
                     sizes: (() => {
                         if (!product.sizes || product.sizes.length === 0) return [];
-                        const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0) || 0;
+                        const basePrice = getPriceUsd(product);
                         const userSetBaseName = product.baseSizeName && product.baseSizeName.trim() !== "" && product.baseSizeName !== "Normal";
-                        const sizeHasBasePrice = product.sizes.some(s => parseFloat(s.priceUsdt || s.priceUsd || s.price || 0) === basePrice);
+                        const sizeHasBasePrice = product.sizes.some(s => getPriceUsd(s) === basePrice);
                         if (userSetBaseName || !sizeHasBasePrice) {
                             return [{ id: "base", name: product.baseSizeName || "Normal", price: basePrice }, ...product.sizes];
                         }

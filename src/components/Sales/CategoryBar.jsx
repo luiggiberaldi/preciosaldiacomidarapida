@@ -50,9 +50,14 @@ export default function CategoryBar({
                   key={p.id}
                   onClick={() => addToCart(p)}
                   disabled={isOut}
-                  className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex flex-col items-center text-center transition-all active:scale-95 hover:border-amber-300 hover:shadow-sm ${isOut ? "opacity-40 cursor-not-allowed" : ""
+                  className={`relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex flex-col items-center text-center transition-all active:scale-95 hover:border-amber-300 hover:shadow-sm ${isOut ? "opacity-40 cursor-not-allowed" : ""
                     }`}
                 >
+                  {(p.sizes?.length > 0 || p.extras?.length > 0) && (
+                    <div className="absolute top-1 right-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                      + Opciones
+                    </div>
+                  )}
                   <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1.5 overflow-hidden text-slate-400">
                     {p.image ? (
                       <img

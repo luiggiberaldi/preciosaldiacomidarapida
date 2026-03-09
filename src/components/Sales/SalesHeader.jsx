@@ -1,4 +1,5 @@
-import { RefreshCw, ShoppingCart } from "lucide-react";
+import { RefreshCw, ShoppingCart, CloudOff, CloudUpload } from "lucide-react";
+import { useOfflineQueue } from "../../hooks/useOfflineQueue";
 
 const formatBs = (n) =>
   new Intl.NumberFormat("es-VE", {
@@ -16,6 +17,8 @@ export default function SalesHeader({
   setShowRateConfig,
   triggerHaptic,
 }) {
+  const { isOnline, queuedCount } = useOfflineQueue();
+
   return (
     <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
@@ -24,7 +27,16 @@ export default function SalesHeader({
             <div className="bg-red-500 text-white p-1.5 sm:p-2 rounded-xl shadow-lg shadow-red-500/30">
               <ShoppingCart size={20} className="sm:w-[22px] sm:h-[22px]" />
             </div>
-            Punto de Venta
+            <span>Punto de Venta</span>
+            {/* Offline Indicators */}
+            <div className="flex items-center gap-1.5 ml-1 sm:ml-2">
+              {!isOnline && <CloudOff size={16} className="text-red-500 animate-pulse" title="Sin Conexión" />}
+              {queuedCount > 0 && (
+                <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-400 text-[10px] font-bold shadow-sm" title="Pendientes de sincronizar">
+                  <CloudUpload size={12} /> {queuedCount}
+                </div>
+              )}
+            </div>
           </h2>
           {/* Tasa Móvil (visible solo en sm) */}
           <div className="sm:hidden">
