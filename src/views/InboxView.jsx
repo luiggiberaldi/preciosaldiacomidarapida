@@ -161,11 +161,11 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
                   order={order}
                   rates={rates}
                   actions={
-                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex gap-2.5 mt-4 pt-4 border-t border-gray-100 bg-slate-50/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-2xl">
                       {/* ACCIÓN SECUNDARIA: Ignorar */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCancel(order.id); }}
-                        className="p-2.5 bg-gray-100 text-gray-400 hover:text-red-500 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        className="w-12 h-12 shrink-0 bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl transition-all active:scale-95 flex items-center justify-center pointer-events-auto"
                         title="Ignorar Pedido"
                       >
                         <Trash2 size={20} />
@@ -174,19 +174,19 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
                       {/* ACCIÓN SECUNDARIA: Editar Localmente */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "edit"); }}
-                        className="py-2.5 px-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition-colors active:scale-95 flex items-center justify-center gap-2 pointer-events-auto"
+                        className="px-4 h-12 bg-white border border-blue-100 text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2 pointer-events-auto shadow-sm"
                         title="Pasar a Caja para Editar"
                       >
-                        <Edit size={16} /> Editar
+                        <Edit size={18} /> <span className="hidden sm:inline">Editar</span>
                       </button>
 
                       {/* ACCIÓN PRIMARIA: Whatsapp Confirmación */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleConfirmWhatsApp(order); }}
-                        className="flex-[2] flex justify-center items-center gap-2 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/30 active:scale-95 transition-transform pointer-events-auto"
+                        className="flex-1 h-12 flex justify-center items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-bold shadow-md shadow-green-500/20 active:scale-95 transition-all pointer-events-auto truncate px-3"
                       >
-                        <MessageCircle size={18} />
-                        Confirmar WhatsApp
+                        <MessageCircle size={18} className="shrink-0" />
+                        <span className="truncate">Confirmar <span className="hidden sm:inline">WhatsApp</span></span>
                       </button>
                     </div>
                   }
@@ -217,20 +217,20 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
                   isConfirmed={true}
                   onResendWhatsApp={handleConfirmWhatsApp}
                   actions={
-                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex gap-2.5 mt-4 pt-4 border-t border-gray-100 bg-slate-50/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-2xl">
                       {/* ACCIÓN SECUNDARIA: Cancelar Venta */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCancel(order.id); }}
-                        className="p-2.5 bg-gray-100 text-gray-400 hover:text-red-500 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        className="w-12 h-12 shrink-0 bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl transition-all active:scale-95 flex items-center justify-center pointer-events-auto"
                         title="Cancelar Venta"
                       >
-                        <X size={20} />
+                        <X size={22} />
                       </button>
 
                       {/* ACCIÓN SECUNDARIA: Editar Localmente */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "edit"); }}
-                        className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors active:scale-95 flex items-center justify-center pointer-events-auto"
+                        className="w-12 h-12 shrink-0 bg-white border border-blue-100 text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-sm"
                         title="Editar Pedido Libremente"
                       >
                         <Edit size={20} />
@@ -239,10 +239,10 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
                       {/* ACCIÓN PRIMARIA: Pasar a Caja y Cobrar */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handlePassToPos(order, "checkout"); }}
-                        className="flex-1 flex justify-center items-center gap-2 py-2.5 px-4 bg-[#1e293b] hover:bg-black text-white rounded-xl font-bold shadow-lg shadow-slate-900/30 active:scale-95 transition-transform pointer-events-auto"
+                        className="flex-1 h-12 flex justify-center items-center gap-2 bg-[#1e293b] hover:bg-black text-white rounded-xl font-bold shadow-md shadow-slate-900/20 active:scale-95 transition-all pointer-events-auto truncate px-3"
                       >
-                        <CreditCard size={18} />
-                        Cobrar en Caja
+                        <CreditCard size={18} className="shrink-0" />
+                        <span className="truncate">Cobrar en Caja</span>
                       </button>
                     </div>
                   }
@@ -294,34 +294,44 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-3 space-y-2 mb-3">
+      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 space-y-3 mb-4">
         {order.items.map((item, idx) => (
-          <div key={idx} className="text-sm">
-            <div className="flex justify-between text-gray-700">
-              <span className="font-medium">
-                <span className="text-red-500 font-bold mr-1">{item.qty}x</span>
+          <div key={idx} className="text-[15px]">
+            <div className="flex items-start text-gray-800 gap-2.5">
+              <span className="shrink-0 px-1.5 py-0.5 bg-red-100 text-red-600 font-black rounded-md text-sm border border-red-200/50">
+                {item.qty}x
+              </span>
+              <span className="font-bold leading-tight pt-0.5">
                 {item.name}{" "}
-                {item.size ? `[${item.size}]` : ""}
+                {item.size ? <span className="text-gray-500 font-medium text-sm">[{item.size}]</span> : ""}
               </span>
             </div>
             {item.selectedExtras && item.selectedExtras.length > 0 && (
-              <p className="text-xs text-gray-500 ml-5 mt-0.5">
+              <p className="text-xs font-medium text-gray-500 ml-10 mt-1">
                 + {item.selectedExtras.map((e) => e.name).join(", ")}
               </p>
             )}
             {item.note && (
-              <p className="text-xs text-amber-600 ml-5 mt-0.5 italic">
-                📝 Nota: {item.note}
-              </p>
+              <div className="ml-10 mt-1.5">
+                <span className="inline-block bg-amber-100/50 border border-amber-200/60 text-amber-700 px-2 py-1 rounded-lg text-xs font-bold w-fit">
+                  <span className="mr-1">✍️</span>
+                  {item.note}
+                </span>
+              </div>
             )}
           </div>
         ))}
       </div>
 
       {order.customer_notes && (
-        <div className="bg-yellow-50 text-yellow-800 text-sm p-2.5 rounded-lg border border-yellow-100 mb-3 italic">
-          <span className="font-bold not-italic mr-1">Nota:</span>
-          {order.customer_notes}
+        <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 mb-4 flex gap-2 items-start shadow-sm">
+          <div className="mt-0.5 text-amber-500">
+            <MessageCircle size={16} />
+          </div>
+          <div className="text-sm text-amber-900 leading-snug">
+            <span className="font-bold uppercase text-[10px] tracking-wider text-amber-700 block mb-0.5">Nota del cliente</span>
+            <span className="font-medium italic">"{order.customer_notes}"</span>
+          </div>
         </div>
       )}
 
