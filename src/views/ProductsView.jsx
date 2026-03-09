@@ -247,7 +247,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           category: p.category || "otros",
           image_url: p.image || "",
           is_available: true,
-          prep_time: String(p.prepTime ?? "10"),
+          prep_time: String([0, 5, 10, 15, 20, 30, 45, 60].includes(Number(p.prepTime)) ? Number(p.prepTime) : (p.prepTime === undefined ? 10 : 0)),
           sizes: p.sizes?.length > 0 ? [{ id: "base", name: p.baseSizeName || "Normal", price: parseFloat(p.priceUsdt || p.priceUsd || p.price || 0) || 0 }, ...p.sizes] : [],
           extras: p.extras || [],
           updated_at: new Date().toISOString(),
@@ -372,7 +372,10 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
 
     // Food-specific fields
     setDescription(product.description || "");
-    setPrepTime(product.prepTime ?? 10);
+    const validPrepTimes = [0, 5, 10, 15, 20, 30, 45, 60];
+    let pt = product.prepTime !== undefined ? Number(product.prepTime) : 10;
+    if (!validPrepTimes.includes(pt)) pt = 0; // Fallback to "No aplica" if corrupted (e.g. 1)
+    setPrepTime(pt);
     setAvailable(product.available !== false);
     setSizes(product.sizes || []);
     setExtras(product.extras || []);

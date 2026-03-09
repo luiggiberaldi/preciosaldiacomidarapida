@@ -42,7 +42,7 @@ export default function PublishWebModal({
                     category: product.category || "otros",
                     image_url: product.image || "",
                     is_available: product.available !== false,
-                    prep_time: String(product.prepTime ?? "10"),
+                    prep_time: String([0, 5, 10, 15, 20, 30, 45, 60].includes(Number(product.prepTime)) ? Number(product.prepTime) : (product.prepTime === undefined ? 10 : 0)),
                     sizes: (() => {
                         if (!product.sizes || product.sizes.length === 0) return [];
                         const basePrice = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0) || 0;
