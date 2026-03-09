@@ -42,9 +42,12 @@ import ConfirmModal from "../components/ConfirmModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
+import { useSecurity } from "../hooks/useSecurity";
 import { webSupabase, getTenantId, generateProductId } from "../utils/supabase";
+import PremiumGuard from "../components/security/PremiumGuard";
 
 export const ProductsView = ({ rates, triggerHaptic }) => {
+  const { isPremium } = useSecurity();
   // ─── STATE DEL HOOK ─────────────────────────────────────
   const {
     products,
@@ -568,24 +571,29 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
               </button>
             )}
 
-            {/* New Share QR Button */}
             {products.length > 0 && (
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  setIsShareWebOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 font-bold text-sm"
-                title="Ver QR y Enlace"
-              >
-                <Globe size={16} strokeWidth={2.5} />
-                <span className="hidden sm:inline">Compartir Web</span>
-              </button>
+              <PremiumGuard featureName="Compartir QR y Menú" hideLock={true}>
+                <button
+                  onClick={() => {
+                    triggerHaptic && triggerHaptic();
+                    setIsShareWebOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 font-bold text-sm"
+                  title="Ver QR y Enlace"
+                >
+                  <Globe size={16} strokeWidth={2.5} />
+                  <span className="hidden sm:inline">Compartir Web</span>
+                </button>
+              </PremiumGuard>
             )}
 
             <button
               onClick={() => {
                 triggerHaptic && triggerHaptic();
+                if (!isPremium && products.length >= 10) {
+                  showToast("Límite Gratis Alcanzado (Máx 10 productos). Adquiere Premium para productos ilimitados.", "error");
+                  return;
+                }
                 setIsModalOpen(true);
               }}
               className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-xl shadow-md shadow-red-500/20 transition-all active:scale-95 font-bold text-sm"
