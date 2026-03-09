@@ -11,6 +11,8 @@ import {
   UtensilsCrossed,
   Globe,
   MessageCircle,
+  MapPin,
+  Car
 } from "lucide-react";
 import { showToast } from "../components/Toast";
 import { useSounds } from "../hooks/useSounds";
@@ -123,6 +125,26 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     return () => clearInterval(timer);
   }, []);
 
+  const formatOrderNotes = (notes) => {
+    if (!notes) return { text: "", link: null };
+    const urlRegex = /(https:\/\/maps\.google\.com\/\?q=[^\s]+)/i;
+    const match = notes.match(urlRegex);
+    let link = null;
+    let cleanText = notes;
+
+    if (match) {
+      link = match[1];
+      cleanText = cleanText
+        .replace(link, "")
+        .replace(/Ubicación GPS:/gi, "")
+        .replace(/\(Por favor añade referencias del lugar\)/gi, "")
+        .replace(/^\s*[\r\n]/gm, "")
+        .trim();
+    }
+
+    return { text: cleanText, link };
+  };
+
   const handleNotifyWhatsApp = (order) => {
     let phoneToUse = order.customerPhone;
     if (!phoneToUse) {
@@ -137,8 +159,36 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     }
 
     const correlative = order.source === "WEB" ? order.saleNumber : `#${String(order.saleNumber).padStart(2, "0")}`;
-    const text = `¡Hola ${order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "amigo"}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya está LISTO ✅🚀.\n\n¡Te esperamos!`;
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    const clName = order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "amigo";
+
+    let text = "";
+    if (order.deliveryType === "DELIVERY") {
+      text = `¡Hola ${clName}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya va en camino 🛵💨.\n\n¡Atento a la puerta!`;
+    } else {
+      text = `¡Hola ${clName}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya está LISTO ✅🚀.\n\n¡Te esperamos!`;
+    }
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+    window.open(waUrl, "_blank");
+  };
+
+  const handleNotifyMotorizado = (order) => {
+    const { text: notes, link } = formatOrderNotes(order.orderNotes);
+    const correlative = order.source === "WEB" ? order.saleNumber : `#${String(order.saleNumber).padStart(2, "0")}`;
+
+    let text = `📦 *NUEVO DELIVERY* ${correlative}\n`;
+    text += `👤 ${order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "Cliente"}\n`;
+    if (order.customerPhone) {
+      text += `📞 ${order.customerPhone}\n`;
+    }
+    if (link) {
+      text += `\n📍 *Ubicación GPS*:\n${link}\n`;
+    }
+    if (notes) {
+      text += `\n📝 *Referencias*:\n${notes}\n`;
+    }
+
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, "_blank");
   };
 
@@ -430,17 +480,35 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                       </div>
                     ))}
 
-                    {/* Order Level Notes */}
-                    {order.orderNotes && (
-                      <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 rounded-lg">
-                        <p className="text-[10px] uppercase font-black text-red-600 dark:text-red-400 mb-0.5">
-                          Nota del Cliente:
-                        </p>
-                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 italic leading-snug">
-                          "{order.orderNotes}"
-                        </p>
-                      </div>
-                    )}
+                    {/* Order Level Notes and GPS Map Link */}
+                    {(() => {
+                      const { text, link } = formatOrderNotes(order.orderNotes);
+                      return (
+                        <>
+                          {text && (
+                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 rounded-lg">
+                              <p className="text-[10px] uppercase font-black text-red-600 dark:text-red-400 mb-0.5">
+                                Nota del Cliente:
+                              </p>
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-200 italic leading-snug whitespace-pre-wrap">
+                                "{text}"
+                              </p>
+                            </div>
+                          )}
+                          {link && (
+                            <a
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-3 w-full py-2.5 bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-sky-200 dark:border-sky-800/50 flex justify-center gap-2 items-center hover:bg-sky-100 dark:hover:bg-sky-900/40"
+                            >
+                              <MapPin size={16} />
+                              Abrir mapa para motorizado
+                            </a>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Action */}
@@ -450,12 +518,22 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                       order.deliveryType === "DELIVERY") && (
                         <button
                           onClick={() => handleNotifyWhatsApp(order)}
-                          className="w-full py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-emerald-200 dark:border-emerald-800/50 flex justify-center gap-2 items-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                          className={`w-full py-2 ${order.deliveryType === "DELIVERY" ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:bg-amber-100" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100"} font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border flex justify-center gap-2 items-center`}
                         >
                           <MessageCircle size={16} />
-                          Avisar por WhatsApp
+                          {order.deliveryType === "DELIVERY" ? "Avisar en Camino" : "Avisar Listo"}
                         </button>
                       )}
+
+                    {order.deliveryType === "DELIVERY" && formatOrderNotes(order.orderNotes).link && (
+                      <button
+                        onClick={() => handleNotifyMotorizado(order)}
+                        className="w-full py-2 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-indigo-200 dark:border-indigo-800/50 flex justify-center gap-2 items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                      >
+                        <Car size={16} />
+                        Enviar Ruta al Motorizado
+                      </button>
+                    )}
                     <button
                       onClick={() => handleMarkAsReady(order.id, order.source)}
                       className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-black text-sm uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] flex justify-center gap-2 items-center shadow-lg shadow-emerald-500/20"
