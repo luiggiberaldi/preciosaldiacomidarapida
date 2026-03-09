@@ -17,7 +17,7 @@ import {
   Box,
   Globe,
   UploadCloud,
-  Flame,
+  Lock, // Added Lock icon
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
@@ -44,7 +44,6 @@ import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
 import { useSecurity } from "../hooks/useSecurity";
 import { webSupabase, getTenantId, generateProductId } from "../utils/supabase";
-import PremiumGuard from "../components/security/PremiumGuard";
 
 export const ProductsView = ({ rates, triggerHaptic }) => {
   const { isPremium } = useSecurity();
@@ -572,19 +571,21 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
             )}
 
             {products.length > 0 && (
-              <PremiumGuard featureName="Compartir QR y Menú" hideLock={true}>
-                <button
-                  onClick={() => {
-                    triggerHaptic && triggerHaptic();
-                    setIsShareWebOpen(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 font-bold text-sm"
-                  title="Ver QR y Enlace"
-                >
-                  <Globe size={16} strokeWidth={2.5} />
-                  <span className="hidden sm:inline">Compartir Web</span>
-                </button>
-              </PremiumGuard>
+              <button
+                onClick={() => {
+                  triggerHaptic && triggerHaptic();
+                  if (!isPremium) {
+                    showToast("Adquiere Premium para compartir tu menú en la web.", "error");
+                    return;
+                  }
+                  setIsShareWebOpen(true);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-md transition-all active:scale-95 font-bold text-sm ${!isPremium ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 shadow-none' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
+                title="Ver QR y Enlace"
+              >
+                {!isPremium ? <Lock size={14} className="opacity-70" /> : <Globe size={16} strokeWidth={2.5} />}
+                <span className="hidden sm:inline">Compartir Web</span>
+              </button>
             )}
 
             <button
