@@ -25,16 +25,16 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
       console.log("handleConfirmWhatsApp clicked for order:", order);
       // Construct the WhatsApp message
       let text = `Hola *${order.customer_name || 'Cliente'}*, hemos recibido tu pedido en *${storeConfig?.name || "nuestro local"}*.\n\n`;
-      text += `*🛍️ Resumen de tu Orden:*\n\n`;
+      text += `*Resumen de tu Orden:*\n\n`;
 
       const safeItems = order.items || [];
       safeItems.forEach((item) => {
-        let itemDesc = `▶ ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
+        let itemDesc = `- ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
         if (item.size) itemDesc += ` [${item.size}]`;
         item.selectedExtras?.forEach((ext) => {
           itemDesc += `\n   + ${ext.name}`;
         });
-        if (item.note) itemDesc += `\n   📝 Nota: ${item.note}`;
+        if (item.note) itemDesc += `\n   Nota: ${item.note}`;
         text += `${itemDesc}\n`;
       });
 
@@ -48,7 +48,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
         text += `\n\n*Tipo de Entrega y Notas:* \n${order.customer_notes}`;
       }
 
-      text += `\n\n💳 Por favor, indícanos tu método de pago preferido para procesarlo de inmediato.`;
+      text += `\n\nPor favor, indicanos tu metodo de pago preferido para procesarlo de inmediato.`;
 
       // We open the chat with the CUSTOMER's phone
       const cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
@@ -301,8 +301,8 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
             </h3>
             {deliveryType !== "UNKNOWN" && (
               <span className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md shadow-sm border ${(deliveryType === "LOCAL" || deliveryType === "MESA_QR") ? "bg-emerald-50 text-emerald-600 border-emerald-200/60" :
-                  deliveryType === "LLEVAR" ? "bg-indigo-50 text-indigo-600 border-indigo-200/60" :
-                    "bg-amber-50 text-amber-600 border-amber-200/60"
+                deliveryType === "LLEVAR" ? "bg-indigo-50 text-indigo-600 border-indigo-200/60" :
+                  "bg-amber-50 text-amber-600 border-amber-200/60"
                 }`}>
                 {deliveryType === "LOCAL" && <><Utensils size={12} strokeWidth={2.5} /> MESA</>}
                 {deliveryType === "MESA_QR" && <><Utensils size={12} strokeWidth={2.5} /> MESA {tableNumber}</>}

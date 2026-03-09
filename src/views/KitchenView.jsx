@@ -173,9 +173,9 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
     let text = "";
     if (order.deliveryType === "DELIVERY") {
-      text = `¡Hola ${clName}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya va en camino 🛵💨.\n\n¡Atento a la puerta!`;
+      text = `Hola ${clName}!\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya va en camino.\n\nAtento a la puerta!`;
     } else {
-      text = `¡Hola ${clName}! 👋\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya está LISTO ✅🚀.\n\n¡Te esperamos!`;
+      text = `Hola ${clName}!\n\nTe avisamos desde *PreciosAlDía* que tu pedido ${correlative} ya esta LISTO.\n\nTe esperamos!`;
     }
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
@@ -186,16 +186,16 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     const { text: notes, link } = formatOrderNotes(order.orderNotes);
     const correlative = order.source === "WEB" ? order.saleNumber : `#${String(order.saleNumber).padStart(2, "0")}`;
 
-    let text = `📦 *NUEVO DELIVERY* ${correlative}\n`;
-    text += `👤 ${order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "Cliente"}\n`;
+    let text = `*NUEVO DELIVERY* ${correlative}\n`;
+    text += `Cliente: ${order.customerName && order.customerName !== "Consumidor Final" ? order.customerName : "Cliente"}\n`;
     if (order.customerPhone) {
-      text += `📞 ${order.customerPhone}\n`;
+      text += `Telefono: ${order.customerPhone}\n`;
     }
     if (link) {
-      text += `\n📍 *Ubicación GPS*:\n${link}\n`;
+      text += `\n*Ubicacion GPS*:\n${link}\n`;
     }
     if (notes) {
-      text += `\n📝 *Referencias*:\n${notes}\n`;
+      text += `\n*Referencias*:\n${notes}\n`;
     }
 
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
