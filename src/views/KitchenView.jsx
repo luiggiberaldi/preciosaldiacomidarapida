@@ -137,6 +137,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
       cleanText = cleanText
         .replace(link, "")
         .replace(/Ubicación GPS:/gi, "")
+        .replace(/\(Precisión aprox: [0-9]+m\)/gi, "")
         .replace(/\(Por favor añade referencias del lugar\)/gi, "")
         .replace(/^\s*[\r\n]/gm, "")
         .trim();
