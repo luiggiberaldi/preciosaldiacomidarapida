@@ -270,8 +270,14 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => {
   let deliveryType = "UNKNOWN";
   let cleanNotes = order.customer_notes || "";
+  let tableNumber = null;
 
-  if (cleanNotes.includes("[EN EL LOCAL]")) {
+  const mesaMatch = cleanNotes.match(/\[MESA (.*?)\]/);
+  if (mesaMatch) {
+    deliveryType = "MESA_QR";
+    tableNumber = mesaMatch[1];
+    cleanNotes = cleanNotes.replace(mesaMatch[0], "").trim();
+  } else if (cleanNotes.includes("[EN EL LOCAL]")) {
     deliveryType = "LOCAL";
     cleanNotes = cleanNotes.replace("[EN EL LOCAL]", "").trim();
   } else if (cleanNotes.includes("[PARA LLEVAR]")) {
@@ -281,6 +287,7 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
     deliveryType = "DELIVERY";
     cleanNotes = cleanNotes.replace("[DELIVERY]", "").trim();
   }
+
 
   return (
     <div
@@ -293,11 +300,12 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
               {order.customer_name}
             </h3>
             {deliveryType !== "UNKNOWN" && (
-              <span className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md shadow-sm border ${deliveryType === "LOCAL" ? "bg-emerald-50 text-emerald-600 border-emerald-200/60" :
+              <span className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md shadow-sm border ${(deliveryType === "LOCAL" || deliveryType === "MESA_QR") ? "bg-emerald-50 text-emerald-600 border-emerald-200/60" :
                   deliveryType === "LLEVAR" ? "bg-indigo-50 text-indigo-600 border-indigo-200/60" :
                     "bg-amber-50 text-amber-600 border-amber-200/60"
                 }`}>
                 {deliveryType === "LOCAL" && <><Utensils size={12} strokeWidth={2.5} /> MESA</>}
+                {deliveryType === "MESA_QR" && <><Utensils size={12} strokeWidth={2.5} /> MESA {tableNumber}</>}
                 {deliveryType === "LLEVAR" && <><ShoppingBag size={12} strokeWidth={2.5} /> RETIRO</>}
                 {deliveryType === "DELIVERY" && <><Car size={12} strokeWidth={2.5} /> DELIVERY</>}
               </span>
@@ -349,14 +357,15 @@ const OrderCard = ({ order, rates, isConfirmed, actions, onResendWhatsApp }) => 
         ))}
       </div>
 
-      {cleanNotes && (
+      {/* Only display notes block if there's actual content left besides hyphens/empty text */}
+      {cleanNotes && cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim() && (
         <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 mb-4 flex gap-2 items-start shadow-sm">
           <div className="mt-0.5 text-amber-500">
             <MessageCircle size={16} />
           </div>
           <div className="text-sm text-amber-900 leading-snug">
             <span className="font-bold uppercase text-[10px] tracking-wider text-amber-700 block mb-0.5">Nota del cliente</span>
-            <span className="font-medium italic">"{cleanNotes}"</span>
+            <span className="font-medium italic">"{cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim()}"</span>
           </div>
         </div>
       )}

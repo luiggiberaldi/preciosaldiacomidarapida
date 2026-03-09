@@ -60,8 +60,14 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
           const notes = wo.customer_notes || "";
           let dType = "LLEVAR";
           let cleanNotes = notes;
+          let tableNumber = null;
 
-          if (notes.includes("[EN EL LOCAL]")) {
+          const mesaMatch = cleanNotes.match(/\[MESA (.*?)\]/);
+          if (mesaMatch) {
+            dType = "MESA_QR";
+            tableNumber = mesaMatch[1];
+            cleanNotes = cleanNotes.replace(mesaMatch[0], "").trim();
+          } else if (notes.includes("[EN EL LOCAL]")) {
             dType = "LOCAL";
             cleanNotes = notes.replace("[EN EL LOCAL]", "").trim();
           } else if (notes.includes("[PARA LLEVAR]")) {
@@ -72,6 +78,8 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             cleanNotes = notes.replace("[DELIVERY]", "").trim();
           }
 
+          cleanNotes = cleanNotes.replace(/^-\s*Notas:\s*/i, "").trim();
+
           return {
             id: wo.id,
             source: "WEB",
@@ -79,6 +87,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             customerName: wo.customer_name,
             customerPhone: wo.customer_phone || "",
             deliveryType: dType,
+            tableNumber: tableNumber,
             orderNotes: cleanNotes,
             timestamp: wo.updated_at || wo.created_at,
             items: wo.items.map((wi) => {
@@ -420,18 +429,20 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
                         <span
                           className={`text-[10px] font-black px-2 py-0.5 rounded-md ${order.deliveryType === "LLEVAR" ||
                             order.deliveryType === "DELIVERY" ||
-                            order.source === "WEB"
+                            (order.source === "WEB" && order.deliveryType !== "MESA_QR")
                             ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                             : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                             }`}
                         >
-                          {order.source === "WEB"
+                          {order.source === "WEB" && order.deliveryType !== "MESA_QR"
                             ? "🌐 PEDIDO WEB"
                             : order.deliveryType === "DELIVERY"
                               ? "🛵 DELIVERY"
                               : order.deliveryType === "LLEVAR"
                                 ? "📦 LLEVAR"
-                                : "🍽️ LOCAL"}
+                                : order.deliveryType === "MESA_QR"
+                                  ? `🍽️ MESA ${order.tableNumber}`
+                                  : "🍽️ LOCAL"}
                         </span>
                         {order.customerName &&
                           order.customerName !== "Consumidor Final" && (
