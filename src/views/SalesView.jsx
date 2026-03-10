@@ -579,15 +579,15 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       await storageService.setItem("my_customers_v1", updatedCustomers);
     }
 
-    // Complete Web Order if exists
+    // Send Web Order to Kitchen after payment
     if (pendingWebOrderId) {
       try {
-        console.log(`Marcando webOrder ${pendingWebOrderId} como completada...`);
+        console.log(`Enviando webOrder ${pendingWebOrderId} a cocina...`);
         const { error } = await webSupabase
           .from("web_orders")
-          .update({ status: "completed" })
+          .update({ status: "kitchen", updated_at: new Date().toISOString() })
           .eq("id", pendingWebOrderId);
-        if (error) console.error("Error updating web order to completed:", error);
+        if (error) console.error("Error updating web order to kitchen:", error);
       } catch (err) {
         console.error("Failed to update web order", err);
       }

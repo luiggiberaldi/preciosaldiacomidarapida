@@ -117,11 +117,10 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
       webPending = (data || [])
         .map((wo, index) => { wo._dailySequence = index + 1; return wo; })
-        .filter((wo) => [WEB_ORDER_STATUS.PENDING, WEB_ORDER_STATUS.CONFIRMED, WEB_ORDER_STATUS.PREPARING, WEB_ORDER_STATUS.READY].includes(wo.status))
+        .filter((wo) => [WEB_ORDER_STATUS.PREPARING, WEB_ORDER_STATUS.READY].includes(wo.status))
         .map((wo) => {
           const parsed = parseOrderNotes(wo.customer_notes);
           let normalizedStatus = wo.status;
-          if (wo.status === WEB_ORDER_STATUS.CONFIRMED) normalizedStatus = WEB_ORDER_STATUS.PENDING;
           return {
             id: wo.id,
             source: "WEB",
