@@ -151,8 +151,8 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
               onClick={() => handleToggleDigital(m.id)}
               title={m.isDigital ? "Digital (prepago)" : "Efectivo (presencial)"}
               className={`p-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1 ${m.isDigital
-                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400"
                 }`}
             >
               {m.isDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
@@ -182,21 +182,76 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
         {/* Payment details (expanded) */}
         {m.isDigital && isExpanded && (
           <div className="mt-1 mx-1 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
-            <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1.5">
+            <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-2.5">
               Datos para el cliente (se envian por WhatsApp)
             </label>
-            <textarea
-              value={m.paymentDetails || ""}
-              onChange={(e) => handleUpdateDetails(m.id, e.target.value)}
-              onBlur={() => showToast("Datos guardados", "success")}
-              placeholder={
-                m.id === "pago_movil"
-                  ? "Ej: 0412-1234567 / CI: V-12345678 / Banesco"
-                  : "Ej: correo@ejemplo.com o ID de cuenta"
-              }
-              rows={2}
-              className="w-full py-2 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
-            />
+
+            {m.id === "pago_movil" || (m.currency === "BS" && m.id !== "efectivo_bs" && m.id !== "punto_venta") ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-0.5">Telefono</span>
+                    <input
+                      type="text"
+                      placeholder="0412-1234567"
+                      className="w-full py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={(m.paymentDetails || "").split(" / ")[0] || ""}
+                      onChange={(e) => {
+                        const parts = (m.paymentDetails || " / / ").split(" / ");
+                        parts[0] = e.target.value;
+                        handleUpdateDetails(m.id, parts.join(" / "));
+                      }}
+                      onBlur={() => showToast("Datos guardados", "success")}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-0.5">Cedula/RIF</span>
+                    <input
+                      type="text"
+                      placeholder="V-12345678"
+                      className="w-full py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={(m.paymentDetails || "").split(" / ")[1] || ""}
+                      onChange={(e) => {
+                        const parts = (m.paymentDetails || " / ").split(" / ");
+                        parts[1] = e.target.value;
+                        if (parts.length < 3) parts.push("");
+                        handleUpdateDetails(m.id, parts.join(" / "));
+                      }}
+                      onBlur={() => showToast("Datos guardados", "success")}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-0.5">Banco</span>
+                  <input
+                    type="text"
+                    placeholder="Banesco"
+                    className="w-full py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+                    value={(m.paymentDetails || "").split(" / ")[2] || ""}
+                    onChange={(e) => {
+                      const parts = (m.paymentDetails || " / ").split(" / ");
+                      parts[2] = e.target.value;
+                      handleUpdateDetails(m.id, parts.join(" / "));
+                    }}
+                    onBlur={() => showToast("Datos guardados", "success")}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-0.5">
+                  Correo / ID / Billetera
+                </span>
+                <input
+                  type="text"
+                  placeholder={m.id === "zelle" ? "correo@ejemplo.com" : "ID o Dirección de cuenta"}
+                  className="w-full py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+                  value={m.paymentDetails || ""}
+                  onChange={(e) => handleUpdateDetails(m.id, e.target.value)}
+                  onBlur={() => showToast("Datos guardados", "success")}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -253,8 +308,8 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
           <button
             onClick={() => setNewIsDigital(!newIsDigital)}
             className={`w-full py-2.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${newIsDigital
-                ? "bg-blue-500 text-white"
-                : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+              ? "bg-blue-500 text-white"
+              : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
               }`}
           >
             {newIsDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
