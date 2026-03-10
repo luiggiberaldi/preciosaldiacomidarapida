@@ -391,13 +391,18 @@ export default function SettingsModal({
                 </div>
 
                 <button
+                  type="button"
                   onClick={handlePrepaymentToggle}
                   disabled={isSyncingPrepayment}
-                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex items-center px-1 shadow-inner disabled:opacity-50 ${requiresPrepayment ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${requiresPrepayment ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                 >
-                  <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${requiresPrepayment ? 'translate-x-6' : 'translate-x-0'}`}>
-                    {isSyncingPrepayment && <div className="w-2 h-2 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}
-                  </div>
+                  <span className="sr-only">Solo Pagos Digitales</span>
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${requiresPrepayment ? 'translate-x-5' : 'translate-x-0'}`}
+                  >
+                    {isSyncingPrepayment && <div className="h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}
+                  </span>
                 </button>
               </div>
             </div>
