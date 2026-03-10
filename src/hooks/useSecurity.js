@@ -5,6 +5,11 @@ import { supabase } from "../utils/supabase";
 const APP_VERSION = "1.0.0";
 const PRODUCT_ID = "comida_rapida";
 
+// Storage keys namespaced by product to avoid cross-PWA contamination
+const TOKEN_KEY = `pda_premium_token_${PRODUCT_ID}`;
+const DEMO_FLAG_KEY = `pda_demo_flag_${PRODUCT_ID}`;
+const SESSION_BACKUP_KEY = `_pda_s_${PRODUCT_ID}`;
+
 // FIX 1: Salt desde variable de entorno
 const MASTER_SECRET_KEY = import.meta.env.VITE_LICENSE_SALT;
 const DEMO_DURATION_MS = 168 * 60 * 60 * 1000; // 168 horas (7 días)
@@ -140,7 +145,7 @@ export function useSecurity() {
         if (newTempId.startsWith("CRP-")) {
           console.log(`[Migración] Actualizando ID de ${storedId} a ${newTempId}...`);
           // Si el ID antiguo tenía token premium/demo, regenerarlo
-          const oldTokenRaw = localStorage.getItem("pda_premium_token");
+          const oldTokenRaw = localStorage.getItem(TOKEN_KEY);
           if (oldTokenRaw) {
             const decodedOld = decodeToken(oldTokenRaw);
             // Intenta parsear para ver si es demo o code directo
@@ -162,7 +167,7 @@ export function useSecurity() {
               const tokenObj = { code: newValidCode, expires: expTime, isDemo: true };
               newTokenRaw = JSON.stringify(tokenObj);
             }
-            localStorage.setItem("pda_premium_token", encodeToken(newTokenRaw));
+            localStorage.setItem(TOKEN_KEY, encodeToken(newTokenRaw));
 
             // Intento 'best effort' de migrar en backend (Licencia y Demo)
             // No esperamos a que termine para no bloquear inicio off-line
@@ -175,7 +180,7 @@ export function useSecurity() {
 
             // Actualizar también el backup session (si existiese)
             try {
-              sessionStorage.setItem("_pda_s", encodeToken(newValidCode + ":" + newTempId));
+              sessionStorage.setItem(SESSION_BACKUP_KEY, encodeToken(newValidCode + ":" + newTempId));
             } catch (e) { }
           }
 
@@ -188,6 +193,19 @@ export function useSecurity() {
         storedId = await generateFingerprint();
         localStorage.setItem("pda_device_id", storedId);
       }
+
+      // Migrate from old shared keys to namespaced keys (one-time)
+      const oldToken = localStorage.getItem("pda_premium_token");
+      if (oldToken && !localStorage.getItem(TOKEN_KEY)) {
+        localStorage.setItem(TOKEN_KEY, oldToken);
+        localStorage.removeItem("pda_premium_token");
+      }
+      const oldSession = sessionStorage.getItem("_pda_s");
+      if (oldSession && !sessionStorage.getItem(SESSION_BACKUP_KEY)) {
+        sessionStorage.setItem(SESSION_BACKUP_KEY, oldSession);
+        sessionStorage.removeItem("_pda_s");
+      }
+
       setDeviceId(storedId);
       checkLicense(storedId);
     };
@@ -195,7 +213,7 @@ export function useSecurity() {
     initDeviceId();
 
     // FIX 3: Leer demo flag desde IndexedDB
-    storageService.getItem("pda_demo_flag_v1", null).then((r) => {
+    storageService.getItem(DEMO_FLAG_KEY, null).then((r) => {
       if (r?.used) setDemoUsed(true);
     });
   }, []);
@@ -216,7 +234,7 @@ export function useSecurity() {
 
         if (license && license.active === false && isPremium) {
           // Revocado
-          localStorage.removeItem("pda_premium_token");
+          localStorage.removeItem(TOKEN_KEY);
           setIsPremium(false);
           setIsDemo(false);
           setDemoExpiredMsg(
@@ -224,7 +242,7 @@ export function useSecurity() {
           );
         } else if (license && license.active === true) {
           // Si pasó a permanente en backend pero el estado local es demo -> recargar
-          const rawStored = localStorage.getItem("pda_premium_token");
+          const rawStored = localStorage.getItem(TOKEN_KEY);
           let isDemoLocal = false;
           if (rawStored) {
             try {
@@ -239,7 +257,7 @@ export function useSecurity() {
             (license.type === "demo7" && !isDemoLocal);
 
           if (isMismatch) {
-            localStorage.removeItem("pda_premium_token");
+            localStorage.removeItem(TOKEN_KEY);
             window.location.reload();
           } else if (!isPremium) {
             // Reactivado remotamente -> Recargar para restaurar
@@ -318,7 +336,7 @@ export function useSecurity() {
       if (diff <= 0) {
         // Demo expiró en tiempo real
         clearInterval(interval);
-        localStorage.removeItem("pda_premium_token");
+        localStorage.removeItem(TOKEN_KEY);
         setIsPremium(false);
         setIsDemo(false);
         setDemoTimeLeft("");
@@ -337,12 +355,12 @@ export function useSecurity() {
     if (!deviceId) return;
     const interval = setInterval(
       async () => {
-        const raw = localStorage.getItem("pda_premium_token");
+        const raw = localStorage.getItem(TOKEN_KEY);
 
         // FIX 5: Si localStorage fue borrado, intentar restaurar desde sessionStorage
         if (!raw) {
           try {
-            const backup = sessionStorage.getItem("_pda_s");
+            const backup = sessionStorage.getItem(SESSION_BACKUP_KEY);
             if (backup) {
               const decoded = decodeToken(backup);
               const [backupToken, backupDevice] = decoded.split(":");
@@ -350,7 +368,7 @@ export function useSecurity() {
               if (backupToken === validCode && backupDevice === deviceId) {
                 // Restaurar token silenciosamente
                 localStorage.setItem(
-                  "pda_premium_token",
+                  TOKEN_KEY,
                   encodeToken(validCode),
                 );
                 return; // No hacer reload, licencia restaurada
@@ -380,7 +398,7 @@ export function useSecurity() {
 
           // Si el token local ya venció o fue alterado
           if (!isValid && isPremium) {
-            localStorage.removeItem("pda_premium_token");
+            localStorage.removeItem(TOKEN_KEY);
             setIsPremium(false);
             setIsDemo(false);
             window.location.reload();
@@ -421,7 +439,7 @@ export function useSecurity() {
 
   const checkLicense = async (currentDeviceId) => {
     // FIX 2: Decodificar token ofuscado
-    const rawStored = localStorage.getItem("pda_premium_token");
+    const rawStored = localStorage.getItem(TOKEN_KEY);
     const storedToken = rawStored ? decodeToken(rawStored) : null;
 
     if (!storedToken) {
@@ -449,7 +467,7 @@ export function useSecurity() {
                 isDemo: true,
               };
               localStorage.setItem(
-                "pda_premium_token",
+                TOKEN_KEY,
                 encodeToken(JSON.stringify(token)),
               );
               setIsPremium(true);
@@ -458,7 +476,7 @@ export function useSecurity() {
             }
           } else {
             // Permanente — restaurar token ofuscado
-            localStorage.setItem("pda_premium_token", encodeToken(validCode));
+            localStorage.setItem(TOKEN_KEY, encodeToken(validCode));
             setIsPremium(true);
             setIsDemo(false);
           }
@@ -492,7 +510,7 @@ export function useSecurity() {
             confirmedExpires = tokenObj.expires;
           } else {
             console.warn("Demo Expirada");
-            localStorage.removeItem("pda_premium_token");
+            localStorage.removeItem(TOKEN_KEY);
             setIsPremium(false);
             setIsDemo(false);
             setDemoExpiredMsg(
@@ -521,7 +539,7 @@ export function useSecurity() {
     if (isPremiumConfirmed) {
       try {
         sessionStorage.setItem(
-          "_pda_s",
+          SESSION_BACKUP_KEY,
           encodeToken(validTokenStr + ":" + currentDeviceId),
         );
       } catch { }
@@ -577,7 +595,7 @@ export function useSecurity() {
    */
   const activateDemo = async () => {
     // FIX 3: Verificar demo en IndexedDB (local)
-    const demoRecord = await storageService.getItem("pda_demo_flag_v1", null);
+    const demoRecord = await storageService.getItem(DEMO_FLAG_KEY, null);
     if (demoRecord?.used) {
       return { success: false, status: "DEMO_USED" };
     }
@@ -594,7 +612,7 @@ export function useSecurity() {
         .maybeSingle();
 
       if (existingDemo) {
-        await storageService.setItem("pda_demo_flag_v1", {
+        await storageService.setItem(DEMO_FLAG_KEY, {
           used: true,
           ts: Date.now(),
           deviceId: currentDeviceId,
@@ -615,12 +633,12 @@ export function useSecurity() {
 
     // FIX 2: Guardar token ofuscado
     localStorage.setItem(
-      "pda_premium_token",
+      TOKEN_KEY,
       encodeToken(JSON.stringify(demoToken)),
     );
 
     // FIX 3: Guardar flag en IndexedDB
-    await storageService.setItem("pda_demo_flag_v1", {
+    await storageService.setItem(DEMO_FLAG_KEY, {
       used: true,
       ts: Date.now(),
       deviceId: currentDeviceId,
@@ -713,7 +731,7 @@ export function useSecurity() {
         expiresAt = finalExpiresAt;
         const token = { code: codeToStore, expires: expiresAt, isDemo: true };
         localStorage.setItem(
-          "pda_premium_token",
+          TOKEN_KEY,
           encodeToken(JSON.stringify(token)),
         );
         setIsPremium(true);
@@ -724,7 +742,7 @@ export function useSecurity() {
     }
 
     // Permanente
-    localStorage.setItem("pda_premium_token", encodeToken(codeToStore));
+    localStorage.setItem(TOKEN_KEY, encodeToken(codeToStore));
     setIsPremium(true);
     setIsDemo(false);
     return { success: true, status: "PREMIUM_ACTIVATED" };
