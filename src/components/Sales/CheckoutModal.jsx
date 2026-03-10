@@ -63,10 +63,10 @@ export default function CheckoutModal({
     [barValues, paymentMethods, effectiveRate],
   );
 
-  const remainingUsd = Math.max(0, cartTotalUsd - totalPaidUsd);
-  const remainingBs = remainingUsd * effectiveRate;
-  const changeUsd = Math.max(0, totalPaidUsd - cartTotalUsd);
-  const changeBs = Math.max(0, totalPaidBs - cartTotalBs);
+  const remainingUsd = Number(Math.max(0, cartTotalUsd - totalPaidUsd).toFixed(2));
+  const remainingBs = Number((remainingUsd * effectiveRate).toFixed(2));
+  const changeUsd = Number(Math.max(0, totalPaidUsd - cartTotalUsd).toFixed(2));
+  const changeBs = Number(Math.max(0, totalPaidBs - cartTotalBs).toFixed(2));
   const isPaid = remainingUsd <= 0.01;
 
   // ── Handlers ──
@@ -243,14 +243,14 @@ export default function CheckoutModal({
               onChange={(e) => handleBarChange(method.id, e.target.value)}
               placeholder={method.id.includes("efectivo") ? "Monto recibido" : "0.00"}
               className={`w-full py-3 px-4 pr-14 rounded-xl border-2 text-lg font-bold outline-none transition-all ${hasValue
-                  ? styles.inputActive
-                  : `bg-white dark:bg-slate-900 ${styles.inputBorder}`
+                ? styles.inputActive
+                : `bg-white dark:bg-slate-900 ${styles.inputBorder}`
                 } text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 focus:ring-4`}
             />
             <span
               className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black px-2 py-0.5 rounded-md border ${hasValue
-                  ? `${styles.titleBg} ${styles.title} ${styles.border}`
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
+                ? `${styles.titleBg} ${styles.title} ${styles.border}`
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
                 }`}
             >
               {method.currency === "USD" ? "$" : "Bs"}
@@ -394,8 +394,8 @@ export default function CheckoutModal({
         <div className="px-3 py-2">
           <div
             className={`p-4 rounded-xl border-2 transition-all ${isPaid
-                ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
-                : "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800"
+              ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
+              : "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800"
               }`}
           >
             {isPaid ? (
@@ -666,10 +666,10 @@ export default function CheckoutModal({
           onClick={handleConfirm}
           disabled={!selectedCustomerId && remainingUsd > 0.01}
           className={`w-full py-4 text-white font-black text-base rounded-2xl shadow-lg transition-all tracking-wide flex items-center justify-center gap-2 ${isPaid
+            ? "bg-red-500 hover:bg-red-600 shadow-red-500/25 active:scale-[0.98]"
+            : selectedCustomerId
               ? "bg-red-500 hover:bg-red-600 shadow-red-500/25 active:scale-[0.98]"
-              : selectedCustomerId
-                ? "bg-red-500 hover:bg-red-600 shadow-red-500/25 active:scale-[0.98]"
-                : "bg-slate-300 dark:bg-slate-800 text-slate-500 shadow-none cursor-not-allowed"
+              : "bg-slate-300 dark:bg-slate-800 text-slate-500 shadow-none cursor-not-allowed"
             }`}
         >
           {isPaid ? (
