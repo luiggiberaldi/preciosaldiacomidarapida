@@ -17,7 +17,8 @@ import {
   Box,
   Globe,
   UploadCloud,
-  Lock, // Added Lock icon
+  Lock,
+  Flame,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
