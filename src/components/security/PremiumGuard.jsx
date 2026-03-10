@@ -186,14 +186,13 @@ export default function PremiumGuard({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-2 text-center overflow-hidden px-4">
+    <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center overflow-hidden">
       <style>{`
                 @media (max-height: 600px) {
                     .benefits-list { display: none; }
                 }
             `}</style>
-
-      <div className="w-full max-w-[320px] sm:max-w-sm max-h-[95%] overflow-hidden rounded-[2rem] p-4 relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none">
+      <div className="w-full max-w-[320px] sm:max-w-sm rounded-[2rem] p-4 relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none my-auto overflow-y-auto max-h-full custom-scrollbar">
         {/* Decorative Background */}
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
