@@ -10,6 +10,7 @@ import {
   Fingerprint,
   Copy,
   Truck,
+  Wallet,
 } from "lucide-react";
 import { storageService } from "../utils/storageService";
 import { showToast } from "../components/Toast";
@@ -33,6 +34,8 @@ export default function SettingsModal({
   const [idCopied, setIdCopied] = useState(false);
   const [hasDelivery, setHasDelivery] = useState(() => localStorage.getItem("has_delivery") !== "false");
   const [isSyncingDelivery, setIsSyncingDelivery] = useState(false);
+  const [requiresPrepayment, setRequiresPrepayment] = useState(() => localStorage.getItem("requires_prepayment") === "true");
+  const [isSyncingPrepayment, setIsSyncingPrepayment] = useState(false);
 
   if (!isOpen) return null;
 
@@ -104,6 +107,27 @@ export default function SettingsModal({
       showToast("Error al sincronizar estado de delivery", "error");
     } finally {
       setIsSyncingDelivery(false);
+    }
+  };
+
+  // --- TOGGLE PREPAYMENT ---
+  const handlePrepaymentToggle = async () => {
+    if (triggerHaptic) triggerHaptic();
+    const newValue = !requiresPrepayment;
+    setRequiresPrepayment(newValue);
+    localStorage.setItem("requires_prepayment", String(newValue));
+
+    setIsSyncingPrepayment(true);
+    try {
+      const tenantId = getTenantId();
+      const { error } = await webSupabase.from("web_config").update({ requires_prepayment: newValue }).eq("tenant_id", tenantId);
+      if (error) throw error;
+      showToast(newValue ? "Prepago activado: solo metodos digitales en WhatsApp" : "Prepago desactivado: todos los metodos en WhatsApp", "info");
+    } catch (e) {
+      console.error("Error updating prepayment status:", e);
+      showToast("Error al sincronizar estado de prepago", "error");
+    } finally {
+      setIsSyncingPrepayment(false);
     }
   };
 
@@ -350,6 +374,29 @@ export default function SettingsModal({
                 >
                   <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${hasDelivery ? 'translate-x-6' : 'translate-x-0'}`}>
                     {isSyncingDelivery && <div className="w-2 h-2 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />}
+                  </div>
+                </button>
+              </div>
+
+              {/* Prepayment Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                    <Wallet size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">Prepago Obligatorio</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Envia solo metodos digitales en WhatsApp</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handlePrepaymentToggle}
+                  disabled={isSyncingPrepayment}
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex items-center px-1 shadow-inner disabled:opacity-50 ${requiresPrepayment ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${requiresPrepayment ? 'translate-x-6' : 'translate-x-0'}`}>
+                    {isSyncingPrepayment && <div className="w-2 h-2 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}
                   </div>
                 </button>
               </div>

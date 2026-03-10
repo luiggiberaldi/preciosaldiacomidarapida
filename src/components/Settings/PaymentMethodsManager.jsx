@@ -12,6 +12,10 @@ import {
   Coins,
   Key,
   Fingerprint,
+  Wifi,
+  WifiOff,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   getActivePaymentMethods,
@@ -41,6 +45,8 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
   const [newLabel, setNewLabel] = useState("");
   const [newCurrency, setNewCurrency] = useState("BS");
   const [newIcon, setNewIcon] = useState("Banknote");
+  const [newIsDigital, setNewIsDigital] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     getActivePaymentMethods().then(setMethods);
@@ -48,7 +54,7 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
 
   const handleAdd = async () => {
     if (!newLabel.trim()) {
-      showToast("Escribe un nombre para el método", "error");
+      showToast("Escribe un nombre para el metodo", "error");
       return;
     }
     triggerHaptic && triggerHaptic();
@@ -60,15 +66,17 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
         icon: newIcon,
         currency: newCurrency,
         isFactory: false,
+        isDigital: newIsDigital,
+        paymentDetails: "",
       },
     ];
     await savePaymentMethods(updated);
-    // Rehidratar para el estado local del componente
     const hydrated = await getActivePaymentMethods();
     setMethods(hydrated);
     setNewLabel("");
+    setNewIsDigital(false);
     setShowAdd(false);
-    showToast("Método de pago agregado", "success");
+    showToast("Metodo de pago agregado", "success");
   };
 
   const handleRemove = async (id) => {
@@ -77,52 +85,129 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
     await savePaymentMethods(updated);
     const hydrated = await getActivePaymentMethods();
     setMethods(hydrated);
-    showToast("Método eliminado", "success");
+    showToast("Metodo eliminado", "success");
+  };
+
+  const handleToggleDigital = async (id) => {
+    triggerHaptic && triggerHaptic();
+    const updated = methods.map((m) =>
+      m.id === id ? { ...m, isDigital: !m.isDigital } : m,
+    );
+    await savePaymentMethods(updated);
+    const hydrated = await getActivePaymentMethods();
+    setMethods(hydrated);
+    const method = updated.find((m) => m.id === id);
+    showToast(
+      method.isDigital
+        ? `${method.label} marcado como digital`
+        : `${method.label} marcado como efectivo`,
+      "info",
+    );
+  };
+
+  const handleUpdateDetails = async (id, details) => {
+    const updated = methods.map((m) =>
+      m.id === id ? { ...m, paymentDetails: details } : m,
+    );
+    await savePaymentMethods(updated);
+    setMethods(
+      updated.map((m) => ({
+        ...m,
+        Icon: PAYMENT_ICONS[m.id] ?? ICON_COMPONENTS[m.icon] ?? null,
+      })),
+    );
   };
 
   const methodsBs = methods.filter((m) => m.currency === "BS");
   const methodsUsd = methods.filter((m) => m.currency === "USD");
 
-  const renderMethod = (m) => (
-    <div
-      key={m.id}
-      className="flex items-center justify-between py-2.5 px-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 mb-2"
-    >
-      <div className="flex items-center gap-2.5">
-        {(() => {
-          const MIcon =
-            m.Icon || PAYMENT_ICONS[m.id] || ICON_COMPONENTS[m.icon];
-          return MIcon ? (
-            <MIcon size={18} className="text-slate-500" />
-          ) : (
-            <span className="text-lg">{m.icon}</span>
-          );
-        })()}
-        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-          {m.label}
-        </span>
-        {m.isFactory && (
-          <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
-            Predeterminado
-          </span>
+  const renderMethod = (m) => {
+    const isExpanded = expandedId === m.id;
+    return (
+      <div key={m.id} className="mb-2">
+        <div className="flex items-center justify-between py-2.5 px-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {(() => {
+              const MIcon =
+                m.Icon || PAYMENT_ICONS[m.id] || ICON_COMPONENTS[m.icon];
+              return MIcon ? (
+                <MIcon size={18} className="text-slate-500 shrink-0" />
+              ) : (
+                <span className="text-lg shrink-0">{m.icon}</span>
+              );
+            })()}
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+              {m.label}
+            </span>
+            {m.isFactory && (
+              <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded shrink-0">
+                Base
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Digital/Cash toggle */}
+            <button
+              onClick={() => handleToggleDigital(m.id)}
+              title={m.isDigital ? "Digital (prepago)" : "Efectivo (presencial)"}
+              className={`p-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1 ${m.isDigital
+                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                }`}
+            >
+              {m.isDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
+              <span className="text-[10px]">{m.isDigital ? "Digital" : "Efectivo"}</span>
+            </button>
+            {/* Expand for details */}
+            {m.isDigital && (
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
+                title="Datos de pago"
+              >
+                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            )}
+            {/* Delete custom */}
+            {!m.isFactory && (
+              <button
+                onClick={() => handleRemove(m.id)}
+                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+        {/* Payment details (expanded) */}
+        {m.isDigital && isExpanded && (
+          <div className="mt-1 mx-1 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+            <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1.5">
+              Datos para el cliente (se envian por WhatsApp)
+            </label>
+            <textarea
+              value={m.paymentDetails || ""}
+              onChange={(e) => handleUpdateDetails(m.id, e.target.value)}
+              onBlur={() => showToast("Datos guardados", "success")}
+              placeholder={
+                m.id === "pago_movil"
+                  ? "Ej: 0412-1234567 / CI: V-12345678 / Banesco"
+                  : "Ej: correo@ejemplo.com o ID de cuenta"
+              }
+              rows={2}
+              className="w-full py-2 px-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
+            />
+          </div>
         )}
       </div>
-      {!m.isFactory && (
-        <button
-          onClick={() => handleRemove(m.id)}
-          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-black text-slate-700 dark:text-slate-200 flex items-center gap-2">
-          <CreditCard size={16} /> Métodos de Pago
+          <CreditCard size={16} /> Metodos de Pago
         </h3>
         <button
           onClick={() => setShowAdd(!showAdd)}
@@ -132,6 +217,14 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
         </button>
       </div>
 
+      {/* Info banner */}
+      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 rounded-xl">
+        <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium leading-snug">
+          <Wifi size={12} className="inline mr-1" />
+          Los metodos marcados como <strong>Digital</strong> se enviaran automaticamente en el WhatsApp de confirmacion cuando el prepago este activado.
+        </p>
+      </div>
+
       {/* Formulario agregar */}
       {showAdd && (
         <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3">
@@ -139,7 +232,7 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
             type="text"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Nombre del método..."
+            placeholder="Nombre del metodo..."
             className="w-full py-2.5 px-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/30"
           />
           <div className="flex gap-2">
@@ -147,15 +240,26 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
               onClick={() => setNewCurrency("BS")}
               className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${newCurrency === "BS" ? "bg-blue-500 text-white" : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"}`}
             >
-              Bolívares (Bs)
+              Bolivares (Bs)
             </button>
             <button
               onClick={() => setNewCurrency("USD")}
               className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${newCurrency === "USD" ? "bg-red-500 text-white" : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"}`}
             >
-              Dólares ($)
+              Dolares ($)
             </button>
           </div>
+          {/* Digital toggle */}
+          <button
+            onClick={() => setNewIsDigital(!newIsDigital)}
+            className={`w-full py-2.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${newIsDigital
+                ? "bg-blue-500 text-white"
+                : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+              }`}
+          >
+            {newIsDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
+            {newIsDigital ? "Digital (prepago remoto)" : "Efectivo (presencial)"}
+          </button>
           <div className="flex flex-wrap gap-2">
             {ICON_OPTIONS.map(({ key, Icon }) => (
               <button
@@ -171,26 +275,26 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
             onClick={handleAdd}
             className="w-full py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 transition-colors active:scale-[0.98]"
           >
-            Guardar Método
+            Guardar Metodo
           </button>
         </div>
       )}
 
-      {/* Sección Dólares */}
+      {/* Seccion Dolares */}
       {methodsUsd.length > 0 && (
         <div>
           <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">
-            Dólares ($)
+            Dolares ($)
           </p>
           {methodsUsd.map(renderMethod)}
         </div>
       )}
 
-      {/* Sección Bolívares */}
+      {/* Seccion Bolivares */}
       {methodsBs.length > 0 && (
         <div>
           <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">
-            Bolívares (Bs)
+            Bolivares (Bs)
           </p>
           {methodsBs.map(renderMethod)}
         </div>

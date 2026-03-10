@@ -1,14 +1,23 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Smartphone, Check, ChefHat, MessageCircle, X, Edit, CreditCard, Trash2, Utensils, ShoppingBag, Car } from "lucide-react";
 import { useWebOrders } from "../hooks/useWebOrders";
 import { formatBs } from "../utils/calculatorUtils";
 import { parseOrderNotes } from "../utils/parseOrderNotes";
 import ConfirmDialog from "../components/ConfirmDialog";
 import WebOrderStatusBadge from "../components/WebOrderStatusBadge";
+import { getActivePaymentMethods } from "../config/paymentMethods";
 
 export const InboxView = ({ rates, storeConfig, onNavigate }) => {
   const { orders, loading, updateOrderStatus } = useWebOrders();
   const [confirmCancel, setConfirmCancel] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+
+  const requiresPrepayment = localStorage.getItem("requires_prepayment") === "true";
+
+  // Load payment methods on mount
+  useEffect(() => {
+    getActivePaymentMethods().then(setPaymentMethods);
+  }, []);
 
   // The store needs a whatsapp number to send messages from. If it's not set, they can't easily reply.
   const storePhone = storeConfig?.whatsappNumber || "";
@@ -49,7 +58,34 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
         text += `\n\n*Tipo de Entrega y Notas:* \n${order.customer_notes}`;
       }
 
-      text += `\n\nPor favor, indicanos tu metodo de pago preferido para procesarlo de inmediato.`;
+      // Payment methods section
+      if (requiresPrepayment) {
+        // Only digital methods with their bank details
+        const digitalMethods = paymentMethods.filter((m) => m.isDigital);
+        if (digitalMethods.length > 0) {
+          text += `\n\n*Para procesar tu pedido, realiza el pago por alguno de estos metodos:*\n`;
+          digitalMethods.forEach((m) => {
+            text += `\n${m.icon || ""} *${m.label}*`;
+            if (m.paymentDetails) {
+              text += `\n   ${m.paymentDetails}`;
+            }
+          });
+          text += `\n\nUna vez realizado, envíanos el comprobante por este chat.`;
+        } else {
+          text += `\n\nPor favor, contactanos para coordinar el pago.`;
+        }
+      } else {
+        // All methods listed
+        if (paymentMethods.length > 0) {
+          text += `\n\n*Metodos de pago aceptados:*\n`;
+          paymentMethods.forEach((m) => {
+            text += `${m.icon || ""} ${m.label}\n`;
+          });
+          text += `\nPor favor, indicanos cual prefieres para procesarlo de inmediato.`;
+        } else {
+          text += `\n\nPor favor, indicanos tu metodo de pago preferido para procesarlo de inmediato.`;
+        }
+      }
 
       // We open the chat with the CUSTOMER's phone
       const cleanPhone = (order.customer_phone || "").replace(/\D/g, "");

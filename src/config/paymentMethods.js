@@ -19,19 +19,23 @@ export const FACTORY_PAYMENT_METHODS = [
   // Bolívares
   {
     id: "efectivo_bs",
-    label: "Efectivo en Bolívares",
+    label: "Efectivo en Bolivares",
     icon: "💵",
     Icon: Banknote,
     currency: "BS",
     isFactory: true,
+    isDigital: false,
+    paymentDetails: "",
   },
   {
     id: "pago_movil",
-    label: "Pago Móvil",
+    label: "Pago Movil",
     icon: "📱",
     Icon: Smartphone,
     currency: "BS",
     isFactory: true,
+    isDigital: true,
+    paymentDetails: "",
   },
   {
     id: "punto_venta",
@@ -40,15 +44,19 @@ export const FACTORY_PAYMENT_METHODS = [
     Icon: CreditCard,
     currency: "BS",
     isFactory: true,
+    isDigital: false,
+    paymentDetails: "",
   },
   // Dólares
   {
     id: "efectivo_usd",
-    label: "Efectivo en Dólares",
+    label: "Efectivo en Dolares",
     icon: "💲",
     Icon: DollarSign,
     currency: "USD",
     isFactory: true,
+    isDigital: false,
+    paymentDetails: "",
   },
 ];
 
