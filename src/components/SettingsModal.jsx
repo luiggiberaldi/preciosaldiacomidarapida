@@ -122,7 +122,7 @@ export default function SettingsModal({
       const tenantId = getTenantId();
       const { error } = await webSupabase.from("web_config").update({ requires_prepayment: newValue }).eq("tenant_id", tenantId);
       if (error) throw error;
-      showToast(newValue ? "Prepago activado: solo metodos digitales en WhatsApp" : "Prepago desactivado: todos los metodos en WhatsApp", "info");
+      showToast(newValue ? "Pagos Digitales activados: Efectivo oculto en la web" : "Pagos Digitales desactivados: Efectivo visible", "info");
     } catch (e) {
       console.error("Error updating prepayment status:", e);
       showToast("Error al sincronizar estado de prepago", "error");
@@ -385,8 +385,8 @@ export default function SettingsModal({
                     <Wallet size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">Prepago Obligatorio</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Envia solo metodos digitales en WhatsApp</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">Solo Pagos Digitales</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Oculta el efectivo para exigir depósitos por adelantado</p>
                   </div>
                 </div>
 
