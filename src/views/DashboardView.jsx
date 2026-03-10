@@ -48,6 +48,11 @@ import { generateTicketPDF } from "../utils/ticketGenerator";
 import { generateDailyClosePDF } from "../utils/dailyCloseGenerator";
 import { useNotifications } from "../hooks/useNotifications";
 import AnimatedCounter from "../components/AnimatedCounter";
+import DashboardEmptyState from "../components/Dashboard/DashboardEmptyState";
+import DashboardStats from "../components/Dashboard/DashboardStats";
+import PaymentBreakdown from "../components/Dashboard/PaymentBreakdown";
+import LowStockAlert from "../components/Dashboard/LowStockAlert";
+import TopProducts from "../components/Dashboard/TopProducts";
 
 const SALES_KEY = "bodega_sales_v1";
 
@@ -80,36 +85,50 @@ export default function DashboardView({
   const today = new Date().toISOString().split("T")[0];
   const [activeOrdersCount, setActiveOrdersCount] = useState(0);
 
+  // Function to reload data
+  const loadData = useCallback(async () => {
+    const [savedSales, savedProducts, savedCustomers, savedOrders] =
+      await Promise.all([
+        storageService.getItem(SALES_KEY, []),
+        storageService.getItem("my_products_v1", []),
+        storageService.getItem("bodega_customers_v1", []),
+        storageService.getItem("kitchen_orders_v1", []),
+      ]);
+
+    setSales(savedSales);
+    setProducts(savedProducts);
+    setCustomers(savedCustomers);
+
+    const active = savedOrders.filter(
+      (o) => o.status === "PENDING" || o.status === "PREPARING",
+    ).length;
+    setActiveOrdersCount(active);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      const [savedSales, savedProducts, savedCustomers, savedOrders] =
-        await Promise.all([
-          storageService.getItem(SALES_KEY, []),
-          storageService.getItem("my_products_v1", []),
-          storageService.getItem("bodega_customers_v1", []),
-          storageService.getItem("kitchen_orders_v1", []),
-        ]);
-      if (mounted) {
-        setSales(savedSales);
-        setProducts(savedProducts);
-        setCustomers(savedCustomers);
+    const initLoad = async () => {
+      await loadData();
+      if (mounted) setIsLoading(false);
+    };
+    initLoad();
+    requestPermission();
 
-        const active = savedOrders.filter(
-          (o) => o.status === "PENDING" || o.status === "PREPARING",
-        ).length;
-        setActiveOrdersCount(active);
-
-        setIsLoading(false);
+    // Listen for storage events (Reactive Data)
+    const handleStorageUpdate = (e) => {
+      const keysWeCareAbout = [SALES_KEY, "my_products_v1", "bodega_customers_v1"];
+      if (keysWeCareAbout.includes(e.detail.key)) {
+        loadData();
       }
     };
-    load();
-    // Solicitar permiso de notificaciones al primer uso
-    requestPermission();
+
+    window.addEventListener("app_storage_update", handleStorageUpdate);
+
     return () => {
       mounted = false;
+      window.removeEventListener("app_storage_update", handleStorageUpdate);
     };
-  }, []);
+  }, [loadData, requestPermission]);
 
   // ── Funciones de Historial Avanzado ──
   const handleVoidSale = async (sale) => {
@@ -610,180 +629,25 @@ export default function DashboardView({
       </div>
 
       {/* ─── ONBOARDING RÁPIDO (ESTADO VACÍO GENERAL) ─── */}
-      {sales.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 sm:p-6 shadow-xl shadow-red-500/5 mb-6 border border-slate-100 dark:border-slate-800 relative overflow-hidden">
-          <div className="absolute -right-6 -top-6 w-32 h-32 bg-red-50 dark:bg-red-900/10 rounded-full blur-3xl pointer-events-none"></div>
-
-          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mb-4 relative z-10">
-            <span>👋</span> ¿Primera vez aquí?
-          </h2>
-
-          <div className="space-y-3 relative z-10">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center shrink-0 font-bold text-xs">1</div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-snug pt-0.5">
-                <strong>Crea tu menú</strong> con tus hamburguesas, perros y bebidas desde la pestaña Menú.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center shrink-0 font-bold text-xs">2</div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-snug pt-0.5">
-                <strong>Configura tu tasa BCV</strong> y moneda base en la configuración del menú.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center shrink-0 font-bold text-xs">3</div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-snug pt-0.5">
-                <strong className="text-slate-800 dark:text-slate-200">Haz tu primera venta</strong> desde Vender para comenzar a ver tus reportes aquí.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate && onNavigate("ventas")}
-            className="w-full mt-6 bg-red-500 text-white rounded-xl py-3 font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 active:scale-95"
-          >
-            Ir a Vender
-          </button>
-        </div>
-      )}
+      {sales.length === 0 && <DashboardEmptyState onNavigate={onNavigate} />}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {/* Ventas Hoy */}
-        <div className="col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border-2 border-red-500/20 shadow-sm relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-50 dark:bg-red-900/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center text-red-600 dark:text-red-400">
-                <DollarSign size={20} className="stroke-[2.5px]" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-800 dark:text-white leading-tight">Ventas de hoy</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Tasa BCV: {formatBs(bcvRate)} Bs/$</p>
-              </div>
-            </div>
-            <button
-              onClick={handleDailyClose}
-              className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center gap-1.5 shadow-sm"
-              title="Cierre de caja"
-            >
-              <FileText size={14} /> Cierre
-            </button>
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">
-                <AnimatedCounter value={todayTotalUsd} />
-              </span>
-              <span className="text-sm font-bold text-slate-400 uppercase">USD</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-base font-bold text-slate-500 dark:text-slate-400">
-                {formatBs(todayTotalBs)}
-              </span>
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Bs</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Pedidos de hoy */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
-              <ShoppingBag size={16} className="text-indigo-500" />
-            </div>
-            <h3 className="text-[11px] font-bold text-slate-500 uppercase">Pedidos de hoy</h3>
-          </div>
-          <p className="text-2xl font-black text-slate-800 dark:text-white leading-none mt-2">
-            <AnimatedCounter value={todaySales.length} />
-          </p>
-        </div>
-
-        {/* Platos vendidos */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-              <Flame size={16} className="text-orange-500" />
-            </div>
-            <h3 className="text-[11px] font-bold text-slate-500 uppercase">Platos vendidos</h3>
-          </div>
-          <p className="text-2xl font-black text-slate-800 dark:text-white leading-none mt-2">
-            <AnimatedCounter value={todayItemsSold} />
-          </p>
-        </div>
-
-        {/* Ganancia Estimada */}
-        <div className="col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute -right-4 -top-4 w-16 h-16 bg-green-50 dark:bg-green-900/10 rounded-full blur-2xl pointer-events-none"></div>
-          <div className="flex justify-between items-center relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center shadow-inner shrink-0">
-                <TrendingUp
-                  size={20}
-                  className="text-green-600 dark:text-green-400"
-                  strokeWidth={2.5}
-                />
-              </div>
-              <div>
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase">Ganancia estimada</h3>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span
-                    className={`text-xl font-black tracking-tight ${todayProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-amber-500"}`}
-                  >
-                    {todayProfit >= 0 ? "+" : ""}{(todayProfit / bcvRate).toFixed(2)}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">USD</span>
-                  <span className="text-slate-300 mx-1">·</span>
-                  <span className="text-sm font-bold text-slate-500">{formatBs(todayProfit)}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Bs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <DashboardStats
+        todayTotalUsd={todayTotalUsd}
+        todayTotalBs={todayTotalBs}
+        todaySalesLength={todaySales.length}
+        todayItemsSold={todayItemsSold}
+        todayProfit={todayProfit}
+        bcvRate={bcvRate}
+        handleDailyClose={handleDailyClose}
+      />
 
       {/* Pago por Método */}
-      {Object.keys(paymentBreakdown).length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm mb-5">
-          <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">
-            Pagos del día
-          </h3>
-          <div className="space-y-2">
-            {Object.entries(paymentBreakdown).map(([method, data]) => {
-              const label = getPaymentLabel(method);
-              const PayIcon = PAYMENT_ICONS[method];
-              const totalBsEquiv =
-                data.currency === "USD" ? data.total * bcvRate : data.total;
-              const pct =
-                todayTotalBs > 0 ? (totalBsEquiv / todayTotalBs) * 100 : 0;
-              return (
-                <div key={method}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
-                      {PayIcon && (
-                        <PayIcon size={14} className="text-slate-400" />
-                      )}
-                      {label}
-                    </span>
-                    <span className="font-bold text-slate-700 dark:text-white">
-                      {data.currency === "USD"
-                        ? `$ ${data.total.toFixed(2)}`
-                        : `${formatBs(data.total)} Bs`}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-red-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PaymentBreakdown
+        paymentBreakdown={paymentBreakdown}
+        todayTotalBs={todayTotalBs}
+        bcvRate={bcvRate}
+      />
 
       {/* Gráfica semanal */}
       <SalesChart weekData={weekData} onNavigate={onNavigate} bcvRate={bcvRate} />
@@ -792,82 +656,10 @@ export default function DashboardView({
       <PeakHoursChart sales={sales} />
 
       {/* Bajo Stock */}
-      {lowStockProducts.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-amber-200 dark:border-amber-800/30 shadow-sm mb-5">
-          <h3 className="text-xs font-bold text-red-500 uppercase mb-3 flex items-center gap-1">
-            <AlertTriangle size={12} /> Bajo Stock ({lowStockProducts.length})
-          </h3>
-          <div className="space-y-2">
-            {lowStockProducts.map((p) => (
-              <div key={p.id} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
-                  {p.image ? (
-                    <img
-                      src={p.image}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Package size={14} className="text-slate-400" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                    {p.name}
-                  </p>
-                </div>
-                <span
-                  className={`text-xs font-black px-2 py-0.5 rounded-full ${(p.stock ?? 0) === 0
-                    ? "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                    : "bg-amber-100 text-red-600 dark:bg-amber-900/20 dark:text-red-400"
-                    }`}
-                >
-                  {p.stock ?? 0}{" "}
-                  {p.unit === "kg" ? "kg" : p.unit === "litro" ? "lt" : "ud"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <LowStockAlert lowStockProducts={lowStockProducts} />
 
       {/* Top Productos */}
-      {topProducts.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm mb-5">
-          <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1">
-            <TrendingUp size={12} /> Más Vendidos
-          </h3>
-          <div className="space-y-2">
-            {topProducts.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-3">
-                <span
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${i === 0
-                    ? "bg-amber-100 text-red-600"
-                    : i === 1
-                      ? "bg-slate-200 text-slate-500"
-                      : "bg-orange-50 text-orange-400"
-                    }`}
-                >
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                    {p.name}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    {p.qty} vendidos
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {formatBs(p.revenue)} Bs
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <TopProducts topProducts={topProducts} />
 
       <SalesHistory
         recentSales={recentSales}
