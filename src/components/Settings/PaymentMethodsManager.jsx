@@ -100,7 +100,7 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
     showToast(
       method.isDigital
         ? `${method.label} marcado como digital`
-        : `${method.label} marcado como efectivo`,
+        : `${method.label} marcado como físico`,
       "info",
     );
   };
@@ -149,14 +149,14 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
             {/* Digital/Cash toggle */}
             <button
               onClick={() => handleToggleDigital(m.id)}
-              title={m.isDigital ? "Digital (prepago)" : "Efectivo (presencial)"}
-              className={`p-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1 ${m.isDigital
+              title={m.isDigital ? "Es un pago digital a distancia" : "Es un pago físico o en tienda"}
+              className={`p-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1.5 px-2 ${m.isDigital
                 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                 }`}
             >
-              {m.isDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
-              <span className="text-[10px]">{m.isDigital ? "Digital" : "Efectivo"}</span>
+              {m.isDigital ? <Wifi size={14} /> : <Store size={14} />}
+              <span className="text-[10px] uppercase tracking-wide">{m.isDigital ? "Digital" : "Físico"}</span>
             </button>
             {/* Expand for details */}
             {m.isDigital && (
@@ -183,7 +183,7 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
         {m.isDigital && isExpanded && (
           <div className="mt-1 mx-1 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
             <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-2.5">
-              Datos para el cliente (se envian por WhatsApp)
+              Datos Bancarios (El cliente los recibirá por WhatsApp)
             </label>
 
             {m.id === "pago_movil" || (m.currency === "BS" && m.id !== "efectivo_bs" && m.id !== "punto_venta") ? (
@@ -273,10 +273,10 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
       </div>
 
       {/* Info banner */}
-      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 rounded-xl">
-        <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium leading-snug">
-          <Wifi size={12} className="inline mr-1" />
-          Los metodos marcados como <strong>Digital</strong> se enviaran automaticamente en el WhatsApp de confirmacion cuando el prepago este activado.
+      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl mb-4 flex gap-3 shadow-sm">
+        <div className="text-blue-500 mt-0.5"><Wifi size={18} /></div>
+        <p className="text-xs text-blue-800 dark:text-blue-300 font-medium leading-relaxed">
+          Los métodos marcados como <strong>Digital</strong> son exactamente los que se le enviarán al cliente por WhatsApp para que te pague por adelantado. Sirve para Pago Móvil, Zelle o Transferencias.
         </p>
       </div>
 
@@ -307,13 +307,13 @@ export default function PaymentMethodsManager({ triggerHaptic }) {
           {/* Digital toggle */}
           <button
             onClick={() => setNewIsDigital(!newIsDigital)}
-            className={`w-full py-2.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${newIsDigital
-              ? "bg-blue-500 text-white"
-              : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+            className={`w-full py-3 rounded-lg text-sm font-black transition-all flex items-center justify-center gap-2 border-2 ${newIsDigital
+              ? "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+              : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700"
               }`}
           >
-            {newIsDigital ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {newIsDigital ? "Digital (prepago remoto)" : "Efectivo (presencial)"}
+            {newIsDigital ? <Wifi size={16} /> : <Store size={16} />}
+            {newIsDigital ? "Pago Digital (Se envía por WhatsApp)" : "Pago Físico (Efectivo / Divisas)"}
           </button>
           <div className="flex flex-wrap gap-2">
             {ICON_OPTIONS.map(({ key, Icon }) => (
