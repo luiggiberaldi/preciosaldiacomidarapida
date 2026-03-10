@@ -22,12 +22,14 @@ export function useOfflineQueue() {
         return prevQueue;
       });
     };
-    window.addEventListener("offline_queue_updated", handleUpdate);
-    window.addEventListener("storage", (e) => {
+    const handleStorage = (e) => {
       if (e.key === "offline_sync_queue") handleUpdate();
-    });
+    };
+    window.addEventListener("offline_queue_updated", handleUpdate);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("offline_queue_updated", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 

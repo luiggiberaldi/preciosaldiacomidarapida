@@ -6,8 +6,9 @@ import { showToast } from "../components/Toast";
 import { webSupabase, getTenantId } from "../utils/supabase";
 
 // Keep track of already notified orders to prevent duplicate alerts
-// if useWebOrders is mounted in multiple components
+// Self-cleaning: clear every 2 hours to prevent memory leak on long shifts
 const notifiedOrders = new Set();
+setInterval(() => notifiedOrders.clear(), 2 * 60 * 60 * 1000);
 
 export const useWebOrders = () => {
   const [orders, setOrders] = useState([]);

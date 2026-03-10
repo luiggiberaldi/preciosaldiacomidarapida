@@ -11,7 +11,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("🔴 Calculator Error:", error, errorInfo);
+    console.error("Error en la aplicacion:", error, errorInfo);
   }
 
   render() {
@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
               Error de Carga
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-              La calculadora no pudo cargar correctamente. Esto puede deberse a
+              La aplicacion no pudo cargar correctamente. Esto puede deberse a
               datos corruptos o problemas de compatibilidad.
             </p>
             <button

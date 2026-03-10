@@ -14,7 +14,7 @@ if (!supaUrl || !supaAnonKey) {
 export const supabase = createClient(supaUrl, supaAnonKey);
 
 // Cliente Secundario (Pagina Web - Catalogo e Inbox)
-const webSupaUrl = "https://knhuctauzphtzigecjvx.supabase.co";
+const webSupaUrl = import.meta.env.VITE_WEB_SUPABASE_URL || "https://knhuctauzphtzigecjvx.supabase.co";
 const webSupaAnonKey = import.meta.env.VITE_WEB_SUPABASE_ANON_KEY;
 
 if (!webSupaAnonKey) {
