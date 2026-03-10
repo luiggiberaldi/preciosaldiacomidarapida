@@ -79,9 +79,12 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
         if (paymentMethods.length > 0) {
           text += `\n\n*Metodos de pago aceptados:*\n`;
           paymentMethods.forEach((m) => {
-            text += `${m.icon || ""} ${m.label}\n`;
+            text += `\n${m.icon || ""} *${m.label}*`;
+            if (m.isDigital && m.paymentDetails) {
+              text += `\n   ${m.paymentDetails}`;
+            }
           });
-          text += `\nPor favor, indicanos cual prefieres para procesarlo de inmediato.`;
+          text += `\n\nPor favor, indicanos cual prefieres para procesarlo de inmediato.`;
         } else {
           text += `\n\nPor favor, indicanos tu metodo de pago preferido para procesarlo de inmediato.`;
         }
