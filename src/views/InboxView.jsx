@@ -33,13 +33,16 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
 
   const handleConfirmWhatsApp = async (order) => {
     try {
-      // Construct the WhatsApp message
-      let text = `Hola *${order.customer_name || 'Cliente'}*, hemos recibido tu pedido en *${storeConfig?.name || "nuestro local"}*.\n\n`;
-      text += `*Resumen de tu Orden:*\n\n`;
+      const storeName = storeConfig?.name || "nuestro local";
+      const customerName = order.customer_name || "Cliente";
+
+      // Construct the WhatsApp message body
+      let text = `Hola *${customerName}*, recibimos tu pedido en *${storeName}*.\n\n`;
+      text += `*--- Resumen de tu Orden ---*\n`;
 
       const safeItems = order.items || [];
       safeItems.forEach((item) => {
-        let itemDesc = `- ${item.qty || 1}x ${item.name || 'Producto'} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
+        let itemDesc = `▪ ${item.qty || 1}x ${item.name || "Producto"} ($${(Number(item.priceUsd || 0) * Number(item.qty || 1)).toFixed(2)})`;
         if (item.size) itemDesc += ` [${item.size}]`;
         item.selectedExtras?.forEach((ext) => {
           itemDesc += `\n   + ${ext.name}`;
@@ -48,46 +51,44 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
         text += `${itemDesc}\n`;
       });
 
-      text += `\n*TOTAL: $${Number(order.total_usd || 0).toFixed(2)}*`;
+      const totalUsd = Number(order.total_usd || 0).toFixed(2);
+      text += `\n*TOTAL:* $${totalUsd}`;
+
       if (rates?.euro?.price) {
         const totalBs = (Number(order.total_usd || 0) * rates.euro.price).toFixed(2);
-        text += ` / *Bs ${totalBs}*`;
+        // Using common es-VE formatter manually for the string
+        text += ` / *Bs ${new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(totalBs)}*`;
       }
 
       if (order.customer_notes) {
-        text += `\n\n*Tipo de Entrega y Notas:* \n${order.customer_notes}`;
+        text += `\n*Entrega / Notas:* ${order.customer_notes}`;
       }
 
-      // Payment methods section
+      // Payment methods section based on Prepayment Setting
       if (requiresPrepayment) {
-        // Only digital methods with their bank details
+        // Escenario A: Pagos por Adelantado Activado
         const digitalMethods = paymentMethods.filter((m) => m.isDigital);
         if (digitalMethods.length > 0) {
-          text += `\n\n*Para procesar tu pedido, realiza el pago por alguno de estos metodos:*\n`;
+          text += `\n\n*Para enviarlo a cocina de inmediato, por favor realiza el pago usando:*`;
           digitalMethods.forEach((m) => {
-            text += `\n${m.icon || ""} *${m.label}*`;
+            text += `\n- *${m.label}*`;
             if (m.paymentDetails) {
               text += `\n   ${m.paymentDetails}`;
             }
           });
-          text += `\n\nUna vez realizado, envíanos el comprobante por este chat.`;
+          text += `\n\nPor favor, envíanos el comprobante (Capture) por aquí mismo apenas realices el pago. ¡Gracias!`;
         } else {
-          text += `\n\nPor favor, contactanos para coordinar el pago.`;
+          text += `\n\nPor favor, contáctanos por aquí para indicarte los datos de pago y enviar tu orden a cocina.`;
         }
       } else {
-        // All methods listed
+        // Escenario B: Pago Local / Contraentrega
+        text += `\n\n*Ya lo estamos preparando*. ¿Con qué método deseas pagar al retirar?`;
         if (paymentMethods.length > 0) {
-          text += `\n\n*Metodos de pago aceptados:*\n`;
           paymentMethods.forEach((m) => {
-            text += `\n${m.icon || ""} *${m.label}*`;
-            if (m.isDigital && m.paymentDetails) {
-              text += `\n   ${m.paymentDetails}`;
-            }
+            text += `\n- ${m.label}`;
           });
-          text += `\n\nPor favor, indicanos cual prefieres para procesarlo de inmediato.`;
-        } else {
-          text += `\n\nPor favor, indicanos tu metodo de pago preferido para procesarlo de inmediato.`;
         }
+        text += `\n\nConfírmanos por esta vía. ¡Te avisamos apenas esté listo!`;
       }
 
       // We open the chat with the CUSTOMER's phone

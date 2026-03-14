@@ -268,6 +268,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   const autoSyncWebCatalog = async (updatedProducts) => {
     try {
       const tenantId = getTenantId();
+      console.log("[POS] autoSyncWebCatalog TRIGGERED. Tenant:", tenantId, "Products received:", updatedProducts.length);
+
       const activeProducts = updatedProducts
         .filter((p) => p.available !== false && p.publishWeb !== false)
         .map((p) => ({
@@ -286,6 +288,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           updated_at: new Date().toISOString(),
         }));
 
+      console.log("[POS] mapped activeProducts ready to upsert:", JSON.stringify(activeProducts));
+
       // 1. Borrar todos los productos existentes en la web para este tenant
       await webSupabase
         .from("web_catalog")
@@ -299,6 +303,13 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           .upsert(activeProducts, { onConflict: "id" });
         if (error) console.warn("Auto-sync web_catalog:", error.message);
       }
+
+      // 3. Update the exchange rate in web config
+      await webSupabase
+        .from("web_config")
+        .update({ exchange_rate: effectiveRate || 1 })
+        .eq("tenant_id", tenantId);
+
     } catch (error) {
       console.error("Error auto-syncing web catalog:", error);
     }
@@ -951,8 +962,17 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         onClose={() => setIsShareOpen(false)}
         products={products}
         onImport={(imported) => {
-          setProducts(imported);
-          storageService.setItem("my_products_v1", imported);
+          // Auto-publish all imported products to the web catalog and force them to be available
+          const publishedImport = imported.map((p) => ({
+            ...p,
+            publishWeb: true,
+            available: true,
+          }));
+          setProducts(publishedImport);
+          storageService.setItem("my_products_v1", publishedImport);
+          setTimeout(() => {
+            autoSyncWebCatalog(publishedImport);
+          }, 500);
         }}
       />
       <CategoryManagerModal

@@ -132,7 +132,7 @@ export default function OnboardingOverlay({ isPremium = false }) {
               {/* Logo */}
               <div className="relative mx-auto mb-5">
                 <img
-                  src="/logodark.png"
+                  src="/logoprincipal.png"
                   alt="PreciosAlDía Comida Rápida"
                   className="w-44 h-auto mx-auto drop-shadow-lg"
                 />

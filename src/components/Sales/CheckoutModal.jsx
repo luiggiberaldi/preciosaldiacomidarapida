@@ -82,13 +82,14 @@ export default function CheckoutModal({
   const handleFastCash = useCallback(
     (amount) => {
       triggerHaptic && triggerHaptic();
-      const current = parseFloat(barValues["efectivo_usd"]) || 0;
+      const targetId = selectedSubMethods["usd_efectivo"] || "efectivo_usd";
+      const current = parseFloat(barValues[targetId]) || 0;
       setBarValues((prev) => ({
         ...prev,
-        efectivo_usd: (current + amount).toString(),
+        [targetId]: (current + amount).toString(),
       }));
     },
-    [barValues, triggerHaptic],
+    [barValues, triggerHaptic, selectedSubMethods],
   );
 
   const fillBar = useCallback(
@@ -165,16 +166,56 @@ export default function CheckoutModal({
     }
   };
 
-  // Agrupar métodos por moneda y reordenarlos (Pago Móvil > Efectivo Bs > Efectivo USD)
-  const sortMethods = (a, b) => {
-    const order = { pago_movil: 1, efectivo_bs: 2, efectivo_usd: 3, punto_venta: 4 };
-    const aOrder = order[a.id] || 99;
-    const bOrder = order[b.id] || 99;
-    return aOrder - bOrder;
-  };
+  // ── Agrupación y Estado de Sub-métodos ──
+  const groupedMethodsUi = useMemo(() => {
+    const bsEfectivo = paymentMethods.filter(m => m.id === "efectivo_bs" || (m.currency === "BS" && !m.isDigital && !m.isFactory && m.label.toLowerCase().includes("efectivo")));
+    const bsDigital = paymentMethods.filter(m => m.id === "pago_movil" || (m.currency === "BS" && m.isDigital && !m.isFactory));
+    const bsPunto = paymentMethods.filter(m => m.id === "punto_venta" || (m.currency === "BS" && !m.isDigital && !m.isFactory && m.id !== "efectivo_bs" && !m.label.toLowerCase().includes("efectivo")));
 
-  const methodsUsd = paymentMethods.filter((m) => m.currency === "USD").sort(sortMethods);
-  const methodsBs = paymentMethods.filter((m) => m.currency === "BS").sort(sortMethods);
+    const usdEfectivo = paymentMethods.filter(m => m.id === "efectivo_usd" || (m.currency === "USD" && !m.isDigital && !m.isFactory));
+    const usdDigital = paymentMethods.filter(m => m.currency === "USD" && m.isDigital && !m.isFactory);
+
+    return [
+      { key: "usd_efectivo", currency: "USD", items: usdEfectivo },
+      { key: "usd_digital", currency: "USD", items: usdDigital },
+      { key: "bs_digital", currency: "BS", items: bsDigital },
+      { key: "bs_efectivo", currency: "BS", items: bsEfectivo },
+      { key: "bs_punto", currency: "BS", items: bsPunto },
+    ].filter(g => g.items.length > 0);
+  }, [paymentMethods]);
+
+  const [selectedSubMethods, setSelectedSubMethods] = useState(() => {
+    const initial = {};
+    if (paymentMethods.length > 0) {
+      const bsEfectivo = paymentMethods.find(m => m.id === "efectivo_bs" || (m.currency === "BS" && !m.isDigital && !m.isFactory && m.label.toLowerCase().includes("efectivo")));
+      const bsDigital = paymentMethods.find(m => m.id === "pago_movil" || (m.currency === "BS" && m.isDigital && !m.isFactory));
+      const bsPunto = paymentMethods.find(m => m.id === "punto_venta" || (m.currency === "BS" && !m.isDigital && !m.isFactory && m.id !== "efectivo_bs" && !m.label.toLowerCase().includes("efectivo")));
+      const usdEfectivo = paymentMethods.find(m => m.id === "efectivo_usd" || (m.currency === "USD" && !m.isDigital && !m.isFactory));
+      const usdDigital = paymentMethods.find(m => m.currency === "USD" && m.isDigital && !m.isFactory);
+
+      if (bsEfectivo) initial["bs_efectivo"] = bsEfectivo.id;
+      if (bsDigital) initial["bs_digital"] = bsDigital.id;
+      if (bsPunto) initial["bs_punto"] = bsPunto.id;
+      if (usdEfectivo) initial["usd_efectivo"] = usdEfectivo.id;
+      if (usdDigital) initial["usd_digital"] = usdDigital.id;
+    }
+    return initial;
+  });
+
+  const handleSubMethodChange = useCallback((groupKey, oldMethodId, newMethodId) => {
+    setBarValues(prev => {
+      const val = prev[oldMethodId];
+      if (!val) return prev;
+      const next = { ...prev };
+      next[newMethodId] = val;
+      delete next[oldMethodId];
+      return next;
+    });
+    setSelectedSubMethods(prev => ({ ...prev, [groupKey]: newMethodId }));
+  }, []);
+
+  const groupsUsd = groupedMethodsUi.filter((g) => g.currency === "USD");
+  const groupsBs = groupedMethodsUi.filter((g) => g.currency === "BS");
 
   // ── Estilos de barra por moneda ──
   const sectionStyles = {
@@ -206,33 +247,49 @@ export default function CheckoutModal({
     },
   };
 
-  const renderPaymentBar = (method, styles) => {
-    const val = barValues[method.id] || "";
+  const renderPaymentGroup = (group, styles) => {
+    const selectedId = selectedSubMethods[group.key] || group.items[0].id;
+    const selectedMethod = group.items.find(m => m.id === selectedId) || group.items[0];
+
+    const val = barValues[selectedId] || "";
     const hasValue = parseFloat(val) > 0;
     const equivUsd =
-      method.currency === "BS" && hasValue
+      group.currency === "BS" && hasValue
         ? (parseFloat(val) / effectiveRate).toFixed(2)
         : null;
 
     return (
-      <div key={method.id} className="mb-3 last:mb-0">
-        <div className="flex items-center gap-2 mb-1 ml-0.5">
+      <div key={group.key} className="mb-3 last:mb-0">
+        <div className="flex items-center gap-2 mb-1.5 ml-0.5">
           {(() => {
             const MIcon =
-              method.Icon ||
-              PAYMENT_ICONS[method.id] ||
-              ICON_COMPONENTS[method.icon];
+              selectedMethod.Icon ||
+              PAYMENT_ICONS[selectedMethod.id] ||
+              ICON_COMPONENTS[selectedMethod.icon];
             return MIcon ? (
               <MIcon size={16} className={hasValue ? "" : "text-slate-400"} />
             ) : (
-              <span className="text-base">{method.icon}</span>
+              <span className="text-base leading-none">{selectedMethod.icon}</span>
             );
           })()}
-          <span
-            className={`text-[11px] font-bold uppercase tracking-wide ${hasValue ? styles.title : "text-slate-400 dark:text-slate-500"}`}
-          >
-            {method.label}
-          </span>
+
+          {group.items.length > 1 ? (
+            <select
+              value={selectedId}
+              onChange={(e) => handleSubMethodChange(group.key, selectedId, e.target.value)}
+              className={`text-[11px] font-bold uppercase tracking-wide bg-transparent outline-none cursor-pointer hover:underline ${hasValue ? styles.title : "text-slate-500 dark:text-slate-400"}`}
+            >
+              {group.items.map(m => (
+                <option className="text-slate-800 dark:text-slate-900" key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          ) : (
+            <span
+              className={`text-[11px] font-bold uppercase tracking-wide ${hasValue ? styles.title : "text-slate-400 dark:text-slate-500"}`}
+            >
+              {selectedMethod.label}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -240,8 +297,8 @@ export default function CheckoutModal({
               type="text"
               inputMode="decimal"
               value={val}
-              onChange={(e) => handleBarChange(method.id, e.target.value)}
-              placeholder={method.id.includes("efectivo") ? "Monto recibido" : "0.00"}
+              onChange={(e) => handleBarChange(selectedId, e.target.value)}
+              placeholder={selectedId.includes("efectivo") ? "Monto recibido" : "0.00"}
               className={`w-full py-3 px-4 pr-14 rounded-xl border-2 text-lg font-bold outline-none transition-all ${hasValue
                 ? styles.inputActive
                 : `bg-white dark:bg-slate-900 ${styles.inputBorder}`
@@ -253,11 +310,11 @@ export default function CheckoutModal({
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
                 }`}
             >
-              {method.currency === "USD" ? "$" : "Bs"}
+              {group.currency === "USD" ? "$" : "Bs"}
             </span>
           </div>
           <button
-            onClick={() => fillBar(method.id, method.currency)}
+            onClick={() => fillBar(selectedId, group.currency)}
             className={`shrink-0 py-3 px-3.5 rounded-xl font-black text-xs transition-all active:scale-95 flex items-center gap-1 ${styles.btnBg}`}
           >
             <Zap size={14} fill="currentColor" /> Total
@@ -338,7 +395,7 @@ export default function CheckoutModal({
         </div>
 
         {/* ── SECCIÓN DÓLARES ($) ── */}
-        {methodsUsd.length > 0 && (
+        {groupsUsd.length > 0 && (
           <div
             className={`mx-3 mb-3 rounded-2xl border ${sectionStyles.USD.bg} ${sectionStyles.USD.border} p-3`}
           >
@@ -362,12 +419,12 @@ export default function CheckoutModal({
                 </button>
               ))}
             </div>
-            {methodsUsd.map((m) => renderPaymentBar(m, sectionStyles.USD))}
+            {groupsUsd.map((g) => renderPaymentGroup(g, sectionStyles.USD))}
           </div>
         )}
 
         {/* ── SECCIÓN BOLÍVARES (Bs) ── */}
-        {methodsBs.length > 0 && (
+        {groupsBs.length > 0 && (
           <div
             className={`mx-3 mb-3 rounded-2xl border ${sectionStyles.BS.bg} ${sectionStyles.BS.border} p-3`}
           >
@@ -386,7 +443,7 @@ export default function CheckoutModal({
                 Tasa: {formatBs(effectiveRate)}
               </span>
             </div>
-            {methodsBs.map((m) => renderPaymentBar(m, sectionStyles.BS))}
+            {groupsBs.map((g) => renderPaymentGroup(g, sectionStyles.BS))}
           </div>
         )}
 
