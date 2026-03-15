@@ -933,12 +933,12 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
             Cancelar
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               triggerHaptic && triggerHaptic();
               if (deleteAllConfirmText.trim().toUpperCase() === "BORRAR") {
                 setProducts([]);
                 autoSyncWebCatalog([]);
-                storageService.removeItem("my_products_v1");
+                await storageService.setItem("my_products_v1", []);
                 setIsDeleteAllModalOpen(false);
                 setDeleteAllConfirmText("");
               }

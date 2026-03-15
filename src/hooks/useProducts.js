@@ -63,11 +63,7 @@ export function useProducts(rates) {
   // Auto-save products and categories
   useEffect(() => {
     if (!isLoadingProducts) {
-      if (products.length > 0) {
-        storageService.setItem("my_products_v1", products);
-      } else {
-        storageService.removeItem("my_products_v1");
-      }
+      storageService.setItem("my_products_v1", products);
       storageService.setItem("my_categories_v1", categories);
     }
   }, [products, categories, isLoadingProducts]);
