@@ -240,6 +240,20 @@ export function useSecurity() {
             "Tu licencia ha sido desactivada. Contacta al administrador.",
           );
         } else if (license && license.active === true) {
+          // Verificar si demo venció por fecha
+          if (license.type === 'demo7' && license.expires_at) {
+            const expiresAt = new Date(license.expires_at).getTime();
+            if (Date.now() >= expiresAt && isPremium) {
+              localStorage.removeItem(TOKEN_KEY);
+              setIsPremium(false);
+              setIsDemo(false);
+              setDemoExpiredMsg(
+                "Tu licencia temporal ha finalizado. Esperamos que hayas disfrutado la experiencia completa.",
+              );
+              return;
+            }
+          }
+
           // Si pasó a permanente en backend pero el estado local es demo -> recargar
           const rawStored = localStorage.getItem(TOKEN_KEY);
           let isDemoLocal = false;
