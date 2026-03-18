@@ -219,7 +219,7 @@ export function useSecurity() {
 
   // Heartbeat silencioso cada 4h + chequeo de revocación
   useEffect(() => {
-    if (!isPremium || !deviceId || !import.meta.env.VITE_SUPABASE_URL) return;
+    if (!deviceId || !import.meta.env.VITE_SUPABASE_URL) return;
 
     // Función de chequeo rápido de estado
     const verifyStatus = async () => {
@@ -255,16 +255,16 @@ export function useSecurity() {
           }
 
           // Si el backend cambio el tipo de licencia, actualizar estado local sin recargar
-          if (license.type === 'permanent' && isDemo) {
-            // Demo -> Permanente: actualizar token y estado
+          if (license.type === 'permanent' && (!isPremium || isDemo)) {
+            // Demo (o Expirado) -> Permanente: actualizar token y estado
             const token = { deviceId, type: 'permanent' };
             localStorage.setItem(TOKEN_KEY, encodeToken(JSON.stringify(token)));
             setIsPremium(true);
             setIsDemo(false);
             setDemoExpires(null);
             setDemoTimeLeft('');
-          } else if (license.type === 'demo7' && !isDemo && license.expires_at) {
-            // Permanente -> Demo: actualizar token y estado
+          } else if (license.type === 'demo7' && (!isPremium || !isDemo) && license.expires_at) {
+            // Permanente (o Expirado) -> Demo: actualizar token y estado
             const expiresAt = new Date(license.expires_at).getTime();
             if (Date.now() < expiresAt) {
               const token = { deviceId, type: 'demo7', expires: expiresAt, isDemo: true };
@@ -336,7 +336,7 @@ export function useSecurity() {
       document.removeEventListener("visibilitychange", handleVisibility);
       if (subscription) subscription.unsubscribe();
     };
-  }, [isPremium, deviceId]);
+  }, [isPremium, isDemo, deviceId]);
 
   // Heartbeat universal: actualizar last_seen_at sin importar tipo de licencia
   useEffect(() => {
@@ -682,7 +682,7 @@ export function useSecurity() {
    */
   const unlockApp = async (inputCode) => {
     try {
-      const cleanCode = (inputCode || "").trim();
+      const cleanCode = (inputCode || "").trim().toUpperCase().replace(/O/g, '0');
       // FIX: Validar el código directamente contra la base de datos para ignorar fallos de Edge Functions
       const { data: license, error } = await supabase
         .from('licenses')
