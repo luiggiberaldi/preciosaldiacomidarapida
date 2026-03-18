@@ -254,27 +254,25 @@ export function useSecurity() {
             }
           }
 
-          // Si pasó a permanente en backend pero el estado local es demo -> recargar
-          const rawStored = localStorage.getItem(TOKEN_KEY);
-          let isDemoLocal = false;
-          if (rawStored) {
-            try {
-              isDemoLocal = decodeToken(rawStored).includes('"isDemo":true');
-            } catch (e) {
-              isDemoLocal = rawStored.includes('"isDemo":true');
+          // Si el backend cambio el tipo de licencia, actualizar estado local sin recargar
+          if (license.type === 'permanent' && isDemo) {
+            // Demo -> Permanente: actualizar token y estado
+            const token = { deviceId, type: 'permanent' };
+            localStorage.setItem(TOKEN_KEY, encodeToken(JSON.stringify(token)));
+            setIsPremium(true);
+            setIsDemo(false);
+            setDemoExpires(null);
+            setDemoTimeLeft('');
+          } else if (license.type === 'demo7' && !isDemo && license.expires_at) {
+            // Permanente -> Demo: actualizar token y estado
+            const expiresAt = new Date(license.expires_at).getTime();
+            if (Date.now() < expiresAt) {
+              const token = { deviceId, type: 'demo7', expires: expiresAt, isDemo: true };
+              localStorage.setItem(TOKEN_KEY, encodeToken(JSON.stringify(token)));
+              setIsPremium(true);
+              setIsDemo(true);
+              setDemoExpires(expiresAt);
             }
-          }
-
-          const isMismatch =
-            (license.type === "permanent" && isDemoLocal) ||
-            (license.type === "demo7" && !isDemoLocal);
-
-          if (isMismatch) {
-            localStorage.removeItem(TOKEN_KEY);
-            window.location.reload();
-          } else if (!isPremium) {
-            // Reactivado remotamente -> Recargar para restaurar
-            window.location.reload();
           }
         }
       } catch (e) { }
