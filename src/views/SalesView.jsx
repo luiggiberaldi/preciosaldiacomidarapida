@@ -328,7 +328,6 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         }
 
         return [
-          ...prev,
           {
             ...product,
             id: product.id, // Keep original product ID
@@ -343,6 +342,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
             // recalcula TODO basado en `priceUsd`
             priceUsd: product.priceUsdt || product.priceUsd || product.price || 0, // Fallback, el modal te lo dará calculado abajo si quieres.
           },
+          ...prev,
         ];
       });
       handleSetSearchTerm("");

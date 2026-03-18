@@ -231,7 +231,7 @@ export function useSecurity() {
           .eq("product_id", PRODUCT_ID)
           .maybeSingle();
 
-        if (license && license.active === false && isPremium) {
+        if (license && (license.active === false || license.type === 'revoked') && isPremium) {
           // Revocado
           localStorage.removeItem(TOKEN_KEY);
           setIsPremium(false);
