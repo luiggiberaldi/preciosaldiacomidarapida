@@ -42,7 +42,19 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { useOfflineQueue } from "./hooks/useOfflineQueue";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("inicio");
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get("view");
+      const validTabs = ["inicio", "ventas", "cocina", "inbox", "catalogo", "clientes", "reportes"];
+      if (view && validTabs.includes(view)) {
+        return view;
+      }
+    } catch {
+      // Ignorar errores en SSR o entornos sin window
+    }
+    return "inicio";
+  });
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
 

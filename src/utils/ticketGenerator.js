@@ -45,7 +45,7 @@ export async function generateTicketPDF(sale, bcvRate) {
   // ════════════════════════════════════
   try {
     const img = new Image();
-    img.src = "/logo.png";
+    img.src = import.meta.env.BASE_URL + "logo.png";
     await new Promise((res, rej) => {
       img.onload = res;
       img.onerror = rej;

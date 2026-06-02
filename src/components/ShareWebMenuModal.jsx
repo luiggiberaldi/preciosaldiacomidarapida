@@ -5,7 +5,7 @@ import { Modal } from "./Modal";
 import { webSupabase, getTenantId } from "../utils/supabase";
 import { showToast } from "./Toast";
 
-const WEB_BASE_URL = import.meta.env.VITE_WEB_BASE_URL || "https://paginacomidarapida.vercel.app";
+const WEB_BASE_URL = import.meta.env.VITE_WEB_BASE_URL || window.location.origin;
 
 export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
     const [slug, setSlug] = useState("");
@@ -198,7 +198,7 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
                                     <p className="text-[11px] text-slate-500 font-medium mb-0.5">Tu página será:</p>
                                     <p className="text-[12px] font-bold text-emerald-600 flex items-center gap-1">
                                         <Globe size={12} className="shrink-0 opacity-60" />
-                                        <span className="opacity-50">paginacomidarapida.vercel.app/</span>
+                                        <span className="opacity-50">{WEB_BASE_URL.replace("https://", "").replace("http://", "")}/</span>
                                         <span>{editName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}</span>
                                     </p>
                                 </div>
@@ -279,7 +279,7 @@ export default function ShareWebMenuModal({ isOpen, onClose, effectiveRate }) {
                                     level={"H"}
                                     includeMargin={false}
                                     imageSettings={{
-                                        src: "/icons/icono.png",
+                                        src: import.meta.env.BASE_URL + "icons/icono.png",
                                         x: undefined,
                                         y: undefined,
                                         height: 36,

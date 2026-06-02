@@ -78,13 +78,20 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     const saved = localStorage.getItem("bodega_custom_rate");
     return saved && parseFloat(saved) > 0 ? saved : "";
   });
+  const [autoRateSource, setAutoRateSource] = useState(() => {
+    const saved = localStorage.getItem("bodega_auto_rate_source");
+    return saved !== null ? saved : "dolar";
+  });
 
   const bcvRate = rates.bcv?.price || 0;
+  const euroRate = rates.euro?.price || 0;
+  const activeAutoRate = autoRateSource === "euro" ? euroRate : bcvRate;
+
   const effectiveRate = useAutoRate
-    ? bcvRate
+    ? activeAutoRate
     : parseFloat(customRate) > 0
       ? parseFloat(customRate)
-      : bcvRate;
+      : activeAutoRate;
 
   // Voice
   const handleSetSearchTerm = (text) => {
@@ -140,7 +147,8 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   useEffect(() => {
     localStorage.setItem("bodega_use_auto_rate", JSON.stringify(useAutoRate));
     localStorage.setItem("bodega_custom_rate", customRate.toString());
-  }, [useAutoRate, customRate]);
+    localStorage.setItem("bodega_auto_rate_source", autoRateSource);
+  }, [useAutoRate, customRate, autoRateSource]);
 
   // Persist cart
   useEffect(() => {
@@ -525,7 +533,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       totalBs: cartTotalBs,
       payments,
       rate: effectiveRate,
-      rateSource: useAutoRate ? "BCV Auto" : "Manual",
+      rateSource: useAutoRate ? (autoRateSource === "euro" ? "BCV Euro" : "BCV Dólar") : "Manual",
       timestamp: new Date().toISOString(),
       changeUsd: fiadoAmountUsd > 0 ? 0 : changeUsd,
       changeBs: fiadoAmountUsd > 0 ? 0 : changeBs,
@@ -631,7 +639,6 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   // ── Render ─────────────────────────────────────
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden relative">
-      {/* Header + Rate Config */}
       <SalesHeader
         effectiveRate={effectiveRate}
         useAutoRate={useAutoRate}
@@ -641,6 +648,9 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         showRateConfig={showRateConfig}
         setShowRateConfig={setShowRateConfig}
         triggerHaptic={triggerHaptic}
+        rates={rates}
+        autoRateSource={autoRateSource}
+        setAutoRateSource={setAutoRateSource}
       />
 
       {/* Search + Popups (within header card would require restructure, keep sibling) */}

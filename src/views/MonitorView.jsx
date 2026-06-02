@@ -156,7 +156,7 @@ export default function MonitorView({
         {/* Encabezado Kiosco */}
         <div className="flex flex-col items-center mt-12 gap-4">
           <img
-            src="/logodark.png"
+            src={`${import.meta.env.BASE_URL}logodark.png`}
             alt="PreciosAlDía Comida Rápida"
             className="h-20 w-auto object-contain drop-shadow-lg"
           />
@@ -273,7 +273,7 @@ export default function MonitorView({
             className="active:scale-95 transition-transform outline-none"
           >
             <img
-              src={theme === "dark" ? "/logodark.png" : "/logoprincipal.png"}
+              src={theme === "dark" ? `${import.meta.env.BASE_URL}logodark.png` : `${import.meta.env.BASE_URL}logoprincipal.png`}
               alt="PreciosAlDía Comida Rápida"
               className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm"
             />

@@ -281,19 +281,13 @@ export function useSecurity() {
     const sendHeartbeat = async () => {
       verifyStatus(); // Chequeo constante
       try {
-        // Llamar a la Edge Function que captura la IP real del servidor
-        await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-heartbeat`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              device_id: deviceId,
-              product_id: PRODUCT_ID,
-              app_version: APP_VERSION,
-            }),
-          }
-        );
+        // Actualizar last_seen_at via RPC (no requiere Edge Function)
+        const clientName = localStorage.getItem('business_name') || localStorage.getItem('restaurant_name') || '';
+        await supabase.rpc('heartbeat_device', {
+          p_device_id: deviceId,
+          p_product_id: PRODUCT_ID,
+          p_client_name: clientName,
+        });
       } catch (e) { }
     };
 
@@ -444,13 +438,13 @@ export function useSecurity() {
       try {
         const { data: remoteLicense, error } = await supabase
           .from("licenses")
-          .select("type, active, expires_at")
+          .select("type, active, expires_at, code")
           .eq("device_id", currentDeviceId)
           .eq("product_id", PRODUCT_ID)
           .maybeSingle();
 
         if (remoteLicense && remoteLicense.active === true) {
-          const validCode = await generateActivationCode(currentDeviceId);
+          const validCode = remoteLicense.code || "REMOTE-ACTIVATED";
           const isTimeLimited = remoteLicense.type === "demo7";
           const expiresAt = remoteLicense.expires_at
             ? new Date(remoteLicense.expires_at).getTime()
@@ -459,9 +453,11 @@ export function useSecurity() {
           if (isTimeLimited && expiresAt) {
             if (Date.now() < expiresAt) {
               const token = {
+                deviceId: currentDeviceId,
                 code: validCode,
                 expires: expiresAt,
                 isDemo: true,
+                type: "demo7",
               };
               localStorage.setItem(
                 TOKEN_KEY,
@@ -473,7 +469,15 @@ export function useSecurity() {
             }
           } else {
             // Permanente — restaurar token ofuscado
-            localStorage.setItem(TOKEN_KEY, encodeToken(validCode));
+            const token = {
+              deviceId: currentDeviceId,
+              code: validCode,
+              type: "permanent",
+            };
+            localStorage.setItem(
+              TOKEN_KEY,
+              encodeToken(JSON.stringify(token)),
+            );
             setIsPremium(true);
             setIsDemo(false);
           }

@@ -488,6 +488,25 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
     triggerHaptic && triggerHaptic();
   };
 
+  const handleAddCategoryDirect = (catName, catIcon = "📦") => {
+    if (!catName.trim()) return null;
+    const newCat = {
+      id: catName.trim().toLowerCase().replace(/\s+/g, "_"),
+      label: catName.trim(),
+      icon: catIcon,
+      color: "slate",
+    };
+
+    if (categories.find((c) => c.id === newCat.id)) {
+      showToast("Esta categoría ya existe", "warning");
+      return newCat.id;
+    }
+
+    setCategories([...categories, newCat]);
+    triggerHaptic && triggerHaptic();
+    return newCat.id;
+  };
+
   const handleDeleteCategory = (categoryId) => {
     if (categoryId === "todos" || categoryId === "otros") {
       showToast("No puedes eliminar una categoría del sistema", "warning");
@@ -804,7 +823,6 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         </>
       )}
 
-      {/* ─── Modal Añadir / Editar ───────────────────────── */}
       <ProductFormModal
         isOpen={isModalOpen}
         onClose={handleClose}
@@ -838,6 +856,8 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         handleImageUpload={handleImageUpload}
         handleSave={handleSave}
         categories={categories}
+        onAddCategoryDirect={handleAddCategoryDirect}
+        effectiveRate={effectiveRate}
       />
 
       {/* Share Modal */}

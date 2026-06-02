@@ -16,6 +16,9 @@ export default function SalesHeader({
   showRateConfig,
   setShowRateConfig,
   triggerHaptic,
+  rates = {},
+  autoRateSource = "dolar",
+  setAutoRateSource,
 }) {
   const { isOnline, queuedCount } = useOfflineQueue();
 
@@ -48,6 +51,9 @@ export default function SalesHeader({
                 size={12}
                 className={showRateConfig ? "text-red-500" : "text-slate-400"}
               />
+              <span className="text-[10px] text-slate-400 font-bold">
+                {useAutoRate ? (autoRateSource === "euro" ? "€" : "$") : "M"}
+              </span>
               <strong className="text-xs text-red-600 dark:text-red-400">
                 {formatBs(effectiveRate)}
               </strong>
@@ -68,7 +74,7 @@ export default function SalesHeader({
                   showRateConfig ? "text-red-500" : "group-hover:text-red-500"
                 }
               />
-              BCV:
+              {useAutoRate ? (autoRateSource === "euro" ? "BCV Euro:" : "BCV Dólar:") : "BCV:"}
             </span>
             <strong className="text-sm text-red-600 dark:text-red-400">
               {formatBs(effectiveRate)} Bs
@@ -85,41 +91,80 @@ export default function SalesHeader({
       {/* Rate Config Panel */}
       {showRateConfig && (
         <div className="bg-slate-50 dark:bg-slate-950 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 mb-3 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">
-              Tasa de Cambio
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-slate-400">
-                {useAutoRate ? (
-                  <span className="text-red-500">Auto Dólar BCV</span>
-                ) : (
-                  <span>Manual</span>
-                )}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">
+                Tasa de Cambio
               </span>
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  setUseAutoRate(!useAutoRate);
-                }}
-                className={`relative w-10 h-6 rounded-full transition-colors ${useAutoRate ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"}`}
-              >
-                <span
-                  className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${useAutoRate ? "translate-x-4" : "translate-x-0"}`}
-                />
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-400">
+                  {useAutoRate ? (
+                    <span className="text-red-500">
+                      Auto ({autoRateSource === "euro" ? "Euro" : "Dólar"})
+                    </span>
+                  ) : (
+                    <span>Manual</span>
+                  )}
+                </span>
+                <button
+                  onClick={() => {
+                    triggerHaptic && triggerHaptic();
+                    setUseAutoRate(!useAutoRate);
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${useAutoRate ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"}`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${useAutoRate ? "translate-x-4" : "translate-x-0"}`}
+                  />
+                </button>
+              </div>
             </div>
+
+            {useAutoRate && (
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                <span className="text-xs text-slate-500 font-bold">Moneda Auto:</span>
+                <div className="flex bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg text-[10px]">
+                  <button
+                    onClick={() => {
+                      triggerHaptic && triggerHaptic();
+                      setAutoRateSource("dolar");
+                    }}
+                    className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                      autoRateSource === "dolar"
+                        ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm font-black"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    Dólar ({formatBs(rates?.bcv?.price || 0)})
+                  </button>
+                  <button
+                    onClick={() => {
+                      triggerHaptic && triggerHaptic();
+                      setAutoRateSource("euro");
+                    }}
+                    className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                      autoRateSource === "euro"
+                        ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm font-black"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    Euro ({formatBs(rates?.euro?.price || 0)})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!useAutoRate && (
+              <input
+                type="number"
+                value={customRate}
+                onChange={(e) => setCustomRate(e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="Ingresa Tasa Manual (Bs por $)"
+                autoFocus
+              />
+            )}
           </div>
-          {!useAutoRate && (
-            <input
-              type="number"
-              value={customRate}
-              onChange={(e) => setCustomRate(e.target.value)}
-              className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-              placeholder="Ingresa Tasa Manual (Bs por $)"
-              autoFocus
-            />
-          )}
         </div>
       )}
     </div>

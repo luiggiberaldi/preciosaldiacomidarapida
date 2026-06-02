@@ -2,7 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+const base = process.env.VITE_BASE_URL || "/";
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -31,8 +34,8 @@ export default defineConfig({
         background_color: "#0f172a", // Verde esmeralda de la marca
         display: "standalone", // Modo app nativa (sin barra de navegador)
         orientation: "portrait", // Bloquear rotación
-        scope: "/",
-        start_url: "/",
+        scope: base,
+        start_url: base,
         icons: [
           {
             src: "pwa-192x192.png",
@@ -56,14 +59,14 @@ export default defineConfig({
             name: "Tomar Pedido",
             short_name: "Vender",
             description: "Abrir directamente el Punto de Venta",
-            url: "/?view=ventas",
+            url: `${base}?view=ventas`,
             icons: [{ src: "pwa-192x192.png", sizes: "192x192" }],
           },
           {
             name: "Ver Menú",
             short_name: "Menú",
             description: "Abrir el menú del carrito",
-            url: "/?view=catalogo",
+            url: `${base}?view=catalogo`,
             icons: [{ src: "pwa-192x192.png", sizes: "192x192" }],
           },
         ],
@@ -71,6 +74,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    outDir: process.env.VITE_OUT_DIR || "dist",
     rollupOptions: {
       output: {
         manualChunks: {

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node build-all.js",
     "lint": "eslint .",
     "prettier": "prettier --write .",
     "linc": "eslint .",

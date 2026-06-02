@@ -1,7 +1,16 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/pos",
+      "destination": "/pos/index.html"
+    },
+    {
+      "source": "/pos/:path*",
+      "destination": "/pos/index.html"
+    },
+    {
+      "source": "/((?!pos|api).*)",
       "destination": "/index.html"
     }
   ]
