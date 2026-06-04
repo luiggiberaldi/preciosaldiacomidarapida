@@ -35,6 +35,9 @@ const translateAuthError = (errMsg) => {
   if (lower.includes("user already exists") || lower.includes("already registered")) {
     return "Este correo electrónico ya está registrado.";
   }
+  if (lower.includes("different from the old password") || lower.includes("different from old password")) {
+    return "La nueva contraseña debe ser diferente a la contraseña anterior.";
+  }
   if (lower.includes("signup is disabled")) {
     return "El registro de nuevos usuarios está deshabilitado temporalmente.";
   }
