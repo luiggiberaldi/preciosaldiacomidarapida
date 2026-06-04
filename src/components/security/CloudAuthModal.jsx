@@ -120,8 +120,16 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
 
         {/* Modal Header */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Shield size={24} />
+          <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800/80 p-2.5 shadow-sm">
+            <img
+              src="/pos/icono.png"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/icono.png";
+              }}
+              alt="Precios Al Día"
+              className="w-full h-full object-contain"
+            />
           </div>
           <h3 className="text-lg font-black text-slate-800 dark:text-white">
             {isRegistering ? "Crear Cuenta de Negocio" : "Acceso Administrador (Nube)"}
@@ -149,7 +157,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
               placeholder="correo@ejemplo.com"
               required
             />
@@ -164,7 +172,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
                 placeholder="Mínimo 6 caracteres"
                 required
               />
@@ -181,7 +189,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/10 disabled:opacity-50"
+            className="w-full py-3.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-brand/10 disabled:opacity-50"
           >
             {loading ? (
               <>
@@ -197,7 +205,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
             <button
               type="button"
               onClick={() => setIsRegistering(!isRegistering)}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+              className="text-xs font-bold text-brand hover:text-brand-dark dark:text-brand dark:hover:text-brand-light transition-colors"
             >
               {isRegistering
                 ? "¿Ya tienes una cuenta? Inicia sesión"
