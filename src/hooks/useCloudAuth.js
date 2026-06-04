@@ -21,6 +21,7 @@ export function useCloudAuth() {
   const [role, setRole] = useState(() => {
     return localStorage.getItem("pda_cloud_role") || null;
   });
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -57,6 +58,14 @@ export function useCloudAuth() {
     }
   };
 
+  // Detectar flujo de recuperación en URL al montar
+  useEffect(() => {
+    const hash = window.location.hash || "";
+    if (hash.includes("type=recovery") || window.location.href.includes("type=recovery") || hash.includes("access_token=")) {
+      setIsRecoveryFlow(true);
+    }
+  }, []);
+
   // Escuchar cambios de sesión y verificar sesión inicial de manera óptima
   useEffect(() => {
     let active = true;
@@ -86,6 +95,10 @@ export function useCloudAuth() {
       
       // Ignorar el evento inicial INITIAL_SESSION porque ya es resuelto por initAuth()
       if (event === "INITIAL_SESSION") return;
+
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryFlow(true);
+      }
       
       const user = session?.user || null;
       setCloudUser(user);
@@ -209,6 +222,43 @@ export function useCloudAuth() {
     }
   };
 
+  const sendPasswordResetEmail = async (email) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const redirectUrl = window.location.origin + (window.location.pathname.startsWith('/pos') ? '/pos' : '');
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+      if (resetError) throw resetError;
+    } catch (err) {
+      console.error("[useCloudAuth] Error al enviar correo de restablecimiento:", err);
+      setError(err.message || "Error al enviar el correo de recuperación");
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateError) throw updateError;
+    } catch (err) {
+      console.error("[useCloudAuth] Error al actualizar la contraseña:", err);
+      setError(err.message || "Error al actualizar la contraseña");
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     cloudUser,
     role,
@@ -220,5 +270,9 @@ export function useCloudAuth() {
     signIn,
     signUp,
     signOut,
+    sendPasswordResetEmail,
+    updatePassword,
+    isRecoveryFlow,
+    setRecoveryFlow: setIsRecoveryFlow,
   };
 }

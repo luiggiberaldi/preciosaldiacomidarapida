@@ -103,7 +103,7 @@ export default function App() {
   const usuarioActivo = useAuthStore((s) => s.usuarioActivo);
   const isLocalCajero = usuarioActivo?.rol === "CAJERO";
   const isLocalMesero = usuarioActivo?.rol === "MESERO";
-  const { cloudUser, role, isAdmin, isEmployee, isKitchen, loading: authLoading } = useCloudAuth();
+  const { cloudUser, role, isAdmin, isEmployee, isKitchen, loading: authLoading, isRecoveryFlow, setRecoveryFlow } = useCloudAuth();
   const storeConfig = { name: "PreciosAlDía Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
 
 
@@ -310,8 +310,8 @@ export default function App() {
     );
   }
 
-  if (!cloudUser) {
-    return <CloudAuthModal isOpen={true} isForceLogin={true} />;
+  if (!cloudUser || isRecoveryFlow) {
+    return <CloudAuthModal isOpen={true} isForceLogin={true} isRecoveryFlow={isRecoveryFlow} setRecoveryFlow={setRecoveryFlow} />;
   }
 
   return (
