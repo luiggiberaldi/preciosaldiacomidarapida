@@ -51,11 +51,22 @@ import SystemStatusPill from "./components/security/SystemStatusPill";
 import { CloudAuthModal } from "./components/security/CloudAuthModal";
 import AdminPanelModal from "./components/security/AdminPanelModal";
 import { useAuthStore } from "./hooks/store/useAuthStore";
-
-
+import { showToast } from "./components/Toast";
 
 export default function App() {
   const hasTablesSystem = localStorage.getItem("has_tables_system") !== "false";
+
+  // Mostrar mensaje de éxito si el usuario viene de confirmar su correo de registro
+  useEffect(() => {
+    const isConfirmed = localStorage.getItem("pda_email_confirmed");
+    if (isConfirmed === "true") {
+      localStorage.removeItem("pda_email_confirmed");
+      // Breve retraso para asegurar que el ToastProvider está completamente listo
+      setTimeout(() => {
+        showToast("¡Correo verificado con éxito! Por favor, inicia sesión.", "success");
+      }, 600);
+    }
+  }, []);
 
   const [activeTab, setActiveTab] = useState(() => {
     try {

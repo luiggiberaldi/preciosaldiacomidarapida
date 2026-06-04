@@ -86,7 +86,7 @@ export function useCloudAuth() {
     }
   };
 
-  // Detectar flujo de recuperación o errores de enlace expirado en URL al montar
+  // Detectar flujo de recuperación, confirmación de email o errores en URL al montar
   useEffect(() => {
     const hash = window.location.hash || "";
     if (hash.includes("error_description=")) {
@@ -100,7 +100,21 @@ export function useCloudAuth() {
       try {
         window.history.replaceState(null, null, window.location.pathname);
       } catch (e) {}
-    } else if (hash.includes("type=recovery") || window.location.href.includes("type=recovery") || hash.includes("access_token=")) {
+    } else if (hash.includes("type=signup")) {
+      // El usuario viene de confirmar su correo electrónico de registro
+      // Cerramos sesión para que no entre directo y obligamos a loguearse
+      supabase.auth.signOut().then(() => {
+        localStorage.setItem("pda_email_confirmed", "true");
+        try {
+          window.history.replaceState(null, null, window.location.pathname);
+        } catch (e) {}
+        window.location.reload();
+      });
+    } else if (
+      hash.includes("type=recovery") || 
+      window.location.href.includes("type=recovery") || 
+      (hash.includes("access_token=") && !hash.includes("type=signup"))
+    ) {
       setIsRecoveryFlow(true);
     }
   }, []);
@@ -218,9 +232,13 @@ export function useCloudAuth() {
     setLoading(true);
     setError(null);
     try {
+      const redirectUrl = window.location.origin + (window.location.pathname.startsWith('/pos') ? '/pos' : '');
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        }
       });
       if (signUpError) throw signUpError;
       
