@@ -11,7 +11,7 @@ export default function CategoryBar({
 }) {
   return (
     <div
-      className={`${selectedCategory !== "todos" && searchTerm.length === 0 ? "flex-1 overflow-hidden flex flex-col min-h-0" : ""}`}
+      className={`${searchTerm.length === 0 ? "flex-1 overflow-hidden flex flex-col min-h-0" : ""}`}
     >
       {/* Category Chips */}
       <div className="shrink-0 flex gap-2 overflow-x-auto pb-2 pt-1 px-1 scrollbar-hide">
@@ -37,8 +37,8 @@ export default function CategoryBar({
         })}
       </div>
 
-      {/* Product Grid — solo cuando se filtra por categoría específica */}
-      {selectedCategory !== "todos" && searchTerm.length === 0 && (
+      {/* Product Grid */}
+      {searchTerm.length === 0 && (
         <div className="flex-1 overflow-y-auto min-h-0 pb-2">
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {filteredByCategory.map((p) => {
@@ -74,7 +74,7 @@ export default function CategoryBar({
                     {p.name}
                   </p>
                   <p className="text-[11px] font-black text-red-600 dark:text-red-400">
-                    ${p.priceUsdt?.toFixed(2)}
+                    ${parseFloat(p.priceUsdt || p.priceUsd || p.price || 0).toFixed(2)}
                   </p>
                   <p className="text-[9px] text-slate-400 font-medium">
                     {isOut ? "Agotado" : `${p.stock ?? 0} disp.`}

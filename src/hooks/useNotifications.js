@@ -127,11 +127,24 @@ export function useNotifications() {
     [send]
   );
 
+  /** Mesa enviada a cobrar */
+  const notifyMesaCobrar = useCallback(
+    (tableName, totalUsd) => {
+      send(
+        "💳 Mesa lista para cobrar",
+        `${tableName} — Total: $${totalUsd.toFixed(2)}`,
+        `cobrar-${tableName}`,
+      );
+    },
+    [send],
+  );
+
   return {
     requestPermission,
     notifyLowStock,
     notifySaleComplete,
     notifyCierrePendiente,
     notifyNewWebOrder,
+    notifyMesaCobrar,
   };
 }

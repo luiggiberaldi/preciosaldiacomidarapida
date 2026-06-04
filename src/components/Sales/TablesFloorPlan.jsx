@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, X, Utensils, GlassWater, Armchair, Clock, User, Sparkles, Users, ChefHat, FileText } from "lucide-react";
+import { Plus, Trash2, X, Utensils, GlassWater, Armchair, Clock, User, Sparkles, Users, ChefHat, FileText, Settings } from "lucide-react";
 
 export default function TablesFloorPlan({
   tables,
@@ -111,7 +111,7 @@ export default function TablesFloorPlan({
               }}
               className={`flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 filter === btn.id
-                  ? "bg-white dark:bg-slate-700 shadow-sm text-red-600 dark:text-red-400"
+                  ? "bg-white dark:bg-slate-700 shadow-sm text-brand-dark dark:text-brand"
                   : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
@@ -130,11 +130,18 @@ export default function TablesFloorPlan({
             }}
             className={`px-3.5 py-1.5 text-xs font-black rounded-xl border transition-all ${
               isEditing
-                ? "bg-red-50 border-red-200 text-red-600 dark:bg-red-950/20 dark:border-red-900/50 dark:text-red-400"
+                ? "bg-brand/10 border-brand/20 text-brand-dark dark:bg-brand/20 dark:border-brand/30 dark:text-brand"
                 : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50"
             }`}
           >
-            {isEditing ? "Finalizar Edición" : "⚙️ Configurar Distribución"}
+            {isEditing ? (
+              "Finalizar Edición"
+            ) : (
+              <span className="flex items-center gap-1">
+                <Settings size={12} className="shrink-0" />
+                <span>Configurar Distribución</span>
+              </span>
+            )}
           </button>
           {isEditing && (
             <button
@@ -142,7 +149,7 @@ export default function TablesFloorPlan({
                 triggerHaptic && triggerHaptic();
                 setShowAddForm(true);
               }}
-              className="bg-red-500 hover:bg-red-600 text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1 active:scale-95 transition-transform"
+              className="bg-brand hover:bg-brand-dark text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1 active:scale-95 transition-transform"
             >
               <Plus size={14} /> Agregar Asiento
             </button>
@@ -154,10 +161,10 @@ export default function TablesFloorPlan({
       {showAddForm && (
         <form
           onSubmit={handleAddSubmit}
-          className="mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-dashed border-red-200 dark:border-red-900/50 space-y-3 animate-in slide-in-from-top duration-200"
+          className="mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-dashed border-brand/20 dark:border-brand/35 space-y-3 animate-in slide-in-from-top duration-200"
         >
           <div className="flex justify-between items-center">
-            <h4 className="text-xs font-bold uppercase text-red-600 dark:text-red-400 tracking-wider">
+            <h4 className="text-xs font-bold uppercase text-brand-dark dark:text-brand tracking-wider">
               Registrar Mesa o Asiento
             </h4>
             <button
@@ -180,7 +187,7 @@ export default function TablesFloorPlan({
                 placeholder="Ej. Mesa 13, Barra 5"
                 value={newTableName}
                 onChange={(e) => setNewTableName(e.target.value)}
-                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/30"
+                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -190,7 +197,7 @@ export default function TablesFloorPlan({
               <select
                 value={newTableZone}
                 onChange={(e) => setNewTableZone(e.target.value)}
-                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/30"
+                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand/30"
               >
                 <option value="Salón">Salón</option>
                 <option value="Terraza">Terraza</option>
@@ -204,11 +211,11 @@ export default function TablesFloorPlan({
               <select
                 value={newTableType}
                 onChange={(e) => setNewTableType(e.target.value)}
-                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/30"
+                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand/30"
               >
-                <option value="table">Mesa 🍽️</option>
-                <option value="bar">Barra 🍻</option>
-                <option value="lounge">Sofá/Lounge 🛋️</option>
+                <option value="table">Mesa</option>
+                <option value="bar">Barra</option>
+                <option value="lounge">Sofá / Lounge</option>
               </select>
             </div>
           </div>
@@ -222,7 +229,7 @@ export default function TablesFloorPlan({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl shadow-md"
+              className="px-4 py-2 text-xs font-bold text-white bg-brand hover:bg-brand-dark rounded-xl shadow-md"
             >
               Guardar
             </button>
@@ -242,7 +249,7 @@ export default function TablesFloorPlan({
             <div key={zone} className="space-y-3">
               {/* Zone Header */}
               <div className="flex items-center gap-2 px-1">
-                <span className="h-2 w-2 rounded-full bg-red-500 shadow-sm" />
+                <span className="h-2 w-2 rounded-full bg-brand shadow-sm" />
                 <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   {zone} ({filteredZoneTables.length})
                 </h3>
@@ -279,9 +286,11 @@ export default function TablesFloorPlan({
                         isEditing
                           ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-70 cursor-default"
                           : isCurrentTab
-                          ? "bg-gradient-to-br from-red-600 to-orange-500 border-transparent shadow-lg text-white scale-[1.03] ring-4 ring-red-500/20 cursor-pointer"
+                          ? "bg-gradient-to-br from-brand to-orange-500 border-transparent shadow-lg text-white scale-[1.03] ring-4 ring-brand/20 cursor-pointer"
                           : isOccupied
-                          ? "bg-gradient-to-br from-red-500/90 to-orange-500/95 border-transparent shadow-md text-white hover:scale-[1.01] hover:shadow-lg transition-transform cursor-pointer"
+                          ? tab?.status === "CHECKOUT"
+                            ? "bg-gradient-to-br from-amber-500 to-orange-600 border-transparent shadow-md text-white hover:scale-[1.01] hover:shadow-lg transition-transform cursor-pointer animate-pulse"
+                            : "bg-gradient-to-br from-brand/90 to-orange-500/95 border-transparent shadow-md text-white hover:scale-[1.01] hover:shadow-lg transition-transform cursor-pointer"
                           : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800/80 text-slate-700 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 cursor-pointer active:scale-95"
                       }`}
                     >
@@ -309,12 +318,14 @@ export default function TablesFloorPlan({
                         {/* Status Badge */}
                         <div
                           className={`px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider uppercase shrink-0 ${
-                            isOccupied
+                            tab?.status === "CHECKOUT"
+                              ? "bg-orange-600 text-white font-bold animate-pulse"
+                              : isOccupied
                               ? "bg-white/20 text-white backdrop-blur-md"
                               : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
                           }`}
                         >
-                          {isOccupied ? "OCUPADA" : "LIBRE"}
+                          {tab?.status === "CHECKOUT" ? "EN COBRO" : isOccupied ? "OCUPADA" : "LIBRE"}
                         </div>
                       </div>
 
@@ -361,8 +372,11 @@ export default function TablesFloorPlan({
 
                             {/* Elapsed timer Display */}
                             <div className="flex items-center gap-1 text-[10px] font-black text-orange-100">
-                              <Clock size={10} className="shrink-0" />
-                              <span>{getElapsedTimeStr(tab.createdAt)}</span>
+                              <Clock size={10} className={`shrink-0 ${tab?.status === "CHECKOUT" ? "animate-pulse text-amber-200" : ""}`} />
+                              <span>
+                                {tab?.status === "CHECKOUT" ? "En cobro · " : ""}
+                                {getElapsedTimeStr(tab.createdAt)}
+                              </span>
                             </div>
 
                             {/* Notes pill indicator if notes exist */}
@@ -419,7 +433,7 @@ export default function TablesFloorPlan({
                           className={`absolute -top-1 -right-1 p-1.5 rounded-full shadow-md text-white border transition-colors ${
                             isOccupied
                               ? "bg-slate-300 border-slate-400 opacity-50 cursor-not-allowed"
-                              : "bg-red-500 border-red-600 hover:bg-red-600 active:scale-90"
+                              : "bg-brand border-brand-dark hover:bg-brand-dark active:scale-90"
                           }`}
                           title={isOccupied ? "Mesa ocupada, no se puede borrar" : "Eliminar Mesa"}
                         >

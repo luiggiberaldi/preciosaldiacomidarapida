@@ -176,7 +176,7 @@ function StorePage() {
       <Toast message={toastMessage} show={showToast} />
       {/* ─── HEADER PREMIUM ─── */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-[0_4px_30px_rgb(0,0,0,0.03)] border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col">
             {/* Top Bar: Logo & Cart */}
             <div className="flex items-center justify-between h-16 sm:h-20">
@@ -246,7 +246,7 @@ function StorePage() {
 
       {/* Trust Bar */}
       <div className="bg-emerald-50/50 border-b border-emerald-100/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-4 sm:gap-8 text-[11px] sm:text-xs font-bold text-emerald-800">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-4 sm:gap-8 text-[11px] sm:text-xs font-bold text-emerald-800">
           <div className="flex items-center gap-1.5 border-r border-emerald-200/50 pr-4 sm:pr-8">
             <Zap size={14} className="text-emerald-500" />
             <span>Entrega rápida / Retiro local</span>
@@ -259,7 +259,7 @@ function StorePage() {
       </div>
 
       {/* ─── MAIN CONTENT ─── */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28">
+      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28">
         {/* Search Bar */}
         <div className="mb-8 relative max-w-full">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

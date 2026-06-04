@@ -14,6 +14,8 @@ import {
   Flame,
   BellRing,
   X,
+  Settings,
+  Utensils,
 } from "lucide-react";
 
 import SalesView from "./views/SalesView";
@@ -31,6 +33,7 @@ const InboxView = lazy(() =>
 const TesterView = lazy(() =>
   import("./views/TesterView").then((m) => ({ default: m.TesterView })),
 );
+const SettingsView = lazy(() => import("./views/SettingsView"));
 
 import { useRates } from "./hooks/useRates";
 import { useSecurity } from "./hooks/useSecurity";
@@ -40,14 +43,27 @@ import TermsOverlay from "./components/TermsOverlay";
 import OnboardingOverlay from "./components/OnboardingOverlay";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useOfflineQueue } from "./hooks/useOfflineQueue";
+import { useAutoBackup } from "./hooks/useAutoBackup";
+import { useAutoLock } from "./hooks/useAutoLock";
+import LockScreen from "./components/security/LockScreen";
+import { useCloudAuth } from "./hooks/useCloudAuth";
+import SystemStatusPill from "./components/security/SystemStatusPill";
+import { CloudAuthModal } from "./components/security/CloudAuthModal";
+import AdminPanelModal from "./components/security/AdminPanelModal";
+import { useAuthStore } from "./hooks/store/useAuthStore";
+
+
 
 export default function App() {
+  const hasTablesSystem = localStorage.getItem("has_tables_system") !== "false";
+
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const view = params.get("view");
-      const validTabs = ["inicio", "ventas", "cocina", "inbox", "catalogo", "clientes", "reportes"];
+      const validTabs = ["inicio", "ventas", "mesas", "cocina", "inbox", "catalogo", "clientes", "reportes"];
       if (view && validTabs.includes(view)) {
+        if (view === "mesas" && !hasTablesSystem) return "ventas";
         return view;
       }
     } catch {
@@ -57,6 +73,8 @@ export default function App() {
   });
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
+  const [salesViewMode, setSalesViewMode] = useState("products");
+
 
   // Detectar iOS Safari (no standalone) para mostrar instrucciones manuales
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -67,8 +85,7 @@ export default function App() {
   const [adminClicks, setAdminClicks] = useState(0);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showTester, setShowTester] = useState(false);
-  const [clientDeviceId, setClientDeviceId] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
+
 
   const { rates, loading, isOffline, updateData } = useRates();
   const {
@@ -81,7 +98,14 @@ export default function App() {
     deviceId,
   } = useSecurity();
   const { isOnline, cacheRates } = useOfflineQueue();
+  useAutoBackup();
+  useAutoLock();
+  const usuarioActivo = useAuthStore((s) => s.usuarioActivo);
+  const isLocalCajero = usuarioActivo?.rol === "CAJERO";
+  const isLocalMesero = usuarioActivo?.rol === "MESERO";
+  const { cloudUser, role, isAdmin, isEmployee, isKitchen, loading: authLoading } = useCloudAuth();
   const storeConfig = { name: "PreciosAlDía Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
+
 
   // Global web orders hook for bottom nav badge
   const { orders: webOrders } = useWebOrders();
@@ -89,10 +113,64 @@ export default function App() {
     (o) => o.status === "pending",
   ).length;
 
+  // Track pending checkout tables count for cashier notification badge
+  const [checkoutTablesCount, setCheckoutTablesCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      try {
+        const raw = localStorage.getItem("bodega_open_tabs_v1");
+        if (raw) {
+          const tabs = JSON.parse(raw);
+          if (Array.isArray(tabs)) {
+            const count = tabs.filter((t) => t.status === "CHECKOUT").length;
+            setCheckoutTablesCount(count);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error reading open tabs:", err);
+      }
+      setCheckoutTablesCount(0);
+    };
+
+    updateCount();
+
+    window.addEventListener("storage", updateCount);
+    window.addEventListener("bodega_open_tabs_updated", updateCount);
+
+    return () => {
+      window.removeEventListener("storage", updateCount);
+      window.removeEventListener("bodega_open_tabs_updated", updateCount);
+    };
+  }, []);
+
   // Cache rates whenever they update
   useEffect(() => {
     if (rates) cacheRates(rates);
   }, [rates, cacheRates]);
+
+  // Redirección de roles ante cambios de activeTab
+  useEffect(() => {
+    if (isLocalMesero && activeTab !== "mesas") {
+      setActiveTab("mesas");
+      setSalesViewMode("tables");
+    } else if (cloudUser) {
+      if (isKitchen && activeTab !== "cocina") {
+        setActiveTab("cocina");
+      } else if ((isEmployee || isLocalCajero) && ["inicio", "reportes", "ajustes"].includes(activeTab)) {
+        setActiveTab("ventas");
+      }
+    }
+  }, [cloudUser, isKitchen, isEmployee, isLocalCajero, isLocalMesero, activeTab]);
+
+  // Redirección si se deshabilita el módulo de mesas
+  useEffect(() => {
+    if (activeTab === "mesas" && !hasTablesSystem) {
+      setActiveTab("ventas");
+      setSalesViewMode("products");
+    }
+  }, [activeTab, hasTablesSystem]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -158,12 +236,7 @@ export default function App() {
     }
   };
 
-  const handleGenerateCode = async (e) => {
-    e.preventDefault();
-    if (!clientDeviceId) return;
-    const code = await generateCodeForClient(clientDeviceId);
-    setGeneratedCode(code);
-  };
+
 
   // Keyboard detection
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
@@ -195,6 +268,7 @@ export default function App() {
 
   const TABS = [
     { id: "inicio", label: "Inicio", icon: Home },
+    { id: "mesas", label: "Mesas", icon: Utensils, badge: checkoutTablesCount },
     { id: "ventas", label: "Vender", icon: ShoppingCart },
     { id: "cocina", label: "Cocina", icon: Flame },
     {
@@ -204,7 +278,41 @@ export default function App() {
       badge: pendingWebCount,
     },
     { id: "catalogo", label: "Menú", icon: Store },
-  ];
+    { id: "ajustes", label: "Ajustes", icon: Settings },
+  ].filter(tab => {
+    if (tab.id === "mesas" && !hasTablesSystem) return false;
+    if (isLocalMesero) {
+      return tab.id === "mesas"; // El mesero local solo ve la pestaña de mesas
+    }
+    if (!cloudUser) return true; // Modo local/offline sin roles
+    if (isLocalCajero && ["inicio", "ajustes"].includes(tab.id)) return false; // El cajero local no ve dashboard ni ajustes
+    if (isAdmin && !isLocalCajero) return true;    // Admin ve todo
+    if (isEmployee || isLocalCajero) {
+      return ["ventas", "mesas", "catalogo", "cocina", "inbox"].includes(tab.id); // Empleado o cajero local no ve config/admin
+    }
+
+    if (isKitchen) {
+      return tab.id === "cocina"; // Cocinero solo ve pantalla de cocina
+    }
+    return true;
+  });
+
+
+  // ── Interceptor de sesión obligatoria (Auth Hard Gate) ──
+  if (authLoading) {
+    return (
+      <div className="h-[100dvh] w-full bg-slate-50 dark:bg-black flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+        <div className="w-10 h-10 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
+        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+          Verificando sesión en la nube...
+        </span>
+      </div>
+    );
+  }
+
+  if (!cloudUser) {
+    return <CloudAuthModal isForceLogin={true} />;
+  }
 
   return (
     <div className="font-sans antialiased bg-slate-50 dark:bg-black h-[100dvh] flex flex-col overflow-clip transition-colors duration-300">
@@ -226,6 +334,11 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Barra superior de estado compacta y premium */}
+      <div className="fixed top-3 right-3 z-[100]">
+        <SystemStatusPill rates={rates} triggerHaptic={triggerHaptic} />
+      </div>
 
       {/* Demo Banner (discreto — bottom, above nav) */}
       {isDemo && demoTimeLeft && (
@@ -283,7 +396,7 @@ export default function App() {
       )}
 
       <main
-        className={`flex-1 min-h-0 w-full max-w-md md:max-w-2xl lg:max-w-7xl mx-auto relative ${isKeyboardOpen ? "pb-4" : "pb-24"} flex flex-col overflow-y-auto`}
+        className={`flex-1 min-h-0 w-full max-w-md md:max-w-5xl lg:max-w-7xl xl:max-w-[1600px] mx-auto relative ${isKeyboardOpen ? "pb-4" : "pb-24"} flex flex-col overflow-y-auto`}
       >
         {/* Hidden Admin Trigger Area */}
         <div
@@ -294,18 +407,25 @@ export default function App() {
 
         {/* Eager views — always mounted, visibility toggled via CSS */}
         <div
-          className={`flex-1 min-h-0 flex flex-col ${activeTab === "ventas" ? "" : "hidden"}`}
+          className={`flex-1 min-h-0 flex flex-col ${(activeTab === "ventas" || activeTab === "mesas") ? "" : "hidden"}`}
         >
           <ErrorBoundary>
             <PremiumGuard featureName="Punto de Venta" isShop={true}>
               <SalesView
                 rates={rates}
                 triggerHaptic={triggerHaptic}
-                onNavigate={setActiveTab}
+                onNavigate={(tab) => {
+                  setActiveTab(tab);
+                  if (tab === "ventas") setSalesViewMode("products");
+                  if (tab === "mesas") setSalesViewMode("tables");
+                }}
+                salesViewMode={salesViewMode}
+                setSalesViewMode={setSalesViewMode}
               />
             </PremiumGuard>
           </ErrorBoundary>
         </div>
+
 
         <div
           className={`flex-1 flex flex-col ${activeTab === "inicio" ? "" : "hidden"}`}
@@ -338,7 +458,7 @@ export default function App() {
                 className={`flex-1 flex flex-col ${activeTab === "catalogo" ? "" : "hidden"}`}
               >
                 <ErrorBoundary>
-                  <ProductsView rates={rates} triggerHaptic={triggerHaptic} />
+                  <ProductsView rates={rates} triggerHaptic={triggerHaptic} onNavigate={setActiveTab} />
                 </ErrorBoundary>
               </div>
             )}
@@ -400,6 +520,25 @@ export default function App() {
                 </ErrorBoundary>
               </div>
             )}
+          {(activeTab === "ajustes" ||
+            document.querySelector('[data-view="ajustes"]')) && (
+              <div
+                data-view="ajustes"
+                className={`flex-1 flex flex-col ${activeTab === "ajustes" ? "" : "hidden"}`}
+              >
+                <ErrorBoundary>
+                  <PremiumGuard featureName="Panel de Ajustes">
+                    <SettingsView
+                      rates={rates}
+                      triggerHaptic={triggerHaptic}
+                      onNavigate={setActiveTab}
+                      theme={theme}
+                      toggleTheme={toggleTheme}
+                    />
+                  </PremiumGuard>
+                </ErrorBoundary>
+              </div>
+            )}
         </Suspense>
       </main>
 
@@ -421,8 +560,17 @@ export default function App() {
                 badge={tab.badge}
                 onClick={() => {
                   triggerHaptic();
-                  setActiveTab(tab.id);
+                  if (tab.id === "mesas") {
+                    setActiveTab("mesas");
+                    setSalesViewMode("tables");
+                  } else if (tab.id === "ventas") {
+                    setActiveTab("ventas");
+                    setSalesViewMode("products");
+                  } else {
+                    setActiveTab(tab.id);
+                  }
                 }}
+
               />
             ))}
 
@@ -432,7 +580,7 @@ export default function App() {
                   triggerHaptic();
                   handleInstall();
                 }}
-                className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300 bg-red-500 text-white shadow-md animate-pulse"
+                className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300 bg-brand text-white shadow-md animate-pulse"
               >
                 <Download size={20} strokeWidth={3} />
               </button>
@@ -445,7 +593,7 @@ export default function App() {
                   triggerHaptic();
                   setShowIOSInstall(true);
                 }}
-                className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300 bg-red-500 text-white shadow-md animate-pulse"
+                className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300 bg-brand text-white shadow-md animate-pulse"
               >
                 <Download size={20} strokeWidth={3} />
               </button>
@@ -477,71 +625,25 @@ export default function App() {
                 <p className="text-sm text-slate-600 dark:text-slate-300">Busca y toca <strong>"Agregar a la pantalla de inicio"</strong></p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0 text-red-600 font-bold text-sm">✓</div>
+                <div className="w-8 h-8 bg-brand/10 dark:bg-brand/20 rounded-full flex items-center justify-center shrink-0 text-brand-dark dark:text-brand font-bold text-sm">✓</div>
                 <p className="text-sm text-slate-600 dark:text-slate-300">¡Listo! La app aparecerá como un ícono en tu teléfono</p>
               </div>
             </div>
-            <button onClick={() => { setShowIOSInstall(false); localStorage.setItem('ios_install_dismissed', '1'); }} className="w-full mt-6 py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
+            <button onClick={() => { setShowIOSInstall(false); localStorage.setItem('ios_install_dismissed', '1'); }} className="w-full mt-6 py-3 bg-brand text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
               Entendido
             </button>
           </div>
         </div>
       )}
 
-      {/* Admin Panel Modal */}
-      {showAdminPanel && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Key className="text-red-500" /> Admin Gen
-              </h2>
-              <button
-                onClick={() => setShowAdminPanel(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleGenerateCode}>
-              <label className="block text-xs uppercase text-slate-500 font-bold mb-2">
-                ID del Cliente
-              </label>
-              <input
-                type="text"
-                value={clientDeviceId}
-                onChange={(e) => setClientDeviceId(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white mb-4 font-mono uppercase"
-                placeholder="PDA-XXXX"
-              />
-              <button className="w-full bg-red-500 hover:bg-red-600 text-black font-bold py-3 rounded-lg mb-4">
-                Generar Código
-              </button>
-            </form>
-
-            <button
-              onClick={() => {
-                triggerHaptic();
-                setShowTester(true);
-                setShowAdminPanel(false);
-              }}
-              className="w-full bg-indigo-600/20 border border-indigo-500/50 text-indigo-400 font-bold py-2 rounded-lg text-xs uppercase tracking-tighter hover:bg-indigo-600/30 transition-colors"
-            >
-              🚀 Abrir Tester
-            </button>
-
-            {generatedCode && (
-              <div className="mt-4 bg-green-900/30 border border-green-500/50 p-4 rounded-lg text-center">
-                <p className="text-xs text-green-400 mb-1">Código Generado:</p>
-                <p className="text-xl font-mono font-bold text-white tracking-widest selectable select-all">
-                  {generatedCode}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminPanelModal
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
+        generateCodeForClient={generateCodeForClient}
+        triggerHaptic={triggerHaptic}
+        onOpenTester={() => setShowTester(true)}
+      />
+      {!usuarioActivo && <LockScreen />}
     </div>
   );
 }
@@ -550,7 +652,7 @@ function TabButton({ icon, label, isActive, onClick, badge }) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-2xl transition-all duration-300 ${isActive ? "bg-slate-800 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+      className={`relative flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-2xl transition-all duration-300 ${isActive ? "bg-slate-800 text-brand shadow-[0_0_15px_rgba(var(--color-brand),0.2)]" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
     >
       {icon}
       {badge > 0 && (

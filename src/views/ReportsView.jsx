@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { storageService } from "../utils/storageService";
 import { formatBs } from "../utils/calculatorUtils";
+import { FinancialEngine } from "../core/FinancialEngine";
 import { getPaymentLabel, PAYMENT_ICONS } from "../config/paymentMethods";
 
 const SALES_KEY = "bodega_sales_v1";
@@ -100,29 +101,16 @@ export default function ReportsView({ rates, triggerHaptic }) {
     0,
   );
 
-  const profit = filteredSales.reduce((sum, s) => {
-    return (
-      sum +
-      s.items.reduce((is, item) => {
-        const costBs = item.costBs || 0;
-        const saleBs = item.priceUsd * item.qty * (s.rate || bcvRate);
-        return is + (saleBs - costBs * item.qty);
-      }, 0)
-    );
-  }, 0);
+  const profit = useMemo(
+    () => FinancialEngine.calculateAggregateProfit(filteredSales, bcvRate, []),
+    [filteredSales, bcvRate],
+  );
 
   // Desglose por método de pago
-  const paymentBreakdown = {};
-  filteredSales.forEach((s) => {
-    (s.payments || []).forEach((p) => {
-      if (!paymentBreakdown[p.methodId])
-        paymentBreakdown[p.methodId] = {
-          total: 0,
-          currency: p.currency || "USD",
-        };
-      paymentBreakdown[p.methodId].total += p.amountUsd || 0;
-    });
-  });
+  const paymentBreakdown = useMemo(
+    () => FinancialEngine.calculatePaymentBreakdown(filteredSales),
+    [filteredSales],
+  );
 
   // Top productos
   const productMap = {};
@@ -196,20 +184,28 @@ export default function ReportsView({ rates, triggerHaptic }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-5 pb-32">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-          <div className="bg-indigo-500 text-white p-1.5 md:p-2 rounded-xl shadow-lg shadow-indigo-500/30">
-            <BarChart3 size={20} />
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+            <BarChart3 size={22} className="text-white" />
           </div>
-          Reportes
-        </h2>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none">
+              Reportes
+            </h1>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 font-bold">
+              Estadísticas, análisis de ventas y margen de ganancia
+            </p>
+          </div>
+        </div>
         <button
           onClick={handleExportPDF}
           disabled={filteredSales.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-bold rounded-xl text-sm shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:hover:scale-100 text-white font-bold rounded-xl sm:rounded-2xl text-xs sm:text-sm shadow-md shadow-indigo-500/20 active:scale-95 hover:scale-105 transition-all"
         >
-          <Download size={16} /> Descargar PDF
+          <Download size={16} className="shrink-0" />
+          <span>Descargar PDF</span>
         </button>
       </div>
 

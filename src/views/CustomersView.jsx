@@ -176,25 +176,30 @@ export default function CustomersView({ triggerHaptic, onNavigate }) {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-3 sm:p-6 overflow-y-auto scrollbar-hide">
-      {/* Header */}
-      <div className="shrink-0 mb-5 flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-            <Users size={26} className="text-blue-500" /> Clientes
-          </h2>
-          <p className="text-sm text-slate-400 font-medium ml-1">
-            Deudas y Saldos a Favor
-          </p>
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+            <Users size={22} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none">
+              Clientes
+            </h1>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-bold">
+              Deudas y Saldos a Favor ({customers.length} registrados)
+            </p>
+          </div>
         </div>
         <button
           onClick={() => {
             triggerHaptic();
             setIsAddModalOpen(true);
           }}
-          className="p-3 bg-blue-500 text-white rounded-2xl shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          className="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl sm:rounded-2xl shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
         >
-          <Plus size={20} className="shrink-0" />
-          <span className="text-sm font-bold hidden sm:inline">
+          <Plus size={18} className="shrink-0" />
+          <span className="text-xs sm:text-sm font-bold">
             Nuevo Cliente
           </span>
         </button>

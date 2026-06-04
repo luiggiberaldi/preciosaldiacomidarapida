@@ -13,9 +13,9 @@ export default function DashboardStats({
     handleDailyClose,
 }) {
     return (
-        <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-5">
             {/* Ventas Hoy */}
-            <div className="col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border-2 border-red-500/20 shadow-sm relative overflow-hidden">
+            <div className="col-span-2 sm:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border-2 border-red-500/20 shadow-sm relative overflow-hidden">
                 <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-50 dark:bg-red-900/10 rounded-full blur-2xl"></div>
                 <div className="flex items-center justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ export default function DashboardStats({
             </div>
 
             {/* Pedidos de hoy */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="col-span-1 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
                         <ShoppingBag size={16} className="text-indigo-500" />
@@ -75,7 +75,7 @@ export default function DashboardStats({
             </div>
 
             {/* Platos vendidos */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="col-span-1 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
                         <Flame size={16} className="text-orange-500" />
@@ -90,7 +90,7 @@ export default function DashboardStats({
             </div>
 
             {/* Ganancia Estimada */}
-            <div className="col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-center">
+            <div className="col-span-2 sm:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-center">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-green-50 dark:bg-green-900/10 rounded-full blur-2xl pointer-events-none"></div>
                 <div className="flex justify-between items-center relative z-10">
                     <div className="flex items-center gap-3">

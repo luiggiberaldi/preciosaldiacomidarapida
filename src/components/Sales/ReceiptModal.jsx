@@ -1,9 +1,11 @@
 import React from "react";
-import { CheckCircle, Wallet, Send, X } from "lucide-react";
+import { CheckCircle, Wallet, Send, X, Printer, Package, Utensils, MessageCircle } from "lucide-react";
 import { formatBs } from "../../utils/calculatorUtils";
 import { buildReceiptWhatsAppUrl } from "./ReceiptShareHelper";
+import { usePrinter } from "../../hooks/usePrinter";
 
 export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
+  const { isConnected: printerConnected, printTicket } = usePrinter();
   if (!receipt) return null;
 
   const tenantName = localStorage.getItem("bodega_store_name") || "PreciosAlDía Comida Rápida";
@@ -71,11 +73,19 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
             <p className="text-xs font-bold text-slate-500 mb-4">{fecha}</p>
 
             <div
-              className={`inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest mb-4 ${receipt.deliveryType === "LLEVAR" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest mb-4 ${receipt.deliveryType === "LLEVAR" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
             >
-              {receipt.deliveryType === "LLEVAR"
-                ? "🛍️ Para Llevar"
-                : "🍽️ Comer Aquí"}
+              {receipt.deliveryType === "LLEVAR" ? (
+                <>
+                  <Package size={12} className="shrink-0" />
+                  <span>Para Llevar</span>
+                </>
+              ) : (
+                <>
+                  <Utensils size={12} className="shrink-0" />
+                  <span>Comer Aquí</span>
+                </>
+              )}
             </div>
 
             <div className="border-t border-slate-100 pt-4">
@@ -109,8 +119,9 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
                       </span>
                     )}
                     {item.note && (
-                      <span className="block text-[11px] font-bold text-red-600 my-0.5">
-                        💬 {item.note}
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-red-600 my-0.5">
+                        <MessageCircle size={10} className="shrink-0 text-red-500" />
+                        <span>{item.note}</span>
                       </span>
                     )}
                     <span className="text-xs text-slate-400 flex gap-2">
@@ -177,6 +188,14 @@ export default function ReceiptModal({ receipt, onClose, onShareWhatsApp }) {
 
         {/* Botones sticky en la parte inferior */}
         <div className="p-4 bg-slate-50 flex gap-2 relative z-20 shrink-0 border-t border-slate-200/50 flex-col">
+          {printerConnected && (
+            <button
+              onClick={() => printTicket(receipt)}
+              className="w-full py-3.5 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-colors tracking-wide text-sm flex items-center justify-center gap-2 focus:outline-none active:scale-95 shadow-md shadow-indigo-600/10"
+            >
+              <Printer size={18} /> Imprimir Ticket Termico
+            </button>
+          )}
           <button
             onClick={handleWhatsApp}
             className="w-full py-3.5 bg-amber-100 text-amber-700 font-black rounded-xl hover:bg-amber-200 transition-colors tracking-wide text-sm flex items-center justify-center gap-2 focus:outline-none active:scale-95 shadow-sm"

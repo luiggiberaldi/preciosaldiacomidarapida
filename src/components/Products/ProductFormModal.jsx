@@ -221,7 +221,7 @@ export default function ProductFormModal({
           <div className="absolute left-8 right-8 top-[18px] h-1 bg-slate-100 dark:bg-slate-800 -z-10 rounded-full" />
           {/* Active progress line */}
           <div
-            className="absolute left-8 top-[18px] h-1 bg-red-500 transition-all duration-300 rounded-full -z-10"
+            className="absolute left-8 top-[18px] h-1 bg-brand transition-all duration-300 rounded-full -z-10"
             style={{ width: `${(step - 1) * 44}%` }}
           />
 
@@ -234,7 +234,7 @@ export default function ProductFormModal({
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 border-2 ${
                 step === 1
-                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/30 scale-110"
+                  ? "bg-brand border-brand text-white shadow-lg shadow-brand/30 scale-110"
                   : "bg-emerald-500 border-emerald-500 text-white"
               }`}
             >
@@ -242,7 +242,7 @@ export default function ProductFormModal({
             </div>
             <span
               className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
-                step === 1 ? "text-red-500" : "text-emerald-500"
+                step === 1 ? "text-brand" : "text-emerald-500"
               }`}
             >
               General
@@ -261,7 +261,7 @@ export default function ProductFormModal({
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 border-2 ${
                 step === 2
-                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/30 scale-110"
+                  ? "bg-brand border-brand text-white shadow-lg shadow-brand/30 scale-110"
                   : step > 2
                   ? "bg-emerald-500 border-emerald-500 text-white"
                   : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400"
@@ -272,7 +272,7 @@ export default function ProductFormModal({
             <span
               className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
                 step === 2
-                  ? "text-red-500"
+                  ? "text-brand"
                   : step > 2
                   ? "text-emerald-500"
                   : "text-slate-400"
@@ -294,7 +294,7 @@ export default function ProductFormModal({
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 border-2 ${
                 step === 3
-                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/30 scale-110"
+                  ? "bg-brand border-brand text-white shadow-lg shadow-brand/30 scale-110"
                   : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400"
               }`}
             >
@@ -302,7 +302,7 @@ export default function ProductFormModal({
             </div>
             <span
               className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
-                step === 3 ? "text-red-500" : "text-slate-400"
+                step === 3 ? "text-brand" : "text-slate-400"
               }`}
             >
               Opciones
@@ -316,7 +316,7 @@ export default function ProductFormModal({
             {/* PHOTO UPLOAD */}
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="h-32 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-dashed border-slate-350 dark:border-slate-650 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-red-400 hover:from-red-50/50 hover:to-red-50/30 transition-all relative overflow-hidden group"
+              className="h-32 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-dashed border-slate-350 dark:border-slate-650 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-brand-dark hover:from-brand/10 hover:to-brand/5 transition-all relative overflow-hidden group"
             >
               {image ? (
                 <img
@@ -327,7 +327,7 @@ export default function ProductFormModal({
               ) : (
                 <>
                   <div className="w-11 h-11 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-105 transition-transform">
-                    <Camera size={20} className="text-slate-400 group-hover:text-red-500 transition-colors" />
+                    <Camera size={20} className="text-slate-400 group-hover:text-brand transition-colors" />
                   </div>
                   <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
                     Toca para agregar foto
@@ -364,7 +364,7 @@ export default function ProductFormModal({
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
                 placeholder="Ej: Perro Caliente Especial"
-                className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-sm text-slate-800 dark:text-white outline-none focus:border-red-500 transition-colors capitalize placeholder:text-slate-300"
+                className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-sm text-slate-800 dark:text-white outline-none focus:border-brand transition-colors capitalize placeholder:text-slate-300"
               />
             </div>
 
@@ -378,7 +378,7 @@ export default function ProductFormModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Ej: Pan artesanal, doble salchicha, extra queso cheddar y papas fritas"
                 rows={3}
-                className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-red-500 transition-colors placeholder:text-slate-400 resize-none font-medium leading-relaxed"
+                className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-brand transition-colors placeholder:text-slate-400 resize-none font-medium leading-relaxed"
               />
             </div>
 
@@ -391,7 +391,7 @@ export default function ProductFormModal({
                 <button
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-slate-750 dark:text-white outline-none focus:border-red-500 transition-colors text-xs flex items-center justify-between shadow-sm active:scale-[0.99]"
+                  className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-slate-750 dark:text-white outline-none focus:border-brand transition-colors text-xs flex items-center justify-between shadow-sm active:scale-[0.99]"
                 >
                   <span className="flex items-center gap-2 truncate">
                     {(() => {
@@ -426,15 +426,15 @@ export default function ProductFormModal({
                               }}
                               className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-between ${
                                 category === c.id
-                                  ? "bg-red-50 dark:bg-red-950/40 text-red-500"
+                                  ? "bg-brand/10 dark:bg-brand/20 text-brand-dark dark:text-brand"
                                   : "text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                               }`}
                             >
                               <span className="flex items-center gap-2 truncate">
-                                <IconComp size={14} className={`shrink-0 ${category === c.id ? "text-red-500" : "text-slate-400 dark:text-slate-500"}`} />
+                                <IconComp size={14} className={`shrink-0 ${category === c.id ? "text-brand" : "text-slate-400 dark:text-slate-500"}`} />
                                 <span className="truncate">{c.label}</span>
                               </span>
-                              {category === c.id && <Check size={13} strokeWidth={3} className="text-red-500 shrink-0" />}
+                              {category === c.id && <Check size={13} strokeWidth={3} className="text-brand shrink-0" />}
                             </button>
                           );
                         })}
@@ -448,7 +448,7 @@ export default function ProductFormModal({
                             value={catInputName}
                             onChange={(e) => setCatInputName(e.target.value)}
                             placeholder="Categoría..."
-                            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-650 px-2 py-1.5 rounded-lg text-xs font-bold text-slate-800 dark:text-white outline-none focus:border-red-500 transition-colors min-w-0"
+                            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-650 px-2 py-1.5 rounded-lg text-xs font-bold text-slate-800 dark:text-white outline-none focus:border-brand transition-colors min-w-0"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -460,7 +460,7 @@ export default function ProductFormModal({
                           <button
                             type="button"
                             onClick={handleAddCatSubmit}
-                            className="px-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-xs active:scale-95 transition-all shrink-0"
+                            className="px-2.5 bg-brand hover:bg-brand-dark text-white rounded-lg font-bold text-xs active:scale-95 transition-all shrink-0"
                           >
                             Crear
                           </button>
@@ -479,7 +479,7 @@ export default function ProductFormModal({
                         <button
                           type="button"
                           onClick={() => setIsAddingNewCat(true)}
-                          className="w-full py-1.5 border border-dashed border-red-200 dark:border-red-800/40 text-red-500 dark:text-red-400 bg-red-500/5 rounded-xl hover:bg-red-500/10 active:scale-[0.98] transition-all font-bold text-xs flex items-center justify-center gap-1"
+                          className="w-full py-1.5 border border-dashed border-brand/20 dark:border-brand/30 text-brand-dark dark:text-brand bg-brand/10 rounded-xl hover:bg-brand/20 active:scale-[0.98] transition-all font-bold text-xs flex items-center justify-center gap-1"
                         >
                           <Plus size={13} /> Nueva Categoría
                         </button>
@@ -495,7 +495,7 @@ export default function ProductFormModal({
                 <button
                   type="button"
                   onClick={() => setPrepDropdownOpen(!prepDropdownOpen)}
-                  className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-slate-750 dark:text-white outline-none focus:border-red-500 transition-colors text-xs flex items-center justify-between shadow-sm active:scale-[0.99]"
+                  className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-3 rounded-xl font-bold text-slate-750 dark:text-white outline-none focus:border-brand transition-colors text-xs flex items-center justify-between shadow-sm active:scale-[0.99]"
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Clock size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
@@ -519,12 +519,12 @@ export default function ProductFormModal({
                           }}
                           className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-between ${
                             prepTime === t.value
-                              ? "bg-red-50 dark:bg-red-950/40 text-red-500"
+                              ? "bg-brand/10 dark:bg-brand/20 text-brand-dark dark:text-brand"
                               : "text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                           }`}
                         >
                           <span>{t.label}</span>
-                          {prepTime === t.value && <Check size={13} strokeWidth={3} className="text-red-500 shrink-0" />}
+                          {prepTime === t.value && <Check size={13} strokeWidth={3} className="text-brand shrink-0" />}
                         </button>
                       ))}
                     </div>
@@ -599,7 +599,7 @@ export default function ProductFormModal({
               
               <div className="grid grid-cols-2 gap-3.5">
                 {/* USD Input Group */}
-                <div className="relative group/input flex items-center bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus-within:border-red-500 dark:focus-within:border-red-500 transition-all shadow-sm">
+                <div className="relative group/input flex items-center bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus-within:border-brand dark:focus-within:border-brand transition-all shadow-sm">
                   <div className="flex items-center gap-1 pl-3 pr-2 border-r border-slate-100 dark:border-slate-750 select-none">
                     <span className="text-emerald-500 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">USD</span>
                     <span className="text-emerald-500 font-black text-sm">$</span>
@@ -716,14 +716,14 @@ export default function ProductFormModal({
                   onClick={() => setHasSizes(false)}
                   className={`flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer relative ${
                     !hasSizes
-                      ? "bg-red-500/5 dark:bg-red-500/10 border-red-500 text-red-500 shadow-sm"
+                      ? "bg-brand/10 dark:bg-brand/20 border-brand text-brand shadow-sm"
                       : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:hover:border-slate-650"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <ChefHat size={18} className={!hasSizes ? "text-red-500" : "text-slate-405 dark:text-slate-500"} />
+                    <ChefHat size={18} className={!hasSizes ? "text-brand" : "text-slate-405 dark:text-slate-500"} />
                     {!hasSizes && (
-                      <div className="w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center">
+                      <div className="w-3.5 h-3.5 bg-brand text-white rounded-full flex items-center justify-center">
                         <Check size={9} strokeWidth={4} />
                       </div>
                     )}
@@ -984,14 +984,14 @@ export default function ProductFormModal({
                 (step === 2 && !isStep2Valid)
               }
               onClick={() => setStep((s) => s + 1)}
-              className="flex-1 py-3.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl active:scale-95 transition-all text-xs flex items-center justify-center gap-1.5"
+              className="flex-1 py-3.5 bg-brand hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl active:scale-95 transition-all text-xs flex items-center justify-center gap-1.5"
             >
               Siguiente <ChevronRight size={16} />
             </button>
           ) : (
             <button
               onClick={onSaveClick}
-              className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3.5 rounded-xl font-black uppercase tracking-wider shadow-lg shadow-red-500/20 active:scale-[0.97] transition-all text-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand text-white py-3.5 rounded-xl font-black uppercase tracking-wider shadow-lg shadow-brand/20 active:scale-[0.97] transition-all text-xs flex items-center justify-center gap-2"
             >
               {isEditing ? (
                 <>

@@ -5,7 +5,11 @@ import path from "path";
 // Limpiar la carpeta dist anterior
 if (fs.existsSync("dist")) {
   console.log("Limpiando carpeta dist anterior...");
-  fs.rmSync("dist", { recursive: true, force: true });
+  try {
+    fs.rmSync("dist", { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  } catch (err) {
+    console.warn("Advertencia: No se pudo limpiar 'dist' completamente. Continuando...", err.message);
+  }
 }
 
 // 1. Instalar dependencias de web-cliente

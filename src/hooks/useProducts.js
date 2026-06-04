@@ -32,11 +32,19 @@ export function useProducts(rates) {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      const savedProducts = await storageService.getItem("my_products_v1", []);
+      let savedProducts = await storageService.getItem("my_products_v1", []);
       const savedCategories = await storageService.getItem(
         "my_categories_v1",
         BODEGA_CATEGORIES,
       );
+      
+      // Auto-heal duplicate or corrupted products (ID 0)
+      const originalCount = savedProducts.length;
+      savedProducts = savedProducts.filter(p => p && p.id !== 0 && p.id !== "0");
+      if (savedProducts.length !== originalCount) {
+        console.log(`[useProducts] Auto-heal: Filtrados ${originalCount - savedProducts.length} productos corruptos con ID 0.`);
+      }
+
       if (isMounted) {
         setProducts(savedProducts);
         setCategories(savedCategories);

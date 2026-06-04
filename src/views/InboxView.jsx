@@ -102,7 +102,7 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
       window.open(waUrl, "_blank");
     } catch (e) {
       console.error("Error in handleConfirmWhatsApp:", e);
-      alert("Error procesando la accion: " + e.message);
+      showToast("Error al procesar la acción: " + e.message, "error");
     }
   };
 
@@ -161,22 +161,23 @@ export const InboxView = ({ rates, storeConfig, onNavigate }) => {
   }
 
   return (
-    <div className="pb-28">
-      <div className="bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-lg sticky top-0 z-10">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 pb-28 overflow-hidden">
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-            <Smartphone className="w-6 h-6 text-white" />
+          <div className="w-11 h-11 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+            <Smartphone size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Bandeja de Pedidos</h1>
-            <p className="text-red-100 text-sm opacity-90">
+            <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none">Bandeja de Pedidos</h1>
+            <p className="text-[10px] font-bold text-slate-400 mt-1">
               Órdenes recibidas desde la página web
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-6">
         {/* Pending Section */}
         <section>
           <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">

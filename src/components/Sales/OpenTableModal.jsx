@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Users, User, ClipboardList, Shield } from "lucide-react";
+import { X, Users, User, ClipboardList, Shield, ChefHat } from "lucide-react";
 
 export default function OpenTableModal({
   isOpen,
@@ -100,7 +100,7 @@ export default function OpenTableModal({
               <Shield size={12} /> Mesero Asignado
             </label>
             <div className="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3.5 py-3 font-bold text-slate-500 dark:text-slate-400 text-sm flex items-center gap-2">
-              <span>👤</span>
+              <ChefHat size={14} className="text-slate-400 shrink-0" />
               <span>{activeWaiter || "Usuario Activo"}</span>
               <span className="text-[9px] uppercase font-black bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded ml-auto text-slate-400">
                 Automático

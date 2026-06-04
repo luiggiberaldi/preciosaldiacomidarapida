@@ -138,9 +138,6 @@ export default function OnboardingOverlay({ isPremium = false }) {
                 />
                 <div className="absolute inset-0 bg-red-500/15 rounded-full blur-2xl -z-10 scale-150" />
               </div>
-              <p className="text-xs font-bold text-red-500 uppercase tracking-[0.2em] mb-5">
-                Punto de Venta para Locales
-              </p>
 
               <p className="text-sm text-slate-500 leading-relaxed mb-6 max-w-[260px] mx-auto">
                 Menú QR, toma de pedidos en barra, pantalla de cocina y ventas. Todo en tiempo real.

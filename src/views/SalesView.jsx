@@ -15,6 +15,8 @@ import TablesFloorPlan from "../components/Sales/TablesFloorPlan";
 import TableDetailsModal from "../components/Sales/TableDetailsModal";
 import OpenTableModal from "../components/Sales/OpenTableModal";
 import { useAuthStore } from "../hooks/store/useAuthStore";
+import TableQueuePanel from "../components/Sales/TableQueuePanel";
+import TableBillModal from "../components/Sales/TableBillModal";
 
 
 // Components
@@ -31,12 +33,13 @@ import NoteModifierModal from "../components/Sales/NoteModifierModal";
 import ConfirmModal from "../components/ConfirmModal";
 import Confetti from "../components/Confetti";
 import { buildReceiptWhatsAppUrl } from "../components/Sales/ReceiptShareHelper";
+import { procesarImpactoCliente } from "../utils/financialLogic";
 
 const SALES_KEY = "bodega_sales_v1";
 
 export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewMode, setSalesViewMode }) {
   const { playAdd, playRemove, playCheckout, playError } = useSounds();
-  const { notifySaleComplete, notifyLowStock } = useNotifications();
+  const { notifySaleComplete, notifyLowStock, notifyMesaCobrar } = useNotifications();
   const { logAction } = useAudit();
   const { isConnected: printerConnected, printTicket, printKitchen, printPrecuenta } = usePrinter();
   const { addToQueue } = useOfflineQueue();
@@ -84,6 +87,18 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
     localStorage.setItem("bodega_tables_v1", JSON.stringify(tables));
   }, [tables]);
 
+  // Sync tables from localStorage when view mode changes (stale state prevention)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("bodega_tables_v1");
+      if (saved) {
+        setTables(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("[SalesView] Error loading tables from localStorage:", e);
+    }
+  }, [salesViewMode]);
+
   // Search
   const searchInputRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -101,6 +116,9 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
   const [editingCartId, setEditingCartId] = useState(null);
   const [cartCustomerName, setCartCustomerName] = useState("");
   const [pendingWebOrderId, setPendingWebOrderId] = useState(null);
+  const [tableCheckoutData, setTableCheckoutData] = useState(null);
+  const [showTableBillModal, setShowTableBillModal] = useState(false);
+  const [activeTableDiscount, setActiveTableDiscount] = useState({ type: "percentage", value: 0 });
 
   // Rate config
   const [showRateConfig, setShowRateConfig] = useState(false);
@@ -169,6 +187,20 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
   );
   const cartTotalBs = cartTotalUsd * effectiveRate;
   const cartItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+
+  const discountAmountUsd = useMemo(() => {
+    if (!tableCheckoutData || !activeTableDiscount || activeTableDiscount.value <= 0) return 0;
+    const subtotal = tableCheckoutData.tab.items.reduce(
+      (sum, item) => sum + (item.priceUsdt || item.priceUsd || item.price || 0) * item.qty,
+      0
+    );
+    return activeTableDiscount.type === "percentage"
+      ? subtotal * (activeTableDiscount.value / 100)
+      : Math.min(activeTableDiscount.value, subtotal);
+  }, [tableCheckoutData, activeTableDiscount]);
+
+  const finalTotalUsd = tableCheckoutData ? Math.max(0, cartTotalUsd - discountAmountUsd) : cartTotalUsd;
+  const finalTotalBs = finalTotalUsd * effectiveRate;
 
   const formatBs = (n) =>
     new Intl.NumberFormat("es-VE", {
@@ -549,13 +581,32 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
   };
 
   const handleDetailsCheckout = (table, tab) => {
-    handleSelectOpenTab(tab);
+    setTableCheckoutData({ table, tab });
+    setShowTableBillModal(true);
     setSelectedTableForDetails(null);
-    setShowCheckout(true);
   };
 
   const handleDetailsReleaseTable = (table, tab) => {
     setTableToReleasePending({ table, tab });
+  };
+
+  const handleSendToCashier = (table, tab) => {
+    if (!tab) return;
+    const totalUsd = tab.items.reduce(
+      (s, i) => s + (i.priceUsdt || i.priceUsd || i.price || 0) * i.qty,
+      0
+    );
+    updateTab(tab.id, tab.items, { status: "CHECKOUT" });
+    notifyMesaCobrar(table.name, totalUsd);
+    showToast(`Solicitud de cobro enviada a caja: ${table.name}`, "success");
+    setSelectedTableForDetails(null);
+  };
+
+  const handleCancelCheckout = (table, tab) => {
+    if (!tab) return;
+    updateTab(tab.id, tab.items, { status: "ACTIVE" });
+    showToast(`Solicitud de cobro cancelada: ${table.name}`, "info");
+    setSelectedTableForDetails(null);
   };
 
 
@@ -602,15 +653,18 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
     const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
     if (cart.length === 0) return;
 
+    const targetTotalUsd = tableCheckoutData ? finalTotalUsd : cartTotalUsd;
+    const targetTotalBs = tableCheckoutData ? finalTotalBs : cartTotalBs;
+
     const totalPaidUsd = payments.reduce((acc, p) => acc + p.amountUsd, 0);
-    const remainingUsd = Math.max(0, cartTotalUsd - totalPaidUsd);
-    const changeUsd = Math.max(0, totalPaidUsd - cartTotalUsd);
+    const remainingUsd = Math.max(0, targetTotalUsd - totalPaidUsd);
+    const changeUsd = Math.max(0, totalPaidUsd - targetTotalUsd);
     const changeBs = changeUsd * effectiveRate;
 
     if (!selectedCustomer && remainingUsd > 0.01) return;
     if (
-      isNaN(cartTotalUsd) ||
-      cartTotalUsd < 0 ||
+      isNaN(targetTotalUsd) ||
+      targetTotalUsd < 0 ||
       isNaN(totalPaidUsd) ||
       totalPaidUsd < 0
     ) {
@@ -635,14 +689,16 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
         isWeight: i.isWeight,
         note: i.note || "",
       })),
-      totalUsd: cartTotalUsd,
-      totalBs: cartTotalBs,
+      totalUsd: targetTotalUsd,
+      totalBs: targetTotalBs,
+      discountAmountUsd: tableCheckoutData ? discountAmountUsd : 0,
+      vendedorNombre: tableCheckoutData?.tab?.customerInfo?.waiter || usuarioActivo?.nombre || "Cajero",
       payments,
       rate: effectiveRate,
       rateSource: useAutoRate ? (autoRateSource === "euro" ? "BCV Euro" : "BCV Dólar") : "Manual",
       timestamp: new Date().toISOString(),
-      changeUsd: fiadoAmountUsd > 0 ? 0 : changeUsd,
-      changeBs: fiadoAmountUsd > 0 ? 0 : changeBs,
+      changeUsd: (fiadoAmountUsd > 0 || checkoutInfo?.saveChangeToWallet) ? 0 : changeUsd,
+      changeBs: (fiadoAmountUsd > 0 || checkoutInfo?.saveChangeToWallet) ? 0 : changeBs,
       customerId: selectedCustomerId || null,
       customerName: selectedCustomer
         ? selectedCustomer.name
@@ -681,16 +737,23 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
     setProducts(updatedProducts);
     await storageService.setItem("my_products_v1", updatedProducts);
 
-    // Update customer debt
-    const amount_favor_used = payments
-      .filter((p) => p.methodId === "saldo_favor")
-      .reduce((sum, p) => sum + p.amountUsd, 0);
-    const debtIncurred = fiadoAmountUsd + amount_favor_used;
-    if (selectedCustomer && debtIncurred > 0) {
+    // Update customer debt / balance using unified financial logic
+    if (selectedCustomer) {
+      const amount_favor_used = payments
+        .filter((p) => p.methodId === "saldo_favor")
+        .reduce((sum, p) => sum + p.amountUsd, 0);
+
+      const transaccionOpts = {
+        usaSaldoFavor: amount_favor_used,
+        esCredito: fiadoAmountUsd > 0,
+        deudaGenerada: fiadoAmountUsd > 0 ? fiadoAmountUsd : 0,
+        vueltoParaMonedero: (checkoutInfo?.saveChangeToWallet && changeUsd > 0.009) ? changeUsd : 0,
+      };
+
+      const updatedCustomer = procesarImpactoCliente(selectedCustomer, transaccionOpts);
+
       const updatedCustomers = customers.map((c) =>
-        c.id === selectedCustomer.id
-          ? { ...c, deuda: c.deuda + debtIncurred }
-          : c,
+        c.id === selectedCustomer.id ? updatedCustomer : c
       );
       setCustomers(updatedCustomers);
       await storageService.setItem("my_customers_v1", updatedCustomers);
@@ -730,6 +793,9 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
       removeTab(activeTabId);
       setActiveTabId(null);
     }
+    setTableCheckoutData(null);
+    setShowTableBillModal(false);
+    setActiveTableDiscount({ type: "percentage", value: 0 });
   };
 
 
@@ -774,51 +840,106 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
         setAutoRateSource={setAutoRateSource}
       />
 
+      {salesViewMode === "products" && (usuarioActivo?.rol === "ADMIN" || usuarioActivo?.rol === "CAJERO") && (
+        <TableQueuePanel
+          openTabs={openTabs}
+          tables={tables}
+          effectiveRate={effectiveRate}
+          onCheckoutTable={(tab) => {
+            const table = tables.find((t) => t.id === tab.customerInfo?.tableId);
+            setTableCheckoutData({ tab, table });
+            setShowTableBillModal(true);
+          }}
+        />
+      )}
+
 
       {salesViewMode === "products" ? (
-        <>
-          {/* Search + Popups */}
-          <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
-            <SearchBar
-              ref={searchInputRef}
-              searchTerm={searchTerm}
-              onSearchChange={handleSetSearchTerm}
-              onKeyDown={handleSearchKeyDown}
-              searchResults={searchResults}
-              selectedIndex={selectedIndex}
-              setSelectedIndex={setSelectedIndex}
-              effectiveRate={effectiveRate}
-              addToCart={addToCart}
-              isRecording={isRecording}
-              isProcessingAudio={isProcessingAudio}
-              toggleRecording={toggleRecording}
-              hierarchyPending={hierarchyPending}
-              setHierarchyPending={setHierarchyPending}
-              weightPending={weightPending}
-              setWeightPending={setWeightPending}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-4 overflow-hidden">
+          {/* Catálogo de Productos (Izquierda) */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {/* Search + Popups */}
+            <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+              <SearchBar
+                ref={searchInputRef}
+                searchTerm={searchTerm}
+                onSearchChange={handleSetSearchTerm}
+                onKeyDown={handleSearchKeyDown}
+                searchResults={searchResults}
+                selectedIndex={selectedIndex}
+                setSelectedIndex={setSelectedIndex}
+                effectiveRate={effectiveRate}
+                addToCart={addToCart}
+                isRecording={isRecording}
+                isProcessingAudio={isProcessingAudio}
+                toggleRecording={toggleRecording}
+                hierarchyPending={hierarchyPending}
+                setHierarchyPending={setHierarchyPending}
+                weightPending={weightPending}
+                setWeightPending={setWeightPending}
+              />
+            </div>
+
+            {/* Category Chips + Product Grid */}
+            {!showCheckout && !showReceipt && (
+              <CategoryBar
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                filteredByCategory={filteredByCategory}
+                addToCart={addToCart}
+                triggerHaptic={triggerHaptic}
+                searchTerm={searchTerm}
+              />
+            )}
+
+            {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
+            <OpenTabsPanel
+              openTabs={openTabs.filter(t => !t.customerInfo?.tableId)}
+              onSelectTab={handleSelectOpenTab}
+              onRemoveTab={handleRemoveOpenTab}
+              triggerHaptic={triggerHaptic}
             />
           </div>
 
-          {/* Category Chips + Product Grid */}
-          {!showCheckout && !showReceipt && (
-            <CategoryBar
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              filteredByCategory={filteredByCategory}
-              addToCart={addToCart}
+          {/* Panel de Carrito (Derecha) */}
+          <div className="flex flex-col min-h-0 overflow-hidden lg:h-full">
+            <CartPanel
+              cart={cart}
+              effectiveRate={effectiveRate}
+              cartTotalUsd={cartTotalUsd}
+              cartTotalBs={cartTotalBs}
+              cartItemCount={cartItemCount}
+              updateQty={updateQty}
+              removeFromCart={removeFromCart}
+              onCheckout={(name) => {
+                triggerHaptic && triggerHaptic();
+                setCartCustomerName(name);
+                setShowCheckout(true);
+              }}
+              onOpenTab={handleOpenTab}
+              onClearCart={() => {
+                triggerHaptic && triggerHaptic();
+                setShowClearCartConfirm(true);
+              }}
+              onEditNote={(item) => {
+                triggerHaptic && triggerHaptic();
+                setNotePending(item);
+              }}
+              onEditOptions={(item) => {
+                triggerHaptic && triggerHaptic();
+                setEditingCartId(item.cartId || item.id);
+                setSelectedProductForOptions(item);
+              }}
+              onPrintPrecuenta={() => {
+                if (cart.length === 0) return;
+                triggerHaptic && triggerHaptic();
+                printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
+              }}
               triggerHaptic={triggerHaptic}
-              searchTerm={searchTerm}
+              activeTabName={activeTabId ? cartCustomerName : null}
             />
-          )}
-
-          {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
-          <OpenTabsPanel
-            openTabs={openTabs.filter(t => !t.customerInfo?.tableId)}
-            onSelectTab={handleSelectOpenTab}
-            onRemoveTab={handleRemoveOpenTab}
-            triggerHaptic={triggerHaptic}
-          />
-        </>
+          </div>
+        </div>
       ) : (
         <TablesFloorPlan
           tables={tables}
@@ -832,45 +953,6 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
         />
       )}
 
-      {/* Cart (Only render when in products mode!) */}
-      {salesViewMode === "products" && (
-        <CartPanel
-          cart={cart}
-          effectiveRate={effectiveRate}
-          cartTotalUsd={cartTotalUsd}
-          cartTotalBs={cartTotalBs}
-          cartItemCount={cartItemCount}
-          updateQty={updateQty}
-          removeFromCart={removeFromCart}
-          onCheckout={(name) => {
-            triggerHaptic && triggerHaptic();
-            setCartCustomerName(name);
-            setShowCheckout(true);
-          }}
-          onOpenTab={handleOpenTab}
-          onClearCart={() => {
-            triggerHaptic && triggerHaptic();
-            setShowClearCartConfirm(true);
-          }}
-          onEditNote={(item) => {
-            triggerHaptic && triggerHaptic();
-            setNotePending(item);
-          }}
-          onEditOptions={(item) => {
-            triggerHaptic && triggerHaptic();
-            setEditingCartId(item.cartId || item.id);
-            setSelectedProductForOptions(item);
-          }}
-          onPrintPrecuenta={() => {
-            if (cart.length === 0) return;
-            triggerHaptic && triggerHaptic();
-            printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
-          }}
-          triggerHaptic={triggerHaptic}
-          activeTabName={activeTabId ? cartCustomerName : null}
-        />
-      )}
-
 
       {/* Checkout Modal */}
       {showCheckout && (
@@ -878,12 +960,15 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
           onClose={() => {
             setShowCheckout(false);
             setSelectedCustomerId("");
+            setTableCheckoutData(null);
+            setShowTableBillModal(false);
+            setActiveTableDiscount({ type: "percentage", value: 0 });
           }}
-          cartTotalUsd={cartTotalUsd}
-          cartTotalBs={cartTotalBs}
+          cartTotalUsd={finalTotalUsd}
+          cartTotalBs={finalTotalBs}
           effectiveRate={effectiveRate}
           tasaBcv={effectiveRate}
-          customerName={cartCustomerName} // Creado desde CartPanel
+          customerName={tableCheckoutData ? tableCheckoutData.tab.name : cartCustomerName} // Creado desde CartPanel
           customers={customers}
           selectedCustomerId={selectedCustomerId}
           setSelectedCustomerId={setSelectedCustomerId}
@@ -994,6 +1079,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
           )}
           effectiveRate={effectiveRate}
           products={products}
+          usuarioActivo={usuarioActivo}
           onUpdateTabItems={(tabId, newItems) => {
             updateTab(tabId, newItems);
             if (activeTabId === tabId) {
@@ -1040,6 +1126,26 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
               )
             )
           }
+          onSendToCashier={() =>
+            handleSendToCashier(
+              selectedTableForDetails,
+              openTabs.find(
+                (t) =>
+                  t.customerInfo?.tableId === selectedTableForDetails.id ||
+                  t.name === selectedTableForDetails.name
+              )
+            )
+          }
+          onCancelCheckout={() =>
+            handleCancelCheckout(
+              selectedTableForDetails,
+              openTabs.find(
+                (t) =>
+                  t.customerInfo?.tableId === selectedTableForDetails.id ||
+                  t.name === selectedTableForDetails.name
+              )
+            )
+          }
           triggerHaptic={triggerHaptic}
         />
       )}
@@ -1071,6 +1177,29 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
           activeWaiter={usuarioActivo?.nombre || "Cajero"}
           onConfirm={handleConfirmOpenTable}
           triggerHaptic={triggerHaptic}
+        />
+      )}
+
+      {/* Table Bill Modal (Paso 1 del Cobro por Cola) */}
+      {tableCheckoutData && showTableBillModal && (
+        <TableBillModal
+          tab={tableCheckoutData.tab}
+          table={tableCheckoutData.table}
+          effectiveRate={effectiveRate}
+          onClose={() => {
+            setTableCheckoutData(null);
+            setShowTableBillModal(false);
+            setActiveTableDiscount({ type: "percentage", value: 0 });
+          }}
+          onProceedToPayment={(disc, finalVal) => {
+            setActiveTableDiscount(disc);
+            handleSelectOpenTab(tableCheckoutData.tab);
+            setShowCheckout(true);
+            setShowTableBillModal(false);
+          }}
+          onPrintPrecuenta={() => {
+            printPrecuenta(tableCheckoutData.tab, effectiveRate);
+          }}
         />
       )}
 

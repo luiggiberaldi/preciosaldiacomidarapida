@@ -234,22 +234,30 @@ export default function WalletView({ rates }) {
     "block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 ml-1 uppercase tracking-wide";
 
   return (
-    <div className="space-y-6 pt-6">
-      {/* CABECERA */}
-      <div className="flex justify-between items-center mb-4 px-2">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
-            Mis Cuentas
-          </h2>
-          <p className="text-xs font-medium text-slate-400">
-            Guarda y comparte tus datos de pago
-          </p>
+    <div className="space-y-4 p-3 sm:p-6 overflow-y-auto">
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+            <CreditCard size={22} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none">
+              Mis Cuentas
+            </h1>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 font-bold">
+              Guarda y comparte tus datos de pago ({accounts.length} guardadas)
+            </p>
+          </div>
         </div>
         <button
           onClick={openCreateModal}
-          className="p-3 bg-brand hover:bg-brand-dark text-slate-900 rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-all"
+          className="px-4 py-2.5 bg-brand hover:bg-brand-dark text-slate-900 font-bold rounded-xl sm:rounded-2xl shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
         >
-          <Plus size={24} strokeWidth={2.5} />
+          <Plus size={18} className="shrink-0" />
+          <span className="text-xs sm:text-sm font-bold">
+            Nueva Cuenta
+          </span>
         </button>
       </div>
 

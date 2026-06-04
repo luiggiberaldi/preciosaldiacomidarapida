@@ -10,6 +10,9 @@ export const useOpenTabs = (initialTabs = []) => {
 
     useEffect(() => {
         safeSetJSON("bodega_open_tabs_v1", openTabs);
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("bodega_open_tabs_updated"));
+        }
     }, [openTabs]);
 
     const addTab = (name, cartItems, customerInfo = null) => {
@@ -25,11 +28,11 @@ export const useOpenTabs = (initialTabs = []) => {
         return newTab;
     };
 
-    const updateTab = (id, newItems) => {
+    const updateTab = (id, newItems, additionalData = {}) => {
         setOpenTabs((prev) =>
             prev.map((tab) =>
                 tab.id === id
-                    ? { ...tab, items: [...newItems], updatedAt: new Date().toISOString() }
+                    ? { ...tab, items: [...newItems], ...additionalData, updatedAt: new Date().toISOString() }
                     : tab
             )
         );

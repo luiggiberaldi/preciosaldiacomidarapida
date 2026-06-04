@@ -10,6 +10,7 @@ import {
   Coins,
   Key,
   Fingerprint,
+  Landmark,
 } from "lucide-react";
 
 const PM_KEY = "bodega_payment_methods_v1";
@@ -32,6 +33,16 @@ export const FACTORY_PAYMENT_METHODS = [
     label: "Pago Movil",
     icon: "📱",
     Icon: Smartphone,
+    currency: "BS",
+    isFactory: true,
+    isDigital: true,
+    paymentDetails: "",
+  },
+  {
+    id: "transferencia",
+    label: "Transferencia",
+    icon: "🏦",
+    Icon: Landmark,
     currency: "BS",
     isFactory: true,
     isDigital: true,
@@ -123,6 +134,7 @@ export const getPaymentLabel = (id) => {
 export const PAYMENT_ICONS = {
   efectivo_bs: Banknote,
   pago_movil: Smartphone,
+  transferencia: Landmark,
   punto_venta: CreditCard,
   efectivo_usd: DollarSign,
 };
@@ -139,6 +151,7 @@ export const ICON_COMPONENTS = {
   Coins,
   Key,
   Fingerprint,
+  Landmark,
 };
 
 export const getPaymentMethod = (id) => {

@@ -1,3 +1,5 @@
+import { FinancialEngine } from "../core/FinancialEngine";
+
 export function procesarImpactoCliente(clienteInicial, transaccion) {
   // CLONAR PARA INMUTABILIDAD
   let cliente = { ...clienteInicial };
@@ -58,3 +60,10 @@ export function procesarImpactoCliente(clienteInicial, transaccion) {
 
   return cliente;
 }
+
+/**
+ * Wrapper de retrocompatibilidad para cálculo de ganancia de venta.
+ */
+export const calculateProfit = (sale, rate, products) => 
+  FinancialEngine.calculateSaleProfit(sale, rate, products);
+

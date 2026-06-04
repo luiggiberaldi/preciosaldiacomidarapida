@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal } from "./Modal";
-import { X, Search, Globe, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { X, Search, Globe, Eye, EyeOff, CheckCircle, Utensils } from "lucide-react";
 import { webSupabase, generateProductId } from "../utils/supabase";
 import { getPriceUsd } from "../utils/priceHelpers";
 
@@ -35,7 +35,7 @@ export default function PublishWebModal({
                 // Upsert to web_catalog live
                 const webItem = {
                     id: webId,
-                    local_id: Number(product.id) || 0,
+                    local_id: String(product.id),
                     tenant_id: tenantId,
                     name: product.name,
                     description: product.description || "",
@@ -123,7 +123,9 @@ export default function PublishWebModal({
                                     {p.image ? (
                                         <img src={p.image} alt={p.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
                                     ) : (
-                                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300 text-xl shrink-0">🍔</div>
+                                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-300 dark:text-slate-600 shrink-0">
+                                            <Utensils size={20} />
+                                        </div>
                                     )}
                                     <div className="min-w-0 pr-2">
                                         <p className="font-bold text-slate-800 text-sm truncate">{p.name}</p>

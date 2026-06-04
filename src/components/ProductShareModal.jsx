@@ -40,8 +40,10 @@ export const ProductShareModal = ({
 
   if (!product) return null;
 
+  const priceUsdt = parseFloat(product.priceUsdt || product.priceUsd || product.price || 0);
+
   // Cálculos
-  const valBs = product.priceUsdt * rates.bcv.price;
+  const valBs = priceUsdt * rates.bcv.price;
 
   // Lógica Street Rate (Calibrada)
   // Si hay tasa calibrada (>0), el precio efectivo es Bs / TasaCalibrada
@@ -49,7 +51,7 @@ export const ProductShareModal = ({
   const valEfectivo =
     streetRate > 0
       ? smartCashRounding(valBs / streetRate)
-      : Math.ceil(product.priceUsdt); // Si no calibra, mantenemos techo simple o redondeo
+      : Math.ceil(priceUsdt); // Si no calibra, mantenemos techo simple o redondeo
 
   // Presets
   const applyPreset = (type) => {
@@ -90,7 +92,7 @@ export const ProductShareModal = ({
     lines.push("");
 
     lines.push("PRECIO:"); // Plain text header
-    if (config.showUsdt) lines.push(`USDT: ${formatUsd(product.priceUsdt)}`);
+    if (config.showUsdt) lines.push(`USDT: ${formatUsd(priceUsdt)}`);
     if (config.showEfectivo) lines.push(`Efectivo: $${valEfectivo}`);
     if (config.showBs) lines.push(`Bs: ${formatBs(valBs)}`);
 

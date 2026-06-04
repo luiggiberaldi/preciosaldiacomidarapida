@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Printer, Trash2, Plus, CreditCard, Clock, Search } from "lucide-react";
+import { X, Printer, Trash2, Plus, CreditCard, Clock, Search, ShoppingCart, ChefHat, Users, FileText, Send } from "lucide-react";
 
 export default function TableDetailsModal({
   isOpen,
@@ -8,15 +8,22 @@ export default function TableDetailsModal({
   tab,
   effectiveRate,
   products = [],
+  usuarioActivo,
   onUpdateTabItems,
   onPrintPrecuenta,
   onCheckout,
   onReleaseTable,
+  onSendToCashier,
+  onCancelCheckout,
   triggerHaptic,
 }) {
   const [activeTab, setActiveTab] = useState("consumo"); // "consumo" | "productos"
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
+
+  const isCheckoutPending = tab?.status === "CHECKOUT";
+  const isCajeroOrAdmin = usuarioActivo?.rol === "ADMIN" || usuarioActivo?.rol === "CAJERO";
+  const currentActiveTab = isCheckoutPending ? "consumo" : activeTab;
 
   if (!isOpen || !table || !tab) return null;
 
@@ -123,34 +130,38 @@ export default function TableDetailsModal({
         </div>
 
         {/* Tab Selectors */}
-        <div className="shrink-0 flex border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <button
-            type="button"
-            onClick={() => setActiveTab("consumo")}
-            className={`flex-1 py-3 text-xs font-black transition-all ${
-              activeTab === "consumo"
-                ? "border-b-2 border-red-500 text-red-600 dark:text-red-400 bg-slate-50/50 dark:bg-slate-950/10"
-                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            }`}
-          >
-            🍔 Consumo Actual ({itemCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("productos")}
-            className={`flex-1 py-3 text-xs font-black transition-all ${
-              activeTab === "productos"
-                ? "border-b-2 border-red-500 text-red-600 dark:text-red-400 bg-slate-50/50 dark:bg-slate-950/10"
-                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            }`}
-          >
-            ➕ Añadir Productos
-          </button>
-        </div>
+        {!isCheckoutPending && (
+          <div className="shrink-0 flex border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => setActiveTab("consumo")}
+              className={`flex-1 py-3 text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "consumo"
+                  ? "border-b-2 border-brand text-brand-dark dark:text-brand bg-slate-50/50 dark:bg-slate-950/10"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <ShoppingCart size={14} />
+              <span>Consumo Actual ({itemCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("productos")}
+              className={`flex-1 py-3 text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "productos"
+                  ? "border-b-2 border-brand text-brand-dark dark:text-brand bg-slate-50/50 dark:bg-slate-950/10"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <Plus size={14} />
+              <span>Añadir Productos</span>
+            </button>
+          </div>
+        )}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {activeTab === "consumo" ? (
+          {currentActiveTab === "consumo" ? (
             <>
               {/* Elapsed Time & Metadata */}
               <div className="flex justify-between items-center bg-amber-500/5 dark:bg-amber-900/10 p-3 rounded-2xl border border-amber-200/40 dark:border-amber-800/30">
@@ -171,19 +182,28 @@ export default function TableDetailsModal({
                 <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-300">
                   {tab.customerInfo?.waiter && (
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-400">Mesero:</span>
+                      <span className="font-medium text-slate-400 flex items-center gap-1">
+                        <ChefHat size={12} className="text-slate-400 shrink-0" />
+                        <span>Mesero:</span>
+                      </span>
                       <span className="font-black text-slate-800 dark:text-white">{tab.customerInfo.waiter}</span>
                     </div>
                   )}
                   {tab.customerInfo?.guests && (
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-400">Comensales:</span>
+                      <span className="font-medium text-slate-400 flex items-center gap-1">
+                        <Users size={12} className="text-slate-400 shrink-0" />
+                        <span>Comensales:</span>
+                      </span>
                       <span className="font-black text-slate-800 dark:text-white">{tab.customerInfo.guests} personas</span>
                     </div>
                   )}
                   {tab.customerInfo?.notes && (
                     <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/60 mt-1.5">
-                      <span className="font-medium text-slate-400 block mb-0.5">Notas de la mesa:</span>
+                      <span className="font-medium text-slate-400 flex items-center gap-1 mb-1">
+                        <FileText size={12} className="text-slate-400 shrink-0" />
+                        <span>Notas de la mesa:</span>
+                      </span>
                       <p className="font-bold text-slate-700 dark:text-slate-200 italic bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-100 dark:border-slate-800/60 leading-relaxed">{tab.customerInfo.notes}</p>
                     </div>
                   )}
@@ -223,31 +243,39 @@ export default function TableDetailsModal({
                         </div>
                         {/* Adjust qty buttons */}
                         <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(idx, -1)}
-                            className="w-7 h-7 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 font-black text-sm active:scale-90 transition-all"
-                          >
-                            -
-                          </button>
-                          <span className="w-6 text-center text-xs font-bold text-slate-800 dark:text-white">
-                            {item.qty}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(idx, 1)}
-                            className="w-7 h-7 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 font-black text-sm active:scale-90 transition-all"
-                          >
-                            +
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors ml-1"
-                            title="Eliminar artículo"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {!isCheckoutPending ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(idx, -1)}
+                                className="w-7 h-7 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 font-black text-sm active:scale-90 transition-all"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center text-xs font-bold text-slate-800 dark:text-white">
+                                {item.qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(idx, 1)}
+                                className="w-7 h-7 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 font-black text-sm active:scale-90 transition-all"
+                              >
+                                +
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(idx)}
+                                className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors ml-1"
+                                title="Eliminar artículo"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400">
+                              {item.qty} {item.qty === 1 ? "unidad" : "unidades"}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -271,7 +299,7 @@ export default function TableDetailsModal({
                   placeholder="Buscar producto por nombre..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2.5 font-semibold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2.5 font-semibold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand/20"
                 />
               </div>
 
@@ -284,7 +312,7 @@ export default function TableDetailsModal({
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg border transition-all whitespace-nowrap uppercase tracking-wider ${
                       selectedCategory === cat
-                        ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400"
+                        ? "bg-brand/10 dark:bg-brand/20 border-brand/25 dark:border-brand/40 text-brand-dark dark:text-brand"
                         : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     }`}
                   >
@@ -318,7 +346,7 @@ export default function TableDetailsModal({
                           <button
                             type="button"
                             onClick={() => handleAddProduct(p)}
-                            className="w-8 h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-xl shadow active:scale-95 transition-all"
+                            className="w-8 h-8 flex items-center justify-center bg-brand hover:bg-brand-dark text-white rounded-xl shadow active:scale-95 transition-all"
                           >
                             <Plus size={16} />
                           </button>
@@ -334,7 +362,7 @@ export default function TableDetailsModal({
                             className="px-2 py-1 text-[9px] font-black bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 flex items-center gap-1 active:scale-95 transition-all"
                           >
                             <span>{p.baseSizeName || "Normal"} (${price.toFixed(2)})</span>
-                            <Plus size={10} className="text-red-500" />
+                            <Plus size={10} className="text-brand-dark dark:text-brand" />
                           </button>
                           {/* Other Sizes */}
                           {sizes.map((s) => {
@@ -347,7 +375,7 @@ export default function TableDetailsModal({
                                 className="px-2 py-1 text-[9px] font-black bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 flex items-center gap-1 active:scale-95 transition-all"
                               >
                                 <span>{s.name} (${sPrice.toFixed(2)})</span>
-                                <Plus size={10} className="text-red-500" />
+                                <Plus size={10} className="text-brand-dark dark:text-brand" />
                               </button>
                             );
                           })}
@@ -374,7 +402,7 @@ export default function TableDetailsModal({
               Total Acumulado
             </span>
             <div className="text-right">
-              <p className="text-2xl font-black text-red-600 dark:text-red-500 leading-none">
+              <p className="text-2xl font-black text-brand-dark dark:text-brand leading-none">
                 {formatBs(totalBs)} Bs
               </p>
               <p className="text-sm font-bold text-slate-400 mt-1">
@@ -385,39 +413,105 @@ export default function TableDetailsModal({
 
           {/* Action Grid */}
           <div className="space-y-2">
-            <button
-              onClick={() => {
-                triggerHaptic && triggerHaptic();
-                onPrintPrecuenta();
-              }}
-              className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <Printer size={14} /> Imprimir Pre-cuenta
-            </button>
+            {isCheckoutPending ? (
+              <div className="space-y-3">
+                {/* Pulse Waiting Banner */}
+                <div className="w-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 rounded-2xl py-3 px-4 flex items-center justify-center gap-2.5 text-xs font-black">
+                  <Clock size={16} className="animate-pulse shrink-0" />
+                  <span>ESPERANDO COBRO EN CAJA...</span>
+                </div>
 
-            {/* Checkout & Delete */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  onReleaseTable();
-                }}
-                className="p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 border border-red-100 dark:border-red-900/50 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
-                title="Liberar Mesa (Cancelar cuenta)"
-              >
-                <Trash2 size={16} />
-              </button>
+                <div className="flex gap-2">
+                  {/* Cancel Request Button */}
+                  <button
+                    onClick={() => {
+                      triggerHaptic && triggerHaptic();
+                      onCancelCheckout();
+                    }}
+                    className={`flex-1 py-3 px-4 text-xs font-bold rounded-xl border transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
+                      isCajeroOrAdmin
+                        ? "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 dark:bg-rose-950/20 dark:border-rose-900/50 dark:text-rose-400"
+                        : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    }`}
+                  >
+                    {isCajeroOrAdmin ? "Devolver a Mesa" : "Retirar Solicitud"}
+                  </button>
 
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  onCheckout();
-                }}
-                className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <CreditCard size={16} /> COBRAR EN CAJA
-              </button>
-            </div>
+                  {/* Cashier/Admin checkout validation */}
+                  {isCajeroOrAdmin && (
+                    <button
+                      onClick={() => {
+                        triggerHaptic && triggerHaptic();
+                        onCheckout();
+                      }}
+                      className="flex-1 py-3 px-4 bg-brand hover:bg-brand-dark text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <CreditCard size={14} /> PROCESAR COBRO
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    triggerHaptic && triggerHaptic();
+                    onPrintPrecuenta();
+                  }}
+                  className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Printer size={14} /> Imprimir Pre-cuenta
+                </button>
+
+                {/* Checkout & Delete */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      triggerHaptic && triggerHaptic();
+                      onReleaseTable();
+                    }}
+                    className="p-3 bg-brand/10 dark:bg-brand/20 text-brand-dark dark:text-brand hover:bg-brand/20 border border-brand/20 dark:border-brand/40 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
+                    title="Liberar Mesa (Cancelar cuenta)"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+
+                  {isCajeroOrAdmin ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          triggerHaptic && triggerHaptic();
+                          onSendToCashier();
+                        }}
+                        className="py-3 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-bold text-xs rounded-xl hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-1.5 flex-1"
+                      >
+                        <Send size={14} /> Enviar a Caja
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          triggerHaptic && triggerHaptic();
+                          onCheckout();
+                        }}
+                        className="flex-[1.5] py-3 px-4 bg-brand hover:bg-brand-dark text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <CreditCard size={14} /> COBRAR EN CAJA
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        triggerHaptic && triggerHaptic();
+                        onSendToCashier();
+                      }}
+                      className="flex-1 py-3 px-4 bg-brand hover:bg-brand-dark text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Send size={16} /> ENVIAR A CAJA
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

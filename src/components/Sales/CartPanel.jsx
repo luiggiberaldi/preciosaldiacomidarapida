@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ShoppingCart,
   Plus,
@@ -8,8 +8,12 @@ import {
   Package,
   Trash2,
   Clock,
+  Printer,
+  Sparkles,
+  FileText,
 } from "lucide-react";
 import { formatBs } from "../../utils/calculatorUtils";
+
 
 const SwipeableCartItem = ({
   item,
@@ -111,7 +115,8 @@ const SwipeableCartItem = ({
                     className="group flex items-center gap-1 text-[10px] sm:text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 px-2 py-0.5 rounded-md border border-emerald-200/50 dark:border-emerald-800/50 transition-colors"
                     title="Editar opciones"
                   >
-                    <span className="opacity-60 group-hover:opacity-100 transition-opacity">✨</span> {item.selectedExtras.length} xtra
+                    <Sparkles size={10} className="text-emerald-600 dark:text-emerald-400 opacity-60 group-hover:opacity-100 transition-opacity shrink-0" />
+                    <span>{item.selectedExtras.length} xtra</span>
                   </button>
                 )}
               </div>
@@ -122,10 +127,11 @@ const SwipeableCartItem = ({
               {item.note ? (
                 <button
                   onClick={() => onEditNote && onEditNote(item)}
-                  className="text-[10px] sm:text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors line-clamp-1 max-w-[140px] text-left"
+                  className="text-[10px] sm:text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors line-clamp-1 max-w-[140px] text-left flex items-center gap-1"
                   title={item.note}
                 >
-                  <span className="opacity-60 mr-1">📝</span>{item.note}
+                  <FileText size={10} className="text-slate-400 shrink-0" />
+                  <span>{item.note}</span>
                 </button>
               ) : (
                 <button
@@ -206,9 +212,20 @@ export default function CartPanel({
   triggerHaptic,
   activeTabName,
   onEditOptions,
+  onPrintPrecuenta,
 }) {
   const [customerName, setCustomerName] = useState("");
   const [showError, setShowError] = useState(false);
+
+  // Sync customer input when selecting/changing active tab/table
+  useEffect(() => {
+    if (activeTabName) {
+      setCustomerName(activeTabName);
+    } else {
+      setCustomerName("");
+    }
+  }, [activeTabName]);
+
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -310,6 +327,18 @@ export default function CartPanel({
         </div>
 
         <div className="flex gap-2 w-full mt-2">
+          {/* Botón Imprimir Pre-cuenta */}
+          {activeTabName && (
+            <button
+              disabled={cart.length === 0}
+              onClick={onPrintPrecuenta}
+              className="w-[18%] relative group disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500/50 hover:border-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 active:scale-95 transition-all"
+              title="Imprimir Pre-cuenta"
+            >
+              <Printer size={20} strokeWidth={2.5} />
+            </button>
+          )}
+
           {/* Botón Dejar Abierta */}
           <button
             disabled={cart.length === 0}
@@ -320,8 +349,8 @@ export default function CartPanel({
               }
               onOpenTab && onOpenTab(customerName);
             }}
-            className="w-1/3 relative group disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/50 hover:border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20 active:scale-95 transition-all"
-            title="Guardar cuenta sin cobrar"
+            className={`${activeTabName ? "w-[22%]" : "w-1/3"} relative group disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/50 hover:border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20 active:scale-95 transition-all`}
+            title={activeTabName ? "Guardar cambios en cuenta" : "Guardar cuenta sin cobrar"}
           >
             <Clock size={20} strokeWidth={2.5} />
           </button>
@@ -330,11 +359,11 @@ export default function CartPanel({
           <button
             disabled={cart.length === 0}
             onClick={() => onCheckout(customerName)}
-            className="w-2/3 relative group disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`${activeTabName ? "w-[60%]" : "w-2/3"} relative group disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <div className="absolute inset-0 bg-red-500 rounded-xl sm:rounded-2xl shadow-red-500/30 shadow-lg blur-[2px] opacity-70 group-active:opacity-100 group-hover:blur-[4px] transition-all"></div>
             <div className="relative w-full py-3 sm:py-4 bg-red-500 text-white font-black text-sm sm:text-lg rounded-xl sm:rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-wide">
-              <CheckCircle size={18} className="sm:w-[22px] sm:h-[22px] opacity-80" />
+               <CheckCircle size={18} className="sm:w-[22px] sm:h-[22px] opacity-80" />
               COBRAR
             </div>
           </button>

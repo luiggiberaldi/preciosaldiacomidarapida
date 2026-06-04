@@ -46,13 +46,16 @@ import ConfirmModal from "../components/ConfirmModal";
 import CashRegisterModal from "../components/Dashboard/CashRegisterModal";
 import { generateTicketPDF } from "../utils/ticketGenerator";
 import { generateDailyClosePDF } from "../utils/dailyCloseGenerator";
+import { FinancialEngine } from "../core/FinancialEngine";
 import { useNotifications } from "../hooks/useNotifications";
+import { useAudit } from "../hooks/useAudit";
 import AnimatedCounter from "../components/AnimatedCounter";
 import DashboardEmptyState from "../components/Dashboard/DashboardEmptyState";
 import DashboardStats from "../components/Dashboard/DashboardStats";
 import PaymentBreakdown from "../components/Dashboard/PaymentBreakdown";
 import LowStockAlert from "../components/Dashboard/LowStockAlert";
 import TopProducts from "../components/Dashboard/TopProducts";
+import { usePrinter } from "../hooks/usePrinter";
 
 const SALES_KEY = "bodega_sales_v1";
 
@@ -64,6 +67,8 @@ export default function DashboardView({
   toggleTheme,
 }) {
   const { notifyCierrePendiente, requestPermission } = useNotifications();
+  const { logAction } = useAudit();
+  const { isConnected: printerConnected, printClose } = usePrinter();
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -189,6 +194,7 @@ export default function DashboardView({
 
       // 4. Guardar todo
       await storageService.setItem(SALES_KEY, updatedSales);
+      logAction('VENTA', 'SALE_VOIDED', `Venta anulada #${sale.saleNumber} por $${(sale.totalUsd || 0).toFixed(2)}`, { saleId: sale.id, totalUsd: sale.totalUsd });
       await storageService.setItem("my_products_v1", updatedProducts);
       await storageService.setItem("my_customers_v1", finalCustomers);
 
@@ -328,18 +334,8 @@ export default function DashboardView({
   }, [todaySales.length, notifyCierrePendiente]);
 
   const todayProfit = useMemo(
-    () =>
-      todaySales.reduce(
-        (sum, s) =>
-          sum +
-          s.items.reduce((is, item) => {
-            const costBs = item.costBs || 0;
-            const saleBs = item.priceUsd * item.qty * (s.rate || bcvRate);
-            return is + (saleBs - costBs * item.qty);
-          }, 0),
-        0,
-      ),
-    [todaySales, bcvRate],
+    () => FinancialEngine.calculateAggregateProfit(todaySales, bcvRate, products),
+    [todaySales, bcvRate, products],
   );
 
   // Últimas 7 ventas
@@ -405,21 +401,7 @@ export default function DashboardView({
     const allTodayTransactions = sales.filter(
       (s) => s.timestamp?.startsWith(today) && s.status !== "ANULADA",
     );
-    return allTodayTransactions.reduce((acc, s) => {
-      if (s.payments && s.payments.length > 0) {
-        s.payments.forEach((p) => {
-          if (!acc[p.methodId])
-            acc[p.methodId] = { total: 0, currency: p.currency || "BS" };
-          acc[p.methodId].total +=
-            (p.currency === "USD" ? p.amountUsd : p.amountBs) || 0;
-        });
-      } else {
-        const method = s.paymentMethod || "efectivo_bs";
-        if (!acc[method]) acc[method] = { total: 0, currency: "BS" };
-        acc[method].total += s.totalBs || 0;
-      }
-      return acc;
-    }, {});
+    return FinancialEngine.calculatePaymentBreakdown(allTodayTransactions);
   }, [sales, today]);
 
   // Top productos vendidos HOY (para cierre del día)
@@ -455,7 +437,8 @@ export default function DashboardView({
       const allTodayForReport = sales.filter((s) =>
         s.timestamp?.startsWith(today),
       );
-      await generateDailyClosePDF({
+      
+      const closeData = {
         sales: todaySales,
         allSales: allTodayForReport,
         bcvRate,
@@ -465,11 +448,18 @@ export default function DashboardView({
         todayTotalBs,
         todayProfit,
         todayItemsSold,
-      });
+      };
+
+      if (printerConnected) {
+        await printClose(closeData);
+      }
+
+      await generateDailyClosePDF(closeData);
     }
     // 2. Resetear ventas del día
     const remaining = sales.filter((s) => !s.timestamp?.startsWith(today));
     await storageService.setItem(SALES_KEY, remaining);
+    logAction('SISTEMA', 'DAILY_CLOSE', `Cierre de caja diario generado por $${todayTotalUsd.toFixed(2)} (${todaySales.length} ventas)`, { totalUsd: todayTotalUsd, salesCount: todaySales.length });
     setSales(remaining);
     setIsResetTodayOpen(false);
     showToast("Cierre de caja completado", "success");
@@ -508,7 +498,7 @@ export default function DashboardView({
   const handleTouchEnd = async () => {
     if (pullDistance > 60) {
       setIsRefreshing(true);
-      const [savedSales, savedProducts, savedCustomers] = await Promise.all([
+      const [savedSales, savedProducts, savedCustomers, savedOrders] = await Promise.all([
         storageService.getItem(SALES_KEY, []),
         storageService.getItem("my_products_v1", []),
         storageService.getItem("bodega_customers_v1", []),
@@ -552,28 +542,12 @@ export default function DashboardView({
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4 pt-2">
-        <div className="flex flex-col items-start gap-0.5">
-          <img
-            src={theme === "dark" ? `${import.meta.env.BASE_URL}logodark.png` : `${import.meta.env.BASE_URL}logoprincipal.png`}
-            alt="PreciosAlDía Comida Rápida"
-            className="h-14 w-auto object-contain drop-shadow-sm"
-          />
-          <div className="flex items-center gap-1.5 pl-3">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] leading-none">
-              Comida Rápida
-            </span>
-            <button
-              onClick={() => {
-                triggerHaptic();
-                toggleTheme();
-              }}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-opacity active:scale-90 outline-none"
-            >
-              {theme === "dark" ? <Sun size={12} /> : <Moon size={12} />}
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center justify-start sm:justify-center mb-4 pt-2 pr-[110px] sm:pr-0">
+        <img
+          src={theme === "dark" ? `${import.meta.env.BASE_URL}logodark.png` : `${import.meta.env.BASE_URL}logoprincipal.png`}
+          alt="PreciosAlDía"
+          className="h-20 sm:h-[100px] w-auto object-contain drop-shadow-md"
+        />
       </div>
 
       {/* Acciones Rápidas */}
@@ -642,43 +616,51 @@ export default function DashboardView({
         handleDailyClose={handleDailyClose}
       />
 
-      {/* Pago por Método */}
-      <PaymentBreakdown
-        paymentBreakdown={paymentBreakdown}
-        todayTotalBs={todayTotalBs}
-        bcvRate={bcvRate}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Columna Izquierda: Gráficas e Historial */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-5">
+          {/* Gráfica semanal */}
+          <SalesChart weekData={weekData} onNavigate={onNavigate} bcvRate={bcvRate} />
 
-      {/* Gráfica semanal */}
-      <SalesChart weekData={weekData} onNavigate={onNavigate} bcvRate={bcvRate} />
+          {/* Gráfica Horas Pico */}
+          <PeakHoursChart sales={sales} />
 
-      {/* Gráfica Horas Pico */}
-      <PeakHoursChart sales={sales} />
+          <SalesHistory
+            recentSales={recentSales}
+            bcvRate={bcvRate}
+            totalSalesCount={sales.length}
+            onVoidSale={handleVoidSale}
+            onShareWhatsApp={handleShareWhatsApp}
+            onDownloadPDF={handleDownloadPDF}
+            onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
+            onRequestClientForTicket={(sale) => {
+              triggerHaptic && triggerHaptic();
+              setTicketPendingSale(sale);
+            }}
+            onRecycleSale={(sale) => {
+              triggerHaptic && triggerHaptic();
+              localStorage.setItem("recycled_cart", JSON.stringify(sale.items));
+              if (onNavigate) onNavigate("ventas");
+            }}
+          />
+        </div>
 
-      {/* Bajo Stock */}
-      <LowStockAlert lowStockProducts={lowStockProducts} />
+        {/* Columna Derecha: Resúmenes e Indicadores Secundarios */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-5">
+          {/* Pago por Método */}
+          <PaymentBreakdown
+            paymentBreakdown={paymentBreakdown}
+            todayTotalBs={todayTotalBs}
+            bcvRate={bcvRate}
+          />
 
-      {/* Top Productos */}
-      <TopProducts topProducts={topProducts} />
+          {/* Bajo Stock */}
+          <LowStockAlert lowStockProducts={lowStockProducts} />
 
-      <SalesHistory
-        recentSales={recentSales}
-        bcvRate={bcvRate}
-        totalSalesCount={sales.length}
-        onVoidSale={handleVoidSale}
-        onShareWhatsApp={handleShareWhatsApp}
-        onDownloadPDF={handleDownloadPDF}
-        onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
-        onRequestClientForTicket={(sale) => {
-          triggerHaptic && triggerHaptic();
-          setTicketPendingSale(sale);
-        }}
-        onRecycleSale={(sale) => {
-          triggerHaptic && triggerHaptic();
-          localStorage.setItem("recycled_cart", JSON.stringify(sale.items));
-          if (onNavigate) onNavigate("ventas");
-        }}
-      />
+          {/* Top Productos */}
+          <TopProducts topProducts={topProducts} />
+        </div>
+      </div>
 
       {/* Empty state */}
       {sales.length === 0 && (

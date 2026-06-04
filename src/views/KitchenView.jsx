@@ -17,11 +17,16 @@ import {
   LayoutGrid,
   List,
   PlayCircle,
+  Printer,
+  Bike,
+  Package,
+  FileText,
 } from "lucide-react";
 import { showToast } from "../components/Toast";
 import { useSounds } from "../hooks/useSounds";
 import { WEB_ORDER_STATUS } from "../utils/constants";
 import WebOrderStatusBadge from "../components/WebOrderStatusBadge";
+import { usePrinter } from "../hooks/usePrinter";
 
 const SALES_KEY = "bodega_sales_v1";
 
@@ -65,14 +70,14 @@ function getWaitColor(mins) {
 
 function getDeliveryConfig(order) {
   if (order.deliveryType === "DELIVERY")
-    return { label: "DELIVERY", icon: "🛵", color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" };
+    return { label: "DELIVERY", icon: Bike, color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" };
   if (order.deliveryType === "LLEVAR")
-    return { label: "PARA LLEVAR", icon: "📦", color: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400" };
+    return { label: "PARA LLEVAR", icon: Package, color: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400" };
   if (order.deliveryType === "MESA_QR")
-    return { label: `MESA ${order.tableNumber || ""}`, icon: "🍽️", color: "bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" };
+    return { label: `MESA ${order.tableNumber || ""}`, icon: Utensils, color: "bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" };
   if (order.source === "WEB")
-    return { label: "PEDIDO WEB", icon: "🌐", color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" };
-  return { label: "LOCAL", icon: "🍽️", color: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" };
+    return { label: "PEDIDO WEB", icon: Globe, color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" };
+  return { label: "LOCAL", icon: Utensils, color: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" };
 }
 
 function getNormalizedStatus(order) {
@@ -95,6 +100,22 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
   const { playBell, playTap, playSuccess } = useSounds();
   const prevIdsRef = useRef([]);
   const urgentRef = useRef(null);
+
+  // Hook de impresora
+  const { isConnected: printerConnected, printKitchen } = usePrinter();
+  const [autoPrintNew, setAutoPrintNew] = useState(() => localStorage.getItem("kitchen_autoprint_new") === "true");
+
+  // Referencias para evitar closures obsoletas en el setInterval
+  const autoPrintNewRef = useRef(autoPrintNew);
+  const printerConnectedRef = useRef(printerConnected);
+
+  useEffect(() => {
+    autoPrintNewRef.current = autoPrintNew;
+  }, [autoPrintNew]);
+
+  useEffect(() => {
+    printerConnectedRef.current = printerConnected;
+  }, [printerConnected]);
 
   // ─── DATA LOADING ─────────────────────────────────────
   const loadOrders = async () => {
@@ -135,7 +156,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             timestamp: wo.updated_at || wo.created_at,
             items: wo.items.map((wi) => {
               const extras = wi.selectedExtras?.length ? "Extras: " + wi.selectedExtras.map((e) => e.name).join(", ") : "";
-              const instrucciones = wi.note ? `📝 ${wi.note}` : "";
+              const instrucciones = wi.note ? wi.note : "";
               const noteText = [extras, instrucciones].filter(Boolean).join(" | ");
               return { id: wi.id, name: wi.name + (wi.size ? ` [${wi.size}]` : ""), qty: wi.qty, note: noteText };
             }),
@@ -150,7 +171,15 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
     const currentIds = allPending.map((o) => o.id);
     const hasNew = currentIds.some((id) => !prevIdsRef.current.includes(id));
-    if (hasNew && prevIdsRef.current.length > 0) playBell();
+    if (hasNew && prevIdsRef.current.length > 0) {
+      playBell();
+      if (autoPrintNewRef.current && printerConnectedRef.current) {
+        const newOrdersToPrint = allPending.filter((o) => !prevIdsRef.current.includes(o.id));
+        for (const o of newOrdersToPrint) {
+          printKitchen(o);
+        }
+      }
+    }
     prevIdsRef.current = currentIds;
 
     setPendingOrders(allPending);
@@ -338,6 +367,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
     const orderTime = new Date(order.timestamp).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
     const delivery = getDeliveryConfig(order);
     const status = getNormalizedStatus(order);
+    const DeliveryIcon = delivery.icon;
 
     return (
       <div
@@ -356,7 +386,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             </span>
             <div className="flex flex-col gap-1 min-w-0">
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-md inline-flex items-center gap-1 w-fit ${delivery.color}`}>
-                {delivery.icon} {delivery.label}
+                <DeliveryIcon size={10} className="shrink-0" /> {delivery.label}
               </span>
               <WebOrderStatusBadge status={status} />
               {order.customerName && order.customerName !== "Consumidor Final" && (
@@ -383,7 +413,8 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight">{item.name}</p>
                 {item.note && (
-                  <div className="mt-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg inline-block max-w-full">
+                  <div className="mt-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg inline-flex items-center gap-1 max-w-full">
+                    <FileText size={10} className="text-amber-600 dark:text-amber-500 shrink-0" />
                     <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400">{item.note}</p>
                   </div>
                 )}
@@ -432,6 +463,14 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
             </button>
           )}
 
+          {/* Imprimir Comanda */}
+          {printerConnected && (
+            <button onClick={() => printKitchen(order)}
+              className="w-full py-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border flex justify-center gap-2 items-center">
+              <Printer size={14} /> Imprimir Comanda
+            </button>
+          )}
+
           {/* 3-Step: Pending → Preparing → Completed */}
           {status === WEB_ORDER_STATUS.PENDING && (
             <button onClick={() => handleStartPreparing(order.id, order.source)}
@@ -476,17 +515,17 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
   // ─── RENDER ───────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden">
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20">
+            <div className="w-11 h-11 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
               <Flame size={22} className="text-white" />
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none">Cocina</h1>
-              <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+              <p className="text-[10px] font-bold text-slate-400 mt-1">
                 {pendingOrders.length === 0 ? "Sin pedidos" : `${pendingOrders.length} pedido${pendingOrders.length === 1 ? "" : "s"}`}
               </p>
             </div>
@@ -497,6 +536,19 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
               <button onClick={handleUndo}
                 className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-red-500 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95">
                 <RotateCcw size={12} /> Deshacer
+              </button>
+            )}
+            {/* Toggle Auto-Impresión */}
+            {printerConnected && (
+              <button onClick={() => {
+                const newVal = !autoPrintNew;
+                setAutoPrintNew(newVal);
+                localStorage.setItem("kitchen_autoprint_new", String(newVal));
+                showToast(newVal ? "Auto-impresion activada" : "Auto-impresion desactivada", "info");
+              }}
+                className={`p-2 rounded-xl text-xs transition-all active:scale-95 ${autoPrintNew ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}
+                title={autoPrintNew ? "Desactivar Auto-Impresion" : "Activar Auto-Impresion"}>
+                <Printer size={16} />
               </button>
             )}
             {/* Toggle Production View */}
@@ -516,7 +568,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
         {/* Summary Pills */}
         {pendingOrders.length > 0 && (
-          <div className="flex gap-2 mt-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
             {urgentCount > 0 && (
               <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-1 whitespace-nowrap animate-pulse">
                 🔴 {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
@@ -535,7 +587,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
         {/* Production Summary */}
         {showProduction && productionList.length > 0 && (
-          <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
+          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
             <p className="text-[9px] uppercase font-black text-amber-600 dark:text-amber-400 mb-1.5 flex items-center gap-1">
               <ChefHat size={10} /> Resumen de Produccion
             </p>
@@ -551,7 +603,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
         {/* Filters — only in list mode */}
         {viewMode === "list" && (
-          <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">
+          <div className="flex gap-1.5 mt-3 overflow-x-auto scrollbar-hide pb-1">
             {["TODOS", "PENDING", "PREPARING", "READY"].map((f) => {
               const labels = { TODOS: "Todos", PENDING: "Nuevos", PREPARING: "Preparando", READY: "Listos" };
               const counts = { TODOS: pendingOrders.length, PENDING: newOrders.length, PREPARING: preparingOrders.length, READY: readyOrders.length };

@@ -12,6 +12,8 @@ const formatBs = (n) =>
     maximumFractionDigits: 2,
   }).format(n);
 
+const getProductPrice = (p) => parseFloat(p?.priceUsdt || p?.priceUsd || p?.price || 0);
+
 const SearchBar = forwardRef(function SearchBar(
   {
     searchTerm,
@@ -152,10 +154,10 @@ const SearchBar = forwardRef(function SearchBar(
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-black text-red-600 dark:text-red-400">
-                    ${p.priceUsdt?.toFixed(2)}
+                    ${getProductPrice(p).toFixed(2)}
                   </p>
                   <p className="text-[10px] font-medium text-slate-400">
-                    {formatBs(p.priceUsdt * effectiveRate)} Bs
+                    {formatBs(getProductPrice(p) * effectiveRate)} Bs
                   </p>
                   {(p.sizes?.length > 0 || p.extras?.length > 0) && (
                     <div className="text-[9px] font-black text-amber-500 mt-1">
@@ -218,7 +220,7 @@ const SearchBar = forwardRef(function SearchBar(
                 Caja/Bulto
               </span>
               <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                ${hierarchyPending.priceUsdt?.toFixed(2)}
+                ${getProductPrice(hierarchyPending).toFixed(2)}
               </span>
               <span className="text-[9px] text-slate-400 font-bold">
                 {hierarchyPending.unitsPerPackage} uds
@@ -251,7 +253,7 @@ const SearchBar = forwardRef(function SearchBar(
                   ¿Cuántos {weightPending.unit === "kg" ? "kilos" : "litros"}?
                 </p>
                 <p className="text-[11px] text-red-500/70 dark:text-red-400/50 font-medium mt-0.5">
-                  {weightPending.name} · ${weightPending.priceUsdt?.toFixed(2)}/
+                  {weightPending.name} · ${getProductPrice(weightPending).toFixed(2)}/
                   {weightPending.unit === "kg" ? "kg" : "lt"}
                 </p>
               </div>

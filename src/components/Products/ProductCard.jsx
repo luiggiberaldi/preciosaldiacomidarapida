@@ -10,7 +10,8 @@ export default function ProductCard({
   onEdit,
   onDelete,
 }) {
-  const valBs = p.priceUsdt * effectiveRate;
+  const priceUsdt = parseFloat(p.priceUsdt || p.priceUsd || p.price || 0);
+  const valBs = priceUsdt * effectiveRate;
   const catInfo = categories.find((c) => c.id === p.category);
   const isUnavailable = p.available === false;
 
@@ -74,7 +75,7 @@ export default function ProductCard({
         {/* Prices */}
         <div className="mt-auto">
           <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">
-            ${formatUsd(p.priceUsdt)}
+            ${formatUsd(priceUsdt)}
           </p>
           <p className="text-[11px] font-bold text-slate-400 mt-1">
             {formatBs(valBs)} Bs

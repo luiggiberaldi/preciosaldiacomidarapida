@@ -19,12 +19,12 @@ import {
   UploadCloud,
   Lock,
   Flame,
+  AlertTriangle,
 } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductShareModal } from "../components/ProductShareModal";
 import ShareWebMenuModal from "../components/ShareWebMenuModal";
 import PublishWebModal from "../components/PublishWebModal";
-import SettingsModal from "../components/SettingsModal";
 import ShareInventoryModal from "../components/ShareInventoryModal";
 import {
   formatBs,
@@ -44,10 +44,12 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import CategoryManagerModal from "../components/Products/CategoryManagerModal";
 import { useProducts } from "../hooks/useProducts";
 import { useSecurity } from "../hooks/useSecurity";
+import { useAudit } from "../hooks/useAudit";
 import { webSupabase, getTenantId, generateProductId } from "../utils/supabase";
 
-export const ProductsView = ({ rates, triggerHaptic }) => {
+export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
   const { isPremium } = useSecurity();
+  const { logAction } = useAudit();
   // ─── STATE DEL HOOK ─────────────────────────────────────
   const {
     products,
@@ -274,7 +276,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         .filter((p) => p.available !== false && p.publishWeb !== false)
         .map((p) => ({
           id: generateProductId(tenantId, p.id),
-          local_id: Number(p.id) || 0,
+          local_id: String(p.id),
           tenant_id: tenantId,
           name: p.name,
           description: p.description || "",
@@ -367,6 +369,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
           ? { ...p, ...productData, image: image || p.image }
           : p,
       );
+      logAction('INVENTARIO', 'PRODUCT_MODIFIED', `Producto modificado: ${formattedName}`, { id: editingId, ...productData });
     } else {
       newProducts = [
         {
@@ -377,6 +380,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         },
         ...products,
       ];
+      logAction('INVENTARIO', 'PRODUCT_CREATED', `Producto creado: ${formattedName}`, { ...productData });
     }
 
     setProducts(newProducts);
@@ -434,9 +438,13 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
   };
   const confirmDelete = () => {
     if (deleteId) {
+      const deletedProduct = products.find((p) => p.id === deleteId);
       const newProducts = products.filter((p) => p.id !== deleteId);
       setProducts(newProducts);
       autoSyncWebCatalog(newProducts);
+      if (deletedProduct) {
+        logAction('INVENTARIO', 'PRODUCT_DELETED', `Producto eliminado: ${deletedProduct.name}`, { id: deleteId });
+      }
       setDeleteId(null);
       triggerHaptic && triggerHaptic();
     }
@@ -558,105 +566,105 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-3 sm:p-6 pb-8 overflow-y-auto">
-      {/* Header — Fila 1: Título + Acciones */}
-      <div className="shrink-0 mb-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Store size={22} className="text-red-500 shrink-0" />
-            <h2 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight truncate">
-              Menú
-            </h2>
+      {/* Header Premium */}
+      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-gradient-to-br from-brand to-brand-dark/80 rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20 shrink-0">
+            <Store size={22} className="text-white" />
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {products.length > 0 && (
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  setIsDeleteAllModalOpen(true);
-                }}
-                className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl transition-all active:scale-95"
-                title="Borrar Todo"
-              >
-                <Trash2 size={16} strokeWidth={2.5} />
-              </button>
-            )}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none">
+              Menú / Catálogo
+            </h1>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">
+                {products.length} productos
+              </span>
+              {lowStockCount > 0 && (
+                <button
+                  onClick={() => {
+                    handleSetActiveCategory("bajo-stock");
+                    triggerHaptic && triggerHaptic();
+                  }}
+                  className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                >
+                  <AlertTriangle size={10} className="text-amber-500" /> {lowStockCount} bajo stock
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {products.length > 0 && (
             <button
               onClick={() => {
                 triggerHaptic && triggerHaptic();
-                setIsSettingsOpen(true);
+                setIsDeleteAllModalOpen(true);
               }}
-              className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl transition-all active:scale-95"
-              title="Ajustes"
+              className="p-2.5 bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl transition-all active:scale-95"
+              title="Borrar Todo"
             >
-              <Settings size={16} strokeWidth={2.5} />
+              <Trash2 size={16} strokeWidth={2.5} />
             </button>
-            {products.length > 0 && (
-              <button
-                onClick={handlePublishWeb}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 font-bold text-sm"
-                title="Actualizar / Publicar a la Web"
-              >
-                <UploadCloud size={16} strokeWidth={2.5} />
-                <span className="hidden sm:inline">Publicar Web</span>
-              </button>
-            )}
+          )}
+          <button
+            onClick={() => {
+              triggerHaptic && triggerHaptic();
+              onNavigate && onNavigate("ajustes");
+            }}
+            className="p-2.5 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl transition-all active:scale-95"
+            title="Ajustes"
+          >
+            <Settings size={16} strokeWidth={2.5} />
+          </button>
+          {products.length > 0 && (
+            <button
+              onClick={handlePublishWeb}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 font-bold text-xs"
+              title="Actualizar / Publicar a la Web"
+            >
+              <UploadCloud size={14} strokeWidth={2.5} />
+              <span>Publicar Web</span>
+            </button>
+          )}
 
-            {products.length > 0 && (
-              <button
-                onClick={() => {
-                  triggerHaptic && triggerHaptic();
-                  if (!isPremium) {
-                    showToast("Adquiere Premium para compartir tu menú en la web.", "error");
-                    return;
-                  }
-                  setIsShareWebOpen(true);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-md transition-all active:scale-95 font-bold text-sm ${!isPremium ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 shadow-none' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
-                title="Ver QR y Enlace"
-              >
-                {!isPremium ? <Lock size={14} className="opacity-70" /> : <Globe size={16} strokeWidth={2.5} />}
-                <span className="hidden sm:inline">Compartir Web</span>
-              </button>
-            )}
-
+          {products.length > 0 && (
             <button
               onClick={() => {
                 triggerHaptic && triggerHaptic();
-                if (!isPremium && products.length >= 10) {
-                  showToast("Límite Gratis Alcanzado (Máx 10 productos). Adquiere Premium para productos ilimitados.", "error");
+                if (!isPremium) {
+                  showToast("Adquiere Premium para compartir tu menú en la web.", "error");
                   return;
                 }
-                setIsModalOpen(true);
+                setIsShareWebOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-xl shadow-md shadow-red-500/20 transition-all active:scale-95 font-bold text-sm"
-              title="Agregar"
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl shadow-md transition-all active:scale-95 font-bold text-xs ${!isPremium ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 shadow-none' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
+              title="Ver QR y Enlace"
             >
-              <Plus size={16} strokeWidth={2.5} />
-              <span className="hidden sm:inline">Nuevo</span>
+              {!isPremium ? <Lock size={12} className="opacity-70" /> : <Globe size={14} strokeWidth={2.5} />}
+              <span>Compartir Web</span>
             </button>
-          </div>
-        </div>
-
-        {/* Fila 2: Stats clicables */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-1 rounded-full">
-            {products.length} productos
-          </span>
-          {lowStockCount > 0 && (
-            <>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-              <button
-                onClick={() => {
-                  handleSetActiveCategory("bajo-stock");
-                  triggerHaptic && triggerHaptic();
-                }}
-                className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-red-600 dark:text-red-400 px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-              >
-                ⚠️ {lowStockCount} bajo stock
-              </button>
-            </>
           )}
+
+          <button
+            onClick={() => {
+              triggerHaptic && triggerHaptic();
+              if (!isPremium && products.length >= 10) {
+                showToast("Límite Gratis Alcanzado (Máx 10 productos). Adquiere Premium para productos ilimitados.", "error");
+                return;
+              }
+              setIsModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-brand hover:bg-brand-dark/95 text-white rounded-xl shadow-md shadow-brand/20 transition-all active:scale-95 font-bold text-xs"
+            title="Agregar"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            <span>Nuevo Plato</span>
+          </button>
         </div>
+      </div>
 
         {/* Category Filter Pills — horizontal scroll with fade */}
         <div className="relative">
@@ -672,7 +680,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
                   triggerHaptic && triggerHaptic();
                 }}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all snap-start border ${activeCategory === cat.id
-                  ? "bg-red-500 text-white shadow-sm shadow-red-500/20 border-red-500"
+                  ? "bg-brand text-white shadow-sm shadow-brand/20 border-brand"
                   : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 active:scale-95"
                   }`}
               >
@@ -707,7 +715,6 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-12 pr-4 text-sm text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm"
           />
         </div>
-      </div>
 
       {/* Product Grid */}
       {isLoadingProducts ? (
@@ -971,11 +978,7 @@ export const ProductsView = ({ rates, triggerHaptic }) => {
         </div>
       </Modal>
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onImport={() => setIsShareOpen(true)}
-      />
+
 
       <ShareInventoryModal
         isOpen={isShareOpen}
