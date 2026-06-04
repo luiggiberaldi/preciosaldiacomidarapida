@@ -62,6 +62,14 @@ export default function LockScreen() {
             />
           ))}
         </div>
+
+        {/* Anuncio informativo sobre PIN por defecto */}
+        <div className="mt-8 px-4 py-2.5 bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 rounded-full flex items-center gap-2 max-w-md mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
+          <span className="text-xs">💡</span>
+          <p className="text-[10px] sm:text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wide text-center">
+            El PIN por defecto para todos los usuarios es <span className="font-extrabold underline">0000</span> (Cámbialo en Ajustes)
+          </p>
+        </div>
       </div>
 
       {/* Footer sutil */}

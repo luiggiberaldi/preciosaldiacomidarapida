@@ -14,7 +14,7 @@ async function hashPin(pin) {
 }
 
 const DEFAULT_USERS = [
-    { id: 1, nombre: 'Administrador', rol: 'ADMIN', pin: '123456', pinHashed: false },
+    { id: 1, nombre: 'Administrador', rol: 'ADMIN', pin: '0000', pinHashed: false },
     { id: 2, nombre: 'Cajero', rol: 'CAJERO', pin: '0000', pinHashed: false }
 ];
 
