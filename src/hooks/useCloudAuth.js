@@ -21,7 +21,7 @@ const translateAuthError = (errMsg) => {
   const lower = errMsg.toLowerCase();
   
   if (lower.includes("rate limit exceeded") || lower.includes("rate_limit")) {
-    return "Por seguridad, solo puedes solicitar un correo de recuperación cada 60 segundos. Por favor, espera 60 segundos e inténtalo de nuevo.";
+    return "Por seguridad, solo puedes solicitar un correo de recuperación cada 2 minutos. Por favor, espera 2 minutos e inténtalo de nuevo.";
   }
   if (lower.includes("invalid or has expired")) {
     return "El enlace de recuperación es inválido o ha expirado. Por favor, solicita uno nuevo.";

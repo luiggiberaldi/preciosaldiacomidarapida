@@ -133,12 +133,12 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
       try {
         await sendPasswordResetEmail(email.trim());
         showToast("Correo de recuperación enviado con éxito", "success");
-        setResetEmailCooldown(60);
+        setResetEmailCooldown(120);
         setIsForgotPassword(false);
       } catch (err) {
         showToast(err.message || "Error al enviar correo de recuperación", "error");
-        if (err.message && (err.message.includes("60 segundos") || err.message.toLowerCase().includes("rate limit") || err.message.toLowerCase().includes("rate_limit"))) {
-          setResetEmailCooldown(60);
+        if (err.message && (err.message.includes("segundos") || err.message.includes("minutos") || err.message.toLowerCase().includes("rate limit") || err.message.toLowerCase().includes("rate_limit"))) {
+          setResetEmailCooldown(120);
         }
       }
       return;
