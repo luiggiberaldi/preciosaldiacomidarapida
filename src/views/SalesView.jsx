@@ -7,6 +7,15 @@ import { useNotifications } from "../hooks/useNotifications";
 import { useOpenTabs } from "../hooks/useOpenTabs";
 import { getActivePaymentMethods } from "../config/paymentMethods";
 import { showToast } from "../components/Toast";
+import { useAudit } from "../hooks/useAudit";
+import { usePrinter } from "../hooks/usePrinter";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
+import { DEFAULT_TABLES } from "../config/tablesConfig";
+import TablesFloorPlan from "../components/Sales/TablesFloorPlan";
+import TableDetailsModal from "../components/Sales/TableDetailsModal";
+import OpenTableModal from "../components/Sales/OpenTableModal";
+import { useAuthStore } from "../hooks/store/useAuthStore";
+
 
 // Components
 import SalesHeader from "../components/Sales/SalesHeader";
@@ -25,9 +34,13 @@ import { buildReceiptWhatsAppUrl } from "../components/Sales/ReceiptShareHelper"
 
 const SALES_KEY = "bodega_sales_v1";
 
-export default function SalesView({ rates, triggerHaptic, onNavigate }) {
+export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewMode, setSalesViewMode }) {
   const { playAdd, playRemove, playCheckout, playError } = useSounds();
   const { notifySaleComplete, notifyLowStock } = useNotifications();
+  const { logAction } = useAudit();
+  const { isConnected: printerConnected, printTicket, printKitchen, printPrecuenta } = usePrinter();
+  const { addToQueue } = useOfflineQueue();
+
 
   // ── State ──────────────────────────────────────
   const [products, setProducts] = useState([]);
@@ -49,6 +62,26 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
   // Open Tabs
   const { openTabs, addTab, removeTab, updateTab } = useOpenTabs();
   const [activeTabId, setActiveTabId] = useState(null);
+  const [selectedTableForDetails, setSelectedTableForDetails] = useState(null);
+  const [tableToReleasePending, setTableToReleasePending] = useState(null);
+  const [tableForOpenModal, setTableForOpenModal] = useState(null);
+
+
+
+  // Tables State
+  const [tables, setTables] = useState(() => {
+    try {
+      const saved = localStorage.getItem("bodega_tables_v1");
+      return saved ? JSON.parse(saved) : DEFAULT_TABLES;
+    } catch {
+      return DEFAULT_TABLES;
+    }
+  });
+
+  // Save tables changes to localStorage
+  useEffect(() => {
+    localStorage.setItem("bodega_tables_v1", JSON.stringify(tables));
+  }, [tables]);
 
   // Search
   const searchInputRef = useRef(null);
@@ -428,16 +461,32 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     if (activeTabId) {
       updateTab(activeTabId, cart);
       showToast(`Cuenta actualizada: ${customerName || activeTabId}`, "success");
+
+      // Redirect table orders to the floor plan view
+      const tab = openTabs.find((t) => t.id === activeTabId);
+      if (tab && tab.customerInfo?.tableId) {
+        onNavigate("mesas");
+        setSalesViewMode("tables");
+      }
     } else {
       const tabName = customerName || `Mesa/Cuenta #${openTabs.length + 1}`;
-      addTab(tabName, cart);
+      
+      // Auto-detect table link by name
+      const matchedTable = tables.find((t) => t.name.toLowerCase() === tabName.toLowerCase());
+      addTab(tabName, cart, matchedTable ? { tableId: matchedTable.id } : null);
       showToast(`Cuenta guardada: ${tabName}`, "success");
+
+      if (matchedTable) {
+        onNavigate("mesas");
+        setSalesViewMode("tables");
+      }
     }
 
     setCart([]);
     setCartCustomerName("");
     setActiveTabId(null);
   };
+
 
   const handleSelectOpenTab = (tab) => {
     // Si la caja actual tiene cosas sin guardar, habría que avisar, pero por ahora asumimos que 
@@ -452,6 +501,68 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     removeTab(tabId);
     showToast("Cuenta eliminada permanentemente.", "error");
   };
+
+  // Table selection & edit actions
+  const handleSelectTable = (table, isOccupied) => {
+    if (isOccupied) {
+      setSelectedTableForDetails(table);
+    } else {
+      // Free table -> Open table opening wizard modal
+      setTableForOpenModal(table);
+    }
+  };
+
+  const handleConfirmOpenTable = ({ guests, clientName, notes }) => {
+    if (!tableForOpenModal) return;
+    const { usuarioActivo } = useAuthStore.getState();
+    const activeWaiter = usuarioActivo?.nombre || "Cajero";
+
+    setCart([]);
+    setCartCustomerName(clientName);
+
+    const newTab = addTab(clientName, [], {
+      tableId: tableForOpenModal.id,
+      waiter: activeWaiter,
+      guests: guests,
+      notes: notes,
+    });
+
+    setActiveTabId(newTab.id);
+    onNavigate("ventas");
+    setSalesViewMode("products");
+    showToast(`Mesa ${tableForOpenModal.name} abierta con éxito.`, "success");
+    setTableForOpenModal(null);
+  };
+
+  const handleAddTable = (newTable) => {
+    setTables((prev) => [...prev, newTable]);
+    showToast(`Mesa "${newTable.name}" agregada con éxito.`, "success");
+  };
+
+  const handleRemoveTable = (tableId) => {
+    const tableObj = tables.find((t) => t.id === tableId);
+    setTables((prev) => prev.filter((t) => t.id !== tableId));
+    showToast(`Mesa "${tableObj?.name || 'Mesa'}" eliminada.`, "error");
+  };
+
+  // Table Details Modal Callbacks
+  const handleDetailsAddProducts = (table, tab) => {
+    handleSelectOpenTab(tab);
+    onNavigate("ventas");
+    setSalesViewMode("products");
+    setSelectedTableForDetails(null);
+  };
+
+  const handleDetailsCheckout = (table, tab) => {
+    handleSelectOpenTab(tab);
+    setSelectedTableForDetails(null);
+    setShowCheckout(true);
+  };
+
+  const handleDetailsReleaseTable = (table, tab) => {
+    setTableToReleasePending({ table, tab });
+  };
+
 
   const handleSearchKeyDown = (e) => {
     if (e.key === "ArrowDown") {
@@ -560,6 +671,9 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     sale.saleNumber = maxSaleNumber + 1;
 
     await storageService.setItem(SALES_KEY, [sale, ...existingSales]);
+    addToQueue("UPLOAD_SALE", sale);
+    logAction('VENTA', 'SALE_CREATED', `Venta realizada #${sale.saleNumber} por $${sale.totalUsd.toFixed(2)} (${sale.customerName})`, { saleId: sale.id, totalUsd: sale.totalUsd });
+
 
 
     // Deduct stock
@@ -602,6 +716,11 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
       setPendingWebOrderId(null);
     }
 
+    if (printerConnected) {
+      printTicket(sale, effectiveRate);
+      printKitchen(sale);
+    }
+
     setShowReceipt(sale);
     playCheckout();
     setShowConfetti(true);
@@ -610,7 +729,14 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
     setCart([]);
     setShowCheckout(false);
     setSelectedCustomerId("");
+    
+    // Clear and release the active tab/table session if checked out
+    if (activeTabId) {
+      removeTab(activeTabId);
+      setActiveTabId(null);
+    }
   };
+
 
   const handleCreateCustomer = async (name, phone) => {
     const newCustomer = {
@@ -653,79 +779,103 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         setAutoRateSource={setAutoRateSource}
       />
 
-      {/* Search + Popups (within header card would require restructure, keep sibling) */}
-      <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
-        <SearchBar
-          ref={searchInputRef}
-          searchTerm={searchTerm}
-          onSearchChange={handleSetSearchTerm}
-          onKeyDown={handleSearchKeyDown}
-          searchResults={searchResults}
-          selectedIndex={selectedIndex}
-          setSelectedIndex={setSelectedIndex}
-          effectiveRate={effectiveRate}
-          addToCart={addToCart}
-          isRecording={isRecording}
-          isProcessingAudio={isProcessingAudio}
-          toggleRecording={toggleRecording}
-          hierarchyPending={hierarchyPending}
-          setHierarchyPending={setHierarchyPending}
-          weightPending={weightPending}
-          setWeightPending={setWeightPending}
-        />
-      </div>
 
-      {/* Category Chips + Product Grid */}
-      {!showCheckout && !showReceipt && (
-        <CategoryBar
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          filteredByCategory={filteredByCategory}
-          addToCart={addToCart}
+      {salesViewMode === "products" ? (
+        <>
+          {/* Search + Popups */}
+          <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+            <SearchBar
+              ref={searchInputRef}
+              searchTerm={searchTerm}
+              onSearchChange={handleSetSearchTerm}
+              onKeyDown={handleSearchKeyDown}
+              searchResults={searchResults}
+              selectedIndex={selectedIndex}
+              setSelectedIndex={setSelectedIndex}
+              effectiveRate={effectiveRate}
+              addToCart={addToCart}
+              isRecording={isRecording}
+              isProcessingAudio={isProcessingAudio}
+              toggleRecording={toggleRecording}
+              hierarchyPending={hierarchyPending}
+              setHierarchyPending={setHierarchyPending}
+              weightPending={weightPending}
+              setWeightPending={setWeightPending}
+            />
+          </div>
+
+          {/* Category Chips + Product Grid */}
+          {!showCheckout && !showReceipt && (
+            <CategoryBar
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              filteredByCategory={filteredByCategory}
+              addToCart={addToCart}
+              triggerHaptic={triggerHaptic}
+              searchTerm={searchTerm}
+            />
+          )}
+
+          {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
+          <OpenTabsPanel
+            openTabs={openTabs}
+            onSelectTab={handleSelectOpenTab}
+            onRemoveTab={handleRemoveOpenTab}
+            triggerHaptic={triggerHaptic}
+          />
+        </>
+      ) : (
+        <TablesFloorPlan
+          tables={tables}
+          openTabs={openTabs}
+          activeTabId={activeTabId}
+          onSelectTable={handleSelectTable}
+          onAddTable={handleAddTable}
+          onRemoveTable={handleRemoveTable}
+          effectiveRate={effectiveRate}
           triggerHaptic={triggerHaptic}
-          searchTerm={searchTerm}
         />
       )}
 
-      {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
-      <OpenTabsPanel
-        openTabs={openTabs}
-        onSelectTab={handleSelectOpenTab}
-        onRemoveTab={handleRemoveOpenTab}
-        triggerHaptic={triggerHaptic}
-      />
+      {/* Cart (Only render when in products mode!) */}
+      {salesViewMode === "products" && (
+        <CartPanel
+          cart={cart}
+          effectiveRate={effectiveRate}
+          cartTotalUsd={cartTotalUsd}
+          cartTotalBs={cartTotalBs}
+          cartItemCount={cartItemCount}
+          updateQty={updateQty}
+          removeFromCart={removeFromCart}
+          onCheckout={(name) => {
+            triggerHaptic && triggerHaptic();
+            setCartCustomerName(name);
+            setShowCheckout(true);
+          }}
+          onOpenTab={handleOpenTab}
+          onClearCart={() => {
+            triggerHaptic && triggerHaptic();
+            setShowClearCartConfirm(true);
+          }}
+          onEditNote={(item) => {
+            triggerHaptic && triggerHaptic();
+            setNotePending(item);
+          }}
+          onEditOptions={(item) => {
+            triggerHaptic && triggerHaptic();
+            setEditingCartId(item.cartId || item.id);
+            setSelectedProductForOptions(item);
+          }}
+          onPrintPrecuenta={() => {
+            if (cart.length === 0) return;
+            triggerHaptic && triggerHaptic();
+            printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
+          }}
+          triggerHaptic={triggerHaptic}
+          activeTabName={activeTabId ? cartCustomerName : null}
+        />
+      )}
 
-      {/* Cart */}
-      <CartPanel
-        cart={cart}
-        effectiveRate={effectiveRate}
-        cartTotalUsd={cartTotalUsd}
-        cartTotalBs={cartTotalBs}
-        cartItemCount={cartItemCount}
-        updateQty={updateQty}
-        removeFromCart={removeFromCart}
-        onCheckout={(name) => {
-          triggerHaptic && triggerHaptic();
-          setCartCustomerName(name);
-          setShowCheckout(true);
-        }}
-        onOpenTab={handleOpenTab}
-        onClearCart={() => {
-          triggerHaptic && triggerHaptic();
-          setShowClearCartConfirm(true);
-        }}
-        onEditNote={(item) => {
-          triggerHaptic && triggerHaptic();
-          setNotePending(item);
-        }}
-        onEditOptions={(item) => {
-          triggerHaptic && triggerHaptic();
-          setEditingCartId(item.cartId || item.id);
-          setSelectedProductForOptions(item);
-        }}
-        triggerHaptic={triggerHaptic}
-        activeTabName={activeTabId ? cartCustomerName : null}
-      />
 
       {/* Checkout Modal */}
       {showCheckout && (
@@ -836,8 +986,95 @@ export default function SalesView({ rates, triggerHaptic, onNavigate }) {
         variant="cart"
       />
 
+      {/* Table Details Modal */}
+      {selectedTableForDetails && (
+        <TableDetailsModal
+          isOpen={!!selectedTableForDetails}
+          onClose={() => setSelectedTableForDetails(null)}
+          table={selectedTableForDetails}
+          tab={openTabs.find(
+            (t) =>
+              t.customerInfo?.tableId === selectedTableForDetails.id ||
+              t.name === selectedTableForDetails.name
+          )}
+          effectiveRate={effectiveRate}
+          onAddProducts={() =>
+            handleDetailsAddProducts(
+              selectedTableForDetails,
+              openTabs.find(
+                (t) =>
+                  t.customerInfo?.tableId === selectedTableForDetails.id ||
+                  t.name === selectedTableForDetails.name
+              )
+            )
+          }
+          onPrintPrecuenta={() => {
+            const tab = openTabs.find(
+              (t) =>
+                t.customerInfo?.tableId === selectedTableForDetails.id ||
+                t.name === selectedTableForDetails.name
+            );
+            if (tab) {
+              printPrecuenta(tab, effectiveRate);
+            }
+          }}
+          onCheckout={() =>
+            handleDetailsCheckout(
+              selectedTableForDetails,
+              openTabs.find(
+                (t) =>
+                  t.customerInfo?.tableId === selectedTableForDetails.id ||
+                  t.name === selectedTableForDetails.name
+              )
+            )
+          }
+          onReleaseTable={() =>
+            handleDetailsReleaseTable(
+              selectedTableForDetails,
+              openTabs.find(
+                (t) =>
+                  t.customerInfo?.tableId === selectedTableForDetails.id ||
+                  t.name === selectedTableForDetails.name
+              )
+            )
+          }
+          triggerHaptic={triggerHaptic}
+        />
+      )}
+
+      {/* Table Release Confirm Modal */}
+      {tableToReleasePending && (
+        <ConfirmModal
+          isOpen={!!tableToReleasePending}
+          onClose={() => setTableToReleasePending(null)}
+          onConfirm={() => {
+            removeTab(tableToReleasePending.tab.id);
+            showToast(`${tableToReleasePending.table.name} ha sido liberada.`, "error");
+            setTableToReleasePending(null);
+            setSelectedTableForDetails(null);
+          }}
+          title={`¿Liberar ${tableToReleasePending.table.name}?`}
+          message="Se cancelará y eliminará permanentemente todo el consumo acumulado de esta mesa. Esta acción no se puede deshacer."
+          confirmText="Sí, liberar mesa"
+          variant="danger"
+        />
+      )}
+
+      {/* Open Table Modal */}
+      {tableForOpenModal && (
+        <OpenTableModal
+          isOpen={!!tableForOpenModal}
+          onClose={() => setTableForOpenModal(null)}
+          table={tableForOpenModal}
+          activeWaiter={useAuthStore((s) => s.usuarioActivo)?.nombre || "Cajero"}
+          onConfirm={handleConfirmOpenTable}
+          triggerHaptic={triggerHaptic}
+        />
+      )}
+
       {/* Confetti */}
       {showConfetti && <Confetti onDone={() => setShowConfetti(false)} />}
     </div>
   );
 }
+
