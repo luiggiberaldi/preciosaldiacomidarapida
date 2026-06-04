@@ -40,6 +40,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
   const { logAction } = useAudit();
   const { isConnected: printerConnected, printTicket, printKitchen, printPrecuenta } = usePrinter();
   const { addToQueue } = useOfflineQueue();
+  const usuarioActivo = useAuthStore((s) => s.usuarioActivo);
 
 
   // ── State ──────────────────────────────────────
@@ -1066,7 +1067,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
           isOpen={!!tableForOpenModal}
           onClose={() => setTableForOpenModal(null)}
           table={tableForOpenModal}
-          activeWaiter={useAuthStore((s) => s.usuarioActivo)?.nombre || "Cajero"}
+          activeWaiter={usuarioActivo?.nombre || "Cajero"}
           onConfirm={handleConfirmOpenTable}
           triggerHaptic={triggerHaptic}
         />
