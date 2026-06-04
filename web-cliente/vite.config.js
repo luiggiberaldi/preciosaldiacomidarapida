@@ -9,6 +9,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png", "pwa-maskable-192x192.png", "apple-touch-icon-180x180.png"],
       workbox: {
+        navigateFallbackDenylist: [/^\/pos/],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
