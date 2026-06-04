@@ -311,7 +311,7 @@ export default function App() {
   }
 
   if (!cloudUser) {
-    return <CloudAuthModal isForceLogin={true} />;
+    return <CloudAuthModal isOpen={true} isForceLogin={true} />;
   }
 
   return (

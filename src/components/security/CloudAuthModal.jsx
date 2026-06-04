@@ -69,14 +69,14 @@ export function CloudAuthBadge() {
   );
 }
 
-export function CloudAuthModal({ isOpen, onClose }) {
+export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
   const { signIn, register, loading, error: authError } = useCloudAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isForceLogin) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,7 +93,7 @@ export function CloudAuthModal({ isOpen, onClose }) {
         await signIn(email.trim(), password.trim());
         showToast("Sesión iniciada con éxito", "success");
       }
-      onClose();
+      if (onClose) onClose();
     } catch (err) {
       showToast(err.message || "Error de autenticación", "error");
     }
@@ -102,19 +102,21 @@ export function CloudAuthModal({ isOpen, onClose }) {
   return (
     <div
       className="fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={isForceLogin ? undefined : onClose}
     >
       <div
         className="bg-white dark:bg-slate-900 rounded-[1.5rem] p-6 max-w-sm w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        >
-          <X size={16} />
-        </button>
+        {!isForceLogin && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        )}
 
         {/* Modal Header */}
         <div className="text-center mb-6">
