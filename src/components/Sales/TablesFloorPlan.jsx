@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, X, Utensils, GlassWater, Armchair, Clock, User, Sparkles } from "lucide-react";
+import { Plus, Trash2, X, Utensils, GlassWater, Armchair, Clock, User, Sparkles, Users, ChefHat, FileText } from "lucide-react";
 
 export default function TablesFloorPlan({
   tables,
@@ -335,7 +335,7 @@ export default function TablesFloorPlan({
                               {/* Mesero */}
                               {tab.customerInfo?.waiter && (
                                 <div className="flex items-center gap-1 font-bold opacity-90 truncate max-w-full text-red-50">
-                                  <span>👤</span>
+                                  <ChefHat size={10} className="shrink-0" />
                                   <span className="truncate">{tab.customerInfo.waiter}</span>
                                 </div>
                               )}
@@ -343,7 +343,7 @@ export default function TablesFloorPlan({
                               {/* Comensales */}
                               {tab.customerInfo?.guests && (
                                 <div className="flex items-center gap-1 font-bold opacity-90 text-red-50">
-                                  <span>👥</span>
+                                  <Users size={10} className="shrink-0" />
                                   <span>
                                     {tab.customerInfo.guests} {tab.customerInfo.guests === 1 ? "persona" : "personas"}
                                   </span>
@@ -353,7 +353,7 @@ export default function TablesFloorPlan({
 
                             {/* Food items counter */}
                             <div className="flex items-center gap-1 text-[10px] font-semibold opacity-90">
-                              <span>🍔</span>
+                              <Utensils size={10} className="shrink-0" />
                               <span>
                                 {itemCount} {itemCount === 1 ? "plato" : "platos"}
                               </span>
@@ -367,8 +367,9 @@ export default function TablesFloorPlan({
 
                             {/* Notes pill indicator if notes exist */}
                             {tab.customerInfo?.notes && (
-                              <div className="text-[9px] font-semibold bg-amber-500/30 text-white rounded px-1.5 py-0.5 self-start truncate max-w-full" title={tab.customerInfo.notes}>
-                                📝 {tab.customerInfo.notes}
+                              <div className="text-[9px] font-semibold bg-amber-500/30 text-white rounded px-1.5 py-0.5 self-start truncate max-w-full flex items-center gap-1" title={tab.customerInfo.notes}>
+                                <FileText size={9} className="shrink-0" />
+                                <span className="truncate">{tab.customerInfo.notes}</span>
                               </div>
                             )}
                           </>
