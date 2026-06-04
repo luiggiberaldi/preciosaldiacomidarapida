@@ -255,13 +255,15 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     <Lock size={10} /> Contraseña
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsForgotPassword(true)}
-                    className="text-[10px] font-bold text-brand hover:text-brand-dark transition-colors uppercase tracking-wider"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </button>
+                  {!isRegistering && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-[10px] font-bold text-brand hover:text-brand-dark transition-colors uppercase tracking-wider"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  )}
                 </div>
                 <div className="relative">
                   <input
