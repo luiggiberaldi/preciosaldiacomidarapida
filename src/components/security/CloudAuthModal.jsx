@@ -75,9 +75,13 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [resetEmailCooldown, setResetEmailCooldown] = useState(0);
 
   // Timer para cuenta regresiva de 60 segundos en reenvío de correo
@@ -101,6 +105,14 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
     if (clearError) clearError();
   }, [isForgotPassword, isRegistering, isOpen, clearError]);
 
+  // Limpiar campos de contraseña al cambiar de pantalla
+  React.useEffect(() => {
+    setPassword("");
+    setConfirmPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+  }, [isRegistering, isForgotPassword, isRecoveryFlow]);
+
   if (!isOpen && !isForceLogin) return null;
 
   const handleSubmit = async (e) => {
@@ -109,6 +121,10 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
     if (isRecoveryFlow) {
       if (!newPassword.trim() || newPassword.length < 6) {
         showToast("La contraseña debe tener al menos 6 caracteres", "warning");
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        showToast("Las contraseñas no coinciden", "warning");
         return;
       }
       try {
@@ -149,9 +165,19 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
       return;
     }
 
+    if (isRegistering && password !== confirmPassword) {
+      showToast("Las contraseñas no coinciden", "warning");
+      return;
+    }
+
     try {
       if (isRegistering) {
-        await register(email.trim(), password.trim());
+        const data = await register(email.trim(), password.trim());
+        if (!data?.session) {
+          showToast("Registro exitoso. Por favor, revisa tu correo electrónico y confírmalo para activar tu cuenta.", "info", 6000);
+          setIsRegistering(false); // Volver a la pantalla de login
+          return;
+        }
         showToast("Registro exitoso. Se ha iniciado sesión.", "success");
       } else {
         await signIn(email.trim(), password.trim());
@@ -224,28 +250,53 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRecoveryFlow ? (
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <Lock size={10} /> Nueva Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
-                  placeholder="Mínimo 6 caracteres"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+            <>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Lock size={10} /> Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
-            </div>
+
+              <div className="space-y-1 animate-in fade-in duration-300">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Lock size={10} /> Confirmar Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmNewPassword ? "text" : "password"}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
+                    placeholder="Repite la nueva contraseña"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showConfirmNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            </>
           ) : isForgotPassword ? (
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
@@ -309,6 +360,31 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
                   </button>
                 </div>
               </div>
+
+              {isRegistering && (
+                <div className="space-y-1 animate-in fade-in duration-300">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <Lock size={10} /> Confirmar Contraseña
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full p-2.5 pr-10 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand/35 focus:border-brand"
+                      placeholder="Repite la contraseña"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
