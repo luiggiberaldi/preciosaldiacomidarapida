@@ -16,6 +16,31 @@ const hasSavedSession = () => {
   }
 };
 
+const translateAuthError = (errMsg) => {
+  if (!errMsg) return "Ocurrió un error inesperado";
+  const lower = errMsg.toLowerCase();
+  
+  if (lower.includes("rate limit exceeded") || lower.includes("rate_limit")) {
+    return "Por seguridad, solo puedes solicitar un correo de recuperación cada 60 segundos. Por favor, espera 60 segundos e inténtalo de nuevo.";
+  }
+  if (lower.includes("invalid or has expired")) {
+    return "El enlace de recuperación es inválido o ha expirado. Por favor, solicita uno nuevo.";
+  }
+  if (lower.includes("invalid login credentials") || lower.includes("invalid credentials")) {
+    return "Correo o contraseña incorrectos.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Debes confirmar tu correo electrónico antes de iniciar sesión.";
+  }
+  if (lower.includes("user already exists") || lower.includes("already registered")) {
+    return "Este correo electrónico ya está registrado.";
+  }
+  if (lower.includes("signup is disabled")) {
+    return "El registro de nuevos usuarios está deshabilitado temporalmente.";
+  }
+  return errMsg;
+};
+
 export function useCloudAuth() {
   const [cloudUser, setCloudUser] = useState(null);
   const [role, setRole] = useState(() => {
@@ -66,12 +91,7 @@ export function useCloudAuth() {
       const errorDesc = params.get("error_description") || "";
       let decodedError = decodeURIComponent(errorDesc).replace(/\+/g, " ");
       
-      // Traducir mensajes comunes de Supabase a español
-      if (decodedError.toLowerCase().includes("invalid or has expired")) {
-        decodedError = "El enlace de recuperación es inválido o ha expirado. Por favor, solicita uno nuevo.";
-      }
-      
-      setError(decodedError);
+      setError(translateAuthError(decodedError));
       
       // Limpiar el hash de la URL para una experiencia limpia al recargar
       try {
@@ -184,9 +204,10 @@ export function useCloudAuth() {
       return data;
     } catch (err) {
       console.error("[useCloudAuth] Error al iniciar sesión:", err);
-      setError(err.message || "Credenciales incorrectas");
+      const translated = translateAuthError(err.message || "Credenciales incorrectas");
+      setError(translated);
       setLoading(false);
-      throw err;
+      throw new Error(translated);
     }
   };
 
@@ -215,9 +236,10 @@ export function useCloudAuth() {
       return data;
     } catch (err) {
       console.error("[useCloudAuth] Error al registrar usuario:", err);
-      setError(err.message || "Error al registrar cuenta");
+      const translated = translateAuthError(err.message || "Error al registrar cuenta");
+      setError(translated);
       setLoading(false);
-      throw err;
+      throw new Error(translated);
     }
   };
 
@@ -249,9 +271,10 @@ export function useCloudAuth() {
       if (resetError) throw resetError;
     } catch (err) {
       console.error("[useCloudAuth] Error al enviar correo de restablecimiento:", err);
-      setError(err.message || "Error al enviar el correo de recuperación");
+      const translated = translateAuthError(err.message || "Error al enviar el correo de recuperación");
+      setError(translated);
       setLoading(false);
-      throw err;
+      throw new Error(translated);
     } finally {
       setLoading(false);
     }
@@ -267,13 +290,16 @@ export function useCloudAuth() {
       if (updateError) throw updateError;
     } catch (err) {
       console.error("[useCloudAuth] Error al actualizar la contraseña:", err);
-      setError(err.message || "Error al actualizar la contraseña");
+      const translated = translateAuthError(err.message || "Error al actualizar la contraseña");
+      setError(translated);
       setLoading(false);
-      throw err;
+      throw new Error(translated);
     } finally {
       setLoading(false);
     }
   };
+
+  const clearError = () => setError(null);
 
   return {
     cloudUser,
@@ -283,6 +309,7 @@ export function useCloudAuth() {
     isKitchen: role === "kitchen",
     loading,
     error,
+    clearError,
     signIn,
     signUp,
     signOut,

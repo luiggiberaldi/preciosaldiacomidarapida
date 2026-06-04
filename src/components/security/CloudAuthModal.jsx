@@ -70,7 +70,7 @@ export function CloudAuthBadge() {
 }
 
 export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, setRecoveryFlow }) {
-  const { signIn, register, loading, error: authError, sendPasswordResetEmail, updatePassword, signOut } = useCloudAuth();
+  const { signIn, signUp: register, loading, error: authError, clearError, sendPasswordResetEmail, updatePassword, signOut } = useCloudAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -78,6 +78,28 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetEmailCooldown, setResetEmailCooldown] = useState(0);
+
+  // Timer para cuenta regresiva de 60 segundos en reenvío de correo
+  React.useEffect(() => {
+    if (resetEmailCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetEmailCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (clearError) clearError();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetEmailCooldown, clearError]);
+
+  // Limpiar errores al cambiar de vista o cerrar el modal
+  React.useEffect(() => {
+    if (clearError) clearError();
+  }, [isForgotPassword, isRegistering, isOpen, clearError]);
 
   if (!isOpen && !isForceLogin) return null;
 
@@ -111,9 +133,13 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
       try {
         await sendPasswordResetEmail(email.trim());
         showToast("Correo de recuperación enviado con éxito", "success");
+        setResetEmailCooldown(60);
         setIsForgotPassword(false);
       } catch (err) {
         showToast(err.message || "Error al enviar correo de recuperación", "error");
+        if (err.message && (err.message.includes("60 segundos") || err.message.toLowerCase().includes("rate limit") || err.message.toLowerCase().includes("rate_limit"))) {
+          setResetEmailCooldown(60);
+        }
       }
       return;
     }
@@ -288,7 +314,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isForgotPassword && resetEmailCooldown > 0)}
             className="w-full py-3.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-brand/10 disabled:opacity-50"
           >
             {loading ? (
@@ -298,13 +324,15 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin, isRecoveryFlow, 
               </>
             ) : (
               <>
-                {isRecoveryFlow
-                  ? "Guardar Contraseña"
-                  : isForgotPassword
-                  ? "Enviar Correo de Recuperación"
-                  : isRegistering
-                  ? "Registrar y Conectar"
-                  : "Iniciar Sesión e Integrar"}
+                {isRecoveryFlow ? (
+                  "Guardar Contraseña"
+                ) : isForgotPassword ? (
+                  resetEmailCooldown > 0 ? `Reenviar en ${resetEmailCooldown}s` : "Enviar Correo de Recuperación"
+                ) : isRegistering ? (
+                  "Registrar y Conectar"
+                ) : (
+                  "Iniciar Sesión e Integrar"
+                )}
               </>
             )}
           </button>
