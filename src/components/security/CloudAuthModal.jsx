@@ -120,7 +120,7 @@ export function CloudAuthModal({ isOpen, onClose, isForceLogin }) {
 
         {/* Modal Header */}
         <div className="text-center mb-6">
-          <div className="w-60 h-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800/80 p-1.5 shadow-sm">
+          <div className="w-60 h-16 flex items-center justify-center mx-auto mb-4">
             <img
               src="/pos/logoprincipal.png"
               onError={(e) => {
