@@ -58,10 +58,26 @@ export function useCloudAuth() {
     }
   };
 
-  // Detectar flujo de recuperación en URL al montar
+  // Detectar flujo de recuperación o errores de enlace expirado en URL al montar
   useEffect(() => {
     const hash = window.location.hash || "";
-    if (hash.includes("type=recovery") || window.location.href.includes("type=recovery") || hash.includes("access_token=")) {
+    if (hash.includes("error_description=")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorDesc = params.get("error_description") || "";
+      let decodedError = decodeURIComponent(errorDesc).replace(/\+/g, " ");
+      
+      // Traducir mensajes comunes de Supabase a español
+      if (decodedError.toLowerCase().includes("invalid or has expired")) {
+        decodedError = "El enlace de recuperación es inválido o ha expirado. Por favor, solicita uno nuevo.";
+      }
+      
+      setError(decodedError);
+      
+      // Limpiar el hash de la URL para una experiencia limpia al recargar
+      try {
+        window.history.replaceState(null, null, window.location.pathname);
+      } catch (e) {}
+    } else if (hash.includes("type=recovery") || window.location.href.includes("type=recovery") || hash.includes("access_token=")) {
       setIsRecoveryFlow(true);
     }
   }, []);
