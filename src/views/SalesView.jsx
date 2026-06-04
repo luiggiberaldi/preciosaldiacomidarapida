@@ -518,19 +518,13 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
     const { usuarioActivo } = useAuthStore.getState();
     const activeWaiter = usuarioActivo?.nombre || "Cajero";
 
-    setCart([]);
-    setCartCustomerName(clientName);
-
-    const newTab = addTab(clientName, [], {
+    addTab(clientName, [], {
       tableId: tableForOpenModal.id,
       waiter: activeWaiter,
       guests: guests,
       notes: notes,
     });
 
-    setActiveTabId(newTab.id);
-    onNavigate("ventas");
-    setSalesViewMode("products");
     showToast(`Mesa ${tableForOpenModal.name} abierta con éxito.`, "success");
     setTableForOpenModal(null);
   };
@@ -819,7 +813,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
 
           {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
           <OpenTabsPanel
-            openTabs={openTabs}
+            openTabs={openTabs.filter(t => !t.customerInfo?.tableId)}
             onSelectTab={handleSelectOpenTab}
             onRemoveTab={handleRemoveOpenTab}
             triggerHaptic={triggerHaptic}
@@ -999,6 +993,13 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
               t.name === selectedTableForDetails.name
           )}
           effectiveRate={effectiveRate}
+          products={products}
+          onUpdateTabItems={(tabId, newItems) => {
+            updateTab(tabId, newItems);
+            if (activeTabId === tabId) {
+              setCart(newItems);
+            }
+          }}
           onAddProducts={() =>
             handleDetailsAddProducts(
               selectedTableForDetails,
