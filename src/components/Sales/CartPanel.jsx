@@ -182,15 +182,16 @@ const SwipeableCartItem = ({
             </button>
           </div>
         </div>
-        {/* Botón clásico X (oculto en móviles x el touch, visible hover en PC) */}
+        {/* Botón de eliminar visible permanentemente */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             removeFromCart(item.cartId || item.id);
           }}
-          className="absolute -top-1 -right-1 sm:top-2 sm:right-2 p-1.5 bg-red-50 dark:bg-red-900/40 text-red-500 sm:bg-transparent sm:text-slate-300 sm:hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-full sm:rounded-lg"
+          className="absolute top-2 right-2 p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40 text-red-500 dark:text-red-400 rounded-lg transition-all active:scale-90 border border-red-100/30 dark:border-red-900/20 shadow-sm"
+          title="Eliminar del pedido"
         >
-          <X size={12} className="sm:w-[14px] sm:h-[14px]" />
+          <Trash2 size={12} className="sm:w-[13px] sm:h-[13px]" />
         </button>
       </div>
     </div>
@@ -213,6 +214,7 @@ export default function CartPanel({
   activeTabName,
   onEditOptions,
   onPrintPrecuenta,
+  isSidebar = false,
 }) {
   const [customerName, setCustomerName] = useState("");
   const [showError, setShowError] = useState(false);
@@ -287,55 +289,61 @@ export default function CartPanel({
       </div>
 
       {/* Footer — shrink-0, always visible at bottom of flex container */}
-      <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl sm:rounded-b-3xl space-y-3">
+      <div className="shrink-0 p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl sm:rounded-b-3xl space-y-2.5">
+        
+        {/* Total y Nombre de Cliente inline en tablets, apilados en barra lateral PC */}
+        <div className={`flex flex-col ${isSidebar ? "" : "md:flex-row md:items-center md:justify-between"} gap-2.5 px-1`}>
+          {/* Total Bimonetario */}
+          <div className={`flex justify-between items-center ${isSidebar ? "w-full" : "md:items-start flex-1"} min-w-0`}>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0 mr-2 md:mt-1">
+              Total a Cobrar
+            </span>
+            <div className="text-right flex items-baseline md:flex-col md:items-end gap-1.5 md:gap-0 min-w-0">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black text-red-600 dark:text-red-500 leading-none tracking-tight truncate">
+                {formatBs(cartTotalBs)} Bs
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-slate-400 md:mt-0.5">
+                {cartTotalUsd.toFixed(2)} USD ref.
+              </span>
+            </div>
+          </div>
 
-        {/* Total Bimonetario */}
-        <div className="flex justify-between items-center px-1 sm:px-2">
-          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest">
-            Total a Cobrar
-          </span>
-          <div className="text-right flex flex-col items-end">
-            <span className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-500 leading-none tracking-tight">
-              {formatBs(cartTotalBs)} Bs
-            </span>
-            <span className="text-sm font-bold text-slate-400 mt-1">
-              {cartTotalUsd.toFixed(2)} USD ref.
-            </span>
+          {/* Input Nombre de Cliente */}
+          <div className={`w-full ${isSidebar ? "" : "md:max-w-[200px] lg:max-w-none"} flex-1 min-w-0`}>
+            <input
+              type="text"
+              placeholder="Cliente (opcional)"
+              value={customerName}
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                if (showError) setShowError(false);
+              }}
+              className={`w-full bg-slate-50 dark:bg-slate-800 border ${
+                showError
+                  ? "border-red-400 dark:border-red-500 ring-1 ring-red-500/20"
+                  : "border-slate-200 dark:border-slate-700"
+              } rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-1 focus:ring-red-500/20 transition-all placeholder:text-slate-400`}
+            />
           </div>
         </div>
 
-        {/* Input Nombre de Cliente */}
-        <div className="px-1 pt-1">
-          <input
-            type="text"
-            placeholder="Nombre del cliente (opcional)"
-            value={customerName}
-            onChange={(e) => {
-              setCustomerName(e.target.value);
-              if (showError) setShowError(false);
-            }}
-            className={`w-full bg-slate-50 dark:bg-slate-800 border ${showError
-              ? "border-red-400 dark:border-red-500 ring-2 ring-red-500/20"
-              : "border-slate-200 dark:border-slate-700"
-              } rounded-xl px-4 py-2 font-medium text-sm text-slate-700 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-400`}
-          />
-          {showError && (
-            <p className="text-xs text-red-500 font-medium px-2 py-1 flex items-center gap-1 mt-1 transition-opacity animate-in fade-in slide-in-from-top-1">
-              ⚠️ Ingresa un nombre para poder aplazar la cuenta
-            </p>
-          )}
-        </div>
+        {showError && (
+          <p className="text-xs text-red-500 font-medium px-2 py-0.5 flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+            ⚠️ Ingresa un nombre para poder aplazar la cuenta
+          </p>
+        )}
 
-        <div className="flex gap-2 w-full mt-2">
+        {/* Fila de botones con paddings y tamaños optimizados */}
+        <div className="flex gap-2 w-full mt-1.5">
           {/* Botón Imprimir Pre-cuenta */}
           {activeTabName && (
             <button
               disabled={cart.length === 0}
               onClick={onPrintPrecuenta}
-              className="w-[18%] relative group disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500/50 hover:border-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 active:scale-95 transition-all"
+              className="w-[18%] relative group disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500/50 hover:border-blue-500 rounded-xl flex items-center justify-center p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 active:scale-95 transition-all"
               title="Imprimir Pre-cuenta"
             >
-              <Printer size={20} strokeWidth={2.5} />
+              <Printer size={16} strokeWidth={2.5} />
             </button>
           )}
 
@@ -349,10 +357,10 @@ export default function CartPanel({
               }
               onOpenTab && onOpenTab(customerName);
             }}
-            className={`${activeTabName ? "w-[22%]" : "w-1/3"} relative group disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/50 hover:border-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20 active:scale-95 transition-all`}
+            className={`${activeTabName ? "w-[22%]" : "w-1/3"} relative group disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/50 hover:border-amber-500 rounded-xl flex items-center justify-center p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20 active:scale-95 transition-all`}
             title={activeTabName ? "Guardar cambios en cuenta" : "Guardar cuenta sin cobrar"}
           >
-            <Clock size={20} strokeWidth={2.5} />
+            <Clock size={16} strokeWidth={2.5} />
           </button>
 
           {/* Botón Cobrar */}
@@ -361,9 +369,9 @@ export default function CartPanel({
             onClick={() => onCheckout(customerName)}
             className={`${activeTabName ? "w-[60%]" : "w-2/3"} relative group disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <div className="absolute inset-0 bg-red-500 rounded-xl sm:rounded-2xl shadow-red-500/30 shadow-lg blur-[2px] opacity-70 group-active:opacity-100 group-hover:blur-[4px] transition-all"></div>
-            <div className="relative w-full py-3 sm:py-4 bg-red-500 text-white font-black text-sm sm:text-lg rounded-xl sm:rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-wide">
-               <CheckCircle size={18} className="sm:w-[22px] sm:h-[22px] opacity-80" />
+            <div className="absolute inset-0 bg-red-500 rounded-xl shadow-red-500/30 shadow-lg blur-[1px] opacity-70 group-active:opacity-100 group-hover:blur-[2px] transition-all"></div>
+            <div className="relative w-full py-2.5 bg-red-500 text-white font-black text-xs sm:text-sm rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 tracking-wide">
+               <CheckCircle size={15} className="opacity-80" />
               COBRAR
             </div>
           </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { ShoppingCart, X } from "lucide-react";
 import { storageService } from "../utils/storageService";
 import { webSupabase } from "../utils/supabase";
 import { useSounds } from "../hooks/useSounds";
@@ -53,6 +54,7 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
   const [isLoading, setIsLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
+  const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
   const [cart, setCart] = useState(() => {
     try {
@@ -391,13 +393,19 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
 
         if (existingIndex >= 0 && !qtyOverride) {
           const newCart = [...prev];
-          newCart[existingIndex].qty += 1;
+          newCart[existingIndex] = {
+            ...newCart[existingIndex],
+            qty: newCart[existingIndex].qty + 1,
+          };
           return newCart;
         }
 
         if (existingIndex >= 0 && qtyOverride) {
           const newCart = [...prev];
-          newCart[existingIndex].qty += qtyOverride;
+          newCart[existingIndex] = {
+            ...newCart[existingIndex],
+            qty: newCart[existingIndex].qty + qtyOverride,
+          };
           return newCart;
         }
 
@@ -855,91 +863,200 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
 
 
       {salesViewMode === "products" ? (
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-4 overflow-hidden">
-          {/* Catálogo de Productos (Izquierda) */}
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            {/* Search + Popups */}
-            <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
-              <SearchBar
-                ref={searchInputRef}
-                searchTerm={searchTerm}
-                onSearchChange={handleSetSearchTerm}
-                onKeyDown={handleSearchKeyDown}
-                searchResults={searchResults}
-                selectedIndex={selectedIndex}
-                setSelectedIndex={setSelectedIndex}
-                effectiveRate={effectiveRate}
-                addToCart={addToCart}
-                isRecording={isRecording}
-                isProcessingAudio={isProcessingAudio}
-                toggleRecording={toggleRecording}
-                hierarchyPending={hierarchyPending}
-                setHierarchyPending={setHierarchyPending}
-                weightPending={weightPending}
-                setWeightPending={setWeightPending}
+        <>
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-4 overflow-hidden">
+            {/* Catálogo de Productos (Izquierda) */}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* Search + Popups */}
+              <div className="shrink-0 mb-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+                <SearchBar
+                  ref={searchInputRef}
+                  searchTerm={searchTerm}
+                  onSearchChange={handleSetSearchTerm}
+                  onKeyDown={handleSearchKeyDown}
+                  searchResults={searchResults}
+                  selectedIndex={selectedIndex}
+                  setSelectedIndex={setSelectedIndex}
+                  effectiveRate={effectiveRate}
+                  addToCart={addToCart}
+                  isRecording={isRecording}
+                  isProcessingAudio={isProcessingAudio}
+                  toggleRecording={toggleRecording}
+                  hierarchyPending={hierarchyPending}
+                  setHierarchyPending={setHierarchyPending}
+                  weightPending={weightPending}
+                  setWeightPending={setWeightPending}
+                />
+              </div>
+
+              {/* Category Chips + Product Grid */}
+              {!showCheckout && !showReceipt && (
+                <CategoryBar
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  filteredByCategory={filteredByCategory}
+                  addToCart={addToCart}
+                  triggerHaptic={triggerHaptic}
+                  searchTerm={searchTerm}
+                />
+              )}
+
+              {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
+              <OpenTabsPanel
+                openTabs={openTabs.filter(t => !t.customerInfo?.tableId)}
+                onSelectTab={handleSelectOpenTab}
+                onRemoveTab={handleRemoveOpenTab}
+                triggerHaptic={triggerHaptic}
               />
             </div>
 
-            {/* Category Chips + Product Grid */}
-            {!showCheckout && !showReceipt && (
-              <CategoryBar
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                filteredByCategory={filteredByCategory}
-                addToCart={addToCart}
+            {/* Panel de Carrito (Derecha) */}
+            <div className="hidden lg:flex flex-col min-h-0 overflow-hidden lg:h-full">
+              <CartPanel
+                cart={cart}
+                effectiveRate={effectiveRate}
+                cartTotalUsd={cartTotalUsd}
+                cartTotalBs={cartTotalBs}
+                cartItemCount={cartItemCount}
+                updateQty={updateQty}
+                removeFromCart={removeFromCart}
+                onCheckout={(name) => {
+                  triggerHaptic && triggerHaptic();
+                  setCartCustomerName(name);
+                  setShowCheckout(true);
+                }}
+                onOpenTab={handleOpenTab}
+                onClearCart={() => {
+                  triggerHaptic && triggerHaptic();
+                  setShowClearCartConfirm(true);
+                }}
+                onEditNote={(item) => {
+                  triggerHaptic && triggerHaptic();
+                  setNotePending(item);
+                }}
+                onEditOptions={(item) => {
+                  triggerHaptic && triggerHaptic();
+                  setEditingCartId(item.cartId || item.id);
+                  setSelectedProductForOptions(item);
+                }}
+                onPrintPrecuenta={() => {
+                  if (cart.length === 0) return;
+                  triggerHaptic && triggerHaptic();
+                  printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
+                }}
                 triggerHaptic={triggerHaptic}
-                searchTerm={searchTerm}
+                activeTabName={activeTabId ? cartCustomerName : null}
+                isSidebar={true}
               />
+            </div>
+          </div>
+
+          {/* ── Mobile Cart FAB & Bottom Sheet (lg:hidden) ── */}
+          <div className="lg:hidden">
+            {/* Floating Action Button */}
+            {cart.length > 0 && !isCartSheetOpen && !showCheckout && !showReceipt && (
+              <button
+                onClick={() => {
+                  triggerHaptic && triggerHaptic();
+                  setIsCartSheetOpen(true);
+                }}
+                className="fixed bottom-[max(7.2rem,env(safe-area-inset-bottom)+6.5rem)] left-4 right-4 bg-brand hover:bg-brand-dark/95 text-white p-4 rounded-2xl shadow-xl shadow-brand/30 flex items-center justify-between z-40 active:scale-95 transition-all animate-in slide-in-from-bottom"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-xl">
+                    <ShoppingCart size={20} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-red-100 uppercase tracking-wider">Ver Cesta</div>
+                    <div className="font-black leading-none">
+                      {cartItemCount} artículo{cartItemCount !== 1 && "s"}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black leading-none">
+                    ${cartTotalUsd.toFixed(2)}
+                  </div>
+                  <div className="text-xs font-bold text-red-100 mt-1">
+                    Bs {formatBs(cartTotalBs)}
+                  </div>
+                </div>
+              </button>
             )}
 
-            {/* Open Tabs Drawer (Horizontally scrollable panel above the cart) */}
-            <OpenTabsPanel
-              openTabs={openTabs.filter(t => !t.customerInfo?.tableId)}
-              onSelectTab={handleSelectOpenTab}
-              onRemoveTab={handleRemoveOpenTab}
-              triggerHaptic={triggerHaptic}
-            />
+            {/* Bottom Sheet Overlay */}
+            {isCartSheetOpen && !showCheckout && !showReceipt && (
+              <div
+                className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 pb-[max(0px,env(safe-area-inset-bottom))]"
+                onClick={() => setIsCartSheetOpen(false)}
+              >
+                <div
+                  className="bg-slate-50 dark:bg-slate-950 w-full rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-full duration-300"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div
+                    className="shrink-0 flex justify-center pt-3 pb-2"
+                    onClick={() => setIsCartSheetOpen(false)}
+                  >
+                    <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full cursor-pointer" />
+                  </div>
+                  <div className="shrink-0 px-4 pb-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+                    <h3 className="font-black text-slate-800 dark:text-white text-lg flex items-center gap-2">
+                      <ShoppingCart size={20} className="text-brand" /> Cesta Actual
+                    </h3>
+                    <button
+                      onClick={() => setIsCartSheetOpen(false)}
+                      className="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    <CartPanel
+                      cart={cart}
+                      effectiveRate={effectiveRate}
+                      cartTotalUsd={cartTotalUsd}
+                      cartTotalBs={cartTotalBs}
+                      cartItemCount={cartItemCount}
+                      updateQty={updateQty}
+                      removeFromCart={removeFromCart}
+                      onCheckout={(name) => {
+                        triggerHaptic && triggerHaptic();
+                        setCartCustomerName(name);
+                        setShowCheckout(true);
+                        setIsCartSheetOpen(false);
+                      }}
+                      onOpenTab={(name) => {
+                        handleOpenTab(name);
+                        setIsCartSheetOpen(false);
+                      }}
+                      onClearCart={() => {
+                        triggerHaptic && triggerHaptic();
+                        setShowClearCartConfirm(true);
+                      }}
+                      onEditNote={(item) => {
+                        triggerHaptic && triggerHaptic();
+                        setNotePending(item);
+                      }}
+                      onEditOptions={(item) => {
+                        triggerHaptic && triggerHaptic();
+                        setEditingCartId(item.cartId || item.id);
+                        setSelectedProductForOptions(item);
+                      }}
+                      onPrintPrecuenta={() => {
+                        if (cart.length === 0) return;
+                        triggerHaptic && triggerHaptic();
+                        printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
+                      }}
+                      triggerHaptic={triggerHaptic}
+                      activeTabName={activeTabId ? cartCustomerName : null}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Panel de Carrito (Derecha) */}
-          <div className="flex flex-col min-h-0 overflow-hidden lg:h-full">
-            <CartPanel
-              cart={cart}
-              effectiveRate={effectiveRate}
-              cartTotalUsd={cartTotalUsd}
-              cartTotalBs={cartTotalBs}
-              cartItemCount={cartItemCount}
-              updateQty={updateQty}
-              removeFromCart={removeFromCart}
-              onCheckout={(name) => {
-                triggerHaptic && triggerHaptic();
-                setCartCustomerName(name);
-                setShowCheckout(true);
-              }}
-              onOpenTab={handleOpenTab}
-              onClearCart={() => {
-                triggerHaptic && triggerHaptic();
-                setShowClearCartConfirm(true);
-              }}
-              onEditNote={(item) => {
-                triggerHaptic && triggerHaptic();
-                setNotePending(item);
-              }}
-              onEditOptions={(item) => {
-                triggerHaptic && triggerHaptic();
-                setEditingCartId(item.cartId || item.id);
-                setSelectedProductForOptions(item);
-              }}
-              onPrintPrecuenta={() => {
-                if (cart.length === 0) return;
-                triggerHaptic && triggerHaptic();
-                printPrecuenta({ name: cartCustomerName, items: cart }, effectiveRate);
-              }}
-              triggerHaptic={triggerHaptic}
-              activeTabName={activeTabId ? cartCustomerName : null}
-            />
-          </div>
-        </div>
+        </>
       ) : (
         <TablesFloorPlan
           tables={tables}

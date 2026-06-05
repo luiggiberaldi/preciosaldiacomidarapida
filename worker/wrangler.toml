@@ -1,0 +1,7 @@
+name = "preciosaldia-edge-api"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+kv_namespaces = [
+  { binding = "PRECIOS_AL_DIA_KV", id = "7e0caaaa56274d98b2805cd3aa772048" }
+]

@@ -8,6 +8,7 @@ const roleOptions = [
   { value: "ADMIN", label: "Administrador (Acceso Completo)" },
   { value: "CAJERO", label: "Cajero (Solo Ventas y Caja)" },
   { value: "MESERO", label: "Mesero (Solo Apertura y Comandas)" },
+  { value: "COCINERO", label: "Cocinero (Solo Panel de Cocina)" },
 ];
 
 function CustomSelect({ value, onChange, options, placeholder = "Seleccionar..." }) {
@@ -84,8 +85,9 @@ export default function UsersSettings() {
       showToast("El nombre es requerido", "error");
       return;
     }
-    if ((pin.length !== 4 && pin.length !== 6) || !/^\d+$/.test(pin)) {
-      showToast("El PIN debe ser de 4 o 6 números", "error");
+    const requiredPinLength = rol === "ADMIN" ? 6 : 4;
+    if (pin.length !== requiredPinLength || !/^\d+$/.test(pin)) {
+      showToast(`El PIN debe ser de exactamente ${requiredPinLength} números`, "error");
       return;
     }
     if (pin !== confirmPin) {
@@ -131,8 +133,9 @@ export default function UsersSettings() {
 
   const handleChangePin = async (e) => {
     e.preventDefault();
-    if ((pin.length !== 4 && pin.length !== 6) || !/^\d+$/.test(pin)) {
-      showToast("El PIN debe tener 4 o 6 números", "error");
+    const requiredPinLength = changingPinUser.rol === "ADMIN" ? 6 : 4;
+    if (pin.length !== requiredPinLength || !/^\d+$/.test(pin)) {
+      showToast(`El PIN debe ser de exactamente ${requiredPinLength} números`, "error");
       return;
     }
     if (pin !== confirmPin) {
@@ -241,13 +244,15 @@ export default function UsersSettings() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PIN de Acceso (4 o 6 dígitos)</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                PIN de Acceso ({rol === "ADMIN" ? "6" : "4"} dígitos)
+              </label>
               <input
                 type="password"
-                maxLength={6}
+                maxLength={rol === "ADMIN" ? 6 : 4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••"
+                placeholder={rol === "ADMIN" ? "••••••" : "••••"}
                 className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 tracking-widest text-center"
                 required
               />
@@ -256,10 +261,10 @@ export default function UsersSettings() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirmar PIN</label>
               <input
                 type="password"
-                maxLength={6}
+                maxLength={rol === "ADMIN" ? 6 : 4}
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••"
+                placeholder={rol === "ADMIN" ? "••••••" : "••••"}
                 className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 tracking-widest text-center"
                 required
               />
@@ -361,13 +366,15 @@ export default function UsersSettings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nuevo PIN (4 o 6 dígitos)</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Nuevo PIN ({changingPinUser.rol === "ADMIN" ? "6" : "4"} dígitos)
+              </label>
               <input
                 type="password"
-                maxLength={6}
+                maxLength={changingPinUser.rol === "ADMIN" ? 6 : 4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••"
+                placeholder={changingPinUser.rol === "ADMIN" ? "••••••" : "••••"}
                 className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 tracking-widest text-center"
                 required
               />
@@ -376,10 +383,10 @@ export default function UsersSettings() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirmar PIN</label>
               <input
                 type="password"
-                maxLength={6}
+                maxLength={changingPinUser.rol === "ADMIN" ? 6 : 4}
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••"
+                placeholder={changingPinUser.rol === "ADMIN" ? "••••••" : "••••"}
                 className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 tracking-widest text-center"
                 required
               />
@@ -424,6 +431,10 @@ export default function UsersSettings() {
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${
                   user.rol === "ADMIN"
                     ? "bg-indigo-500 text-white"
+                    : user.rol === "MESERO"
+                    ? "bg-amber-500 text-white"
+                    : user.rol === "COCINERO"
+                    ? "bg-red-500 text-white"
                     : "bg-emerald-500 text-white"
                 }`}>
                   {user.nombre.charAt(0).toUpperCase()}
@@ -444,6 +455,10 @@ export default function UsersSettings() {
                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${
                       user.rol === "ADMIN"
                         ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 border-indigo-100 dark:border-indigo-900/30"
+                        : user.rol === "MESERO"
+                        ? "bg-amber-50 dark:bg-amber-950/20 text-amber-500 border-amber-100 dark:border-amber-900/30"
+                        : user.rol === "COCINERO"
+                        ? "bg-red-50 dark:bg-red-950/20 text-red-500 border-red-100 dark:border-red-900/30"
                         : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 border-emerald-100 dark:border-emerald-900/30"
                     }`}>
                       {user.rol}

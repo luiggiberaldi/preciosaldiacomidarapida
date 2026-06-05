@@ -13,6 +13,10 @@ const AVATAR_COLORS = {
     bg: 'bg-gradient-to-b from-amber-400 to-amber-500 border-t-2 border-amber-300 shadow-[0_6px_0_#b45309,_0_12px_25px_rgba(245,158,11,0.4)]', 
     text: 'text-white font-black' 
   },
+  COCINERO: { 
+    bg: 'bg-gradient-to-b from-red-400 to-red-500 border-t-2 border-red-300 shadow-[0_6px_0_#b91c1c,_0_12px_25px_rgba(239,68,68,0.4)]', 
+    text: 'text-white font-black' 
+  },
 };
 
 export default function LoginAvatar({ user, size = 'lg', className = '' }) {

@@ -27,7 +27,7 @@ export default function UserCard({ user, onClick }) {
 
               {/* Fake thickness layers (3D depth) */}
               <div className="absolute inset-0 bg-black/40 rounded-3xl translate-y-4 translate-x-4 blur-xl" />
-              <div className={`absolute inset-0 rounded-3xl translate-y-2 translate-x-1 ${user.rol === 'ADMIN' ? 'bg-indigo-500/20' : user.rol === 'MESERO' ? 'bg-amber-500/20' : 'bg-emerald-500/20'}`} />
+              <div className={`absolute inset-0 rounded-3xl translate-y-2 translate-x-1 ${user.rol === 'ADMIN' ? 'bg-indigo-500/20' : user.rol === 'MESERO' ? 'bg-amber-500/20' : user.rol === 'COCINERO' ? 'bg-red-500/20' : 'bg-emerald-500/20'}`} />
 
               {/* Admin Crown */}
               {isAdmin && (
@@ -55,8 +55,8 @@ export default function UserCard({ user, onClick }) {
             <h3 className="text-lg font-bold text-slate-800 drop-shadow-sm">
               {toTitleCase(user.nombre)}
             </h3>
-            <span className={`block text-[9px] font-black uppercase tracking-[0.2em] ${user.rol === 'ADMIN' ? 'text-sky-500' : user.rol === 'MESERO' ? 'text-amber-500' : 'text-teal-500'}`}>
-              {user.rol === 'ADMIN' ? 'Administrador' : user.rol === 'MESERO' ? 'Mesero' : 'Cajero'}
+            <span className={`block text-[9px] font-black uppercase tracking-[0.2em] ${user.rol === 'ADMIN' ? 'text-sky-500' : user.rol === 'MESERO' ? 'text-amber-500' : user.rol === 'COCINERO' ? 'text-red-500' : 'text-teal-500'}`}>
+              {user.rol === 'ADMIN' ? 'Administrador' : user.rol === 'MESERO' ? 'Mesero' : user.rol === 'COCINERO' ? 'Cocinero' : 'Cajero'}
             </span>
           </CardItem>
 

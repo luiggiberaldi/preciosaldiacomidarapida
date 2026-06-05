@@ -128,35 +128,7 @@ export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [deleteAllConfirmText, setDeleteAllConfirmText] = useState("");
 
-  // Top Sales State
-  const [topSellingIds, setTopSellingIds] = useState([]);
 
-  React.useEffect(() => {
-    let isMounted = true;
-    const fetchTopSales = async () => {
-      try {
-        const sales = await storageService.getItem("bodega_sales_v1") || [];
-        if (!isMounted) return;
-        const counts = {};
-        sales.forEach(sale => {
-          if (sale.items) {
-            sale.items.forEach(item => {
-              counts[item.id] = (counts[item.id] || 0) + (item.qty || 1);
-            });
-          }
-        });
-        const topIds = Object.entries(counts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(entry => entry[0]);
-        setTopSellingIds(topIds);
-      } catch (err) {
-        console.error("Error calculating top sales", err);
-      }
-    };
-    fetchTopSales();
-    return () => { isMounted = false; };
-  }, []);
 
   // ─── FILTERING & PAGINATION ─────────────────────────────
 
@@ -272,6 +244,30 @@ export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
       const tenantId = getTenantId();
       console.log("[POS] autoSyncWebCatalog TRIGGERED. Tenant:", tenantId, "Products received:", updatedProducts.length);
 
+      // Asegurar que el tenant existe en web_config para evitar errores de clave foránea
+      try {
+        const { data: configExists, error: configCheckError } = await webSupabase
+          .from("web_config")
+          .select("tenant_id")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        
+        if (!configExists && !configCheckError) {
+          console.log(`[POS] Creando configuración de tenant preventivo en web_config para: ${tenantId}`);
+          const tempSlug = `negocio-${tenantId.substring(0, 8)}`;
+          await webSupabase
+            .from("web_config")
+            .insert({
+              tenant_id: tenantId,
+              slug: tempSlug,
+              business_name: "Mi Negocio",
+              exchange_rate: 1.0
+            });
+        }
+      } catch (configErr) {
+        console.warn("[POS] Error en verificación preventiva de web_config:", configErr);
+      }
+
       const activeProducts = updatedProducts
         .filter((p) => p.available !== false && p.publishWeb !== false)
         .map((p) => ({
@@ -311,6 +307,10 @@ export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
         .from("web_config")
         .update({ exchange_rate: effectiveRate || 1 })
         .eq("tenant_id", tenantId);
+
+      // Invalidate Cloudflare Worker Cache
+      fetch(`https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/menu/invalidate?tenant_id=${tenantId}`, { method: "POST" })
+        .catch(err => console.warn("Failed cache invalidation in autoSyncWebCatalog:", err));
 
     } catch (error) {
       console.error("Error auto-syncing web catalog:", error);
@@ -609,16 +609,7 @@ export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
               <Trash2 size={16} strokeWidth={2.5} />
             </button>
           )}
-          <button
-            onClick={() => {
-              triggerHaptic && triggerHaptic();
-              onNavigate && onNavigate("ajustes");
-            }}
-            className="p-2.5 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl transition-all active:scale-95"
-            title="Ajustes"
-          >
-            <Settings size={16} strokeWidth={2.5} />
-          </button>
+
           {products.length > 0 && (
             <button
               onClick={handlePublishWeb}
@@ -750,35 +741,7 @@ export const ProductsView = ({ rates, triggerHaptic, onNavigate }) => {
             </div>
           )}
 
-          {/* Top Ventas Section */}
-          {activeCategory === "todos" && searchTerm === "" && topSellingIds.length > 0 && currentPage === 1 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2 px-1">
-                <Flame size={16} className="text-orange-500" />
-                Top Ventas
-              </h3>
-              <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide px-1 snap-x">
-                {topSellingIds.map(id => {
-                  const p = products.find(prod => prod.id === id);
-                  if (!p) return null;
-                  return (
-                    <div key={p.id} className="w-[180px] shrink-0 snap-start">
-                      <ProductCard
-                        product={p}
-                        effectiveRate={effectiveRate}
-                        categories={categories}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 mt-4 flex items-center gap-2 px-1">
-                Todos los productos
-              </h3>
-            </div>
-          )}
+
 
           <div className="flex-1 overflow-y-auto pb-4 scrollbar-hide">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">

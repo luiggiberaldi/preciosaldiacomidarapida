@@ -8,6 +8,7 @@ import {
   Trash2,
   Shuffle,
   Recycle,
+  Printer,
 } from "lucide-react";
 import { formatBs } from "../../utils/calculatorUtils";
 import {
@@ -27,6 +28,7 @@ export default function SalesHistory({
   onOpenDeleteModal,
   onRequestClientForTicket,
   onRecycleSale,
+  onPrintSale,
 }) {
   const [expandedSaleId, setExpandedSaleId] = useState(null);
 
@@ -201,6 +203,19 @@ export default function SalesHistory({
                         className="py-2 px-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 hover:dark:bg-blue-900/50 font-bold rounded-lg transition-colors flex justify-center items-center gap-1.5 text-xs shadow-sm"
                       >
                         PDF
+                      </button>
+                    )}
+
+                    {onPrintSale && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPrintSale(s);
+                        }}
+                        className="py-2 px-3 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 hover:dark:bg-slate-800 font-bold rounded-lg transition-colors flex justify-center items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-800 shadow-sm active:scale-95"
+                        title="Imprimir"
+                      >
+                        <Printer size={14} />
                       </button>
                     )}
 

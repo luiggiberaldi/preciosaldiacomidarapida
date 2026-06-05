@@ -31,6 +31,7 @@ export default function ConfirmModal({
   confirmText = "Confirmar",
   cancelText = "Cancelar",
   variant = "danger", // 'danger' | 'warning' | 'cart'
+  showConfirmButton = true,
 }) {
   if (!isOpen) return null;
 
@@ -81,15 +82,17 @@ export default function ConfirmModal({
           >
             {cancelText}
           </button>
-          <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className={`flex-1 py-3.5 text-sm font-bold text-white ${colors.btn} rounded-xl shadow-lg active:scale-95 transition-all`}
-          >
-            {confirmText}
-          </button>
+          {showConfirmButton && (
+            <button
+              onClick={() => {
+                onConfirm && onConfirm();
+                onClose();
+              }}
+              className={`flex-1 py-3.5 text-sm font-bold text-white ${colors.btn} rounded-xl shadow-lg active:scale-95 transition-all`}
+            >
+              {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>

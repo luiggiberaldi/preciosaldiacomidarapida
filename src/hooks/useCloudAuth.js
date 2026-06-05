@@ -197,17 +197,8 @@ export function useCloudAuth() {
 
     loadRole();
 
-    // Timeout local de seguridad para evitar que la carga se quede colgada
-    const roleTimeout = setTimeout(() => {
-      if (active) {
-        console.warn("[useCloudAuth] Timeout local esperando rol.");
-        setLoading(false);
-      }
-    }, 8000);
-
     return () => {
       active = false;
-      clearTimeout(roleTimeout);
     };
   }, [cloudUser]);
 

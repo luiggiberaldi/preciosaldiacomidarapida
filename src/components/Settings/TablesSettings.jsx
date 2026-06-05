@@ -84,6 +84,7 @@ export default function TablesSettings({ triggerHaptic }) {
   // Confirmation modal states
   const [pendingDeleteZone, setPendingDeleteZone] = useState(null);
   const [pendingDeleteTable, setPendingDeleteTable] = useState(null);
+  const [activeTablesWarning, setActiveTablesWarning] = useState(null);
 
   // Pagination states for Tables List
   const [currentPage, setCurrentPage] = useState(1);
@@ -151,15 +152,37 @@ export default function TablesSettings({ triggerHaptic }) {
   };
 
   const handleDeleteZone = (zoneName) => {
-    // Check if zone contains tables
-    const hasTables = tables.some((t) => t.zone === zoneName);
-    if (hasTables) {
-      showToast("No se puede eliminar: La zona contiene mesas activas", "error");
+    if (zones.length <= 1) {
+      showToast("Debe haber al menos una zona activa", "error");
       return;
     }
 
-    if (zones.length <= 1) {
-      showToast("Debe haber al menos una zona activa", "error");
+    // Obtener mesas pertenecientes a esta zona
+    const zoneTables = tables.filter((t) => t.zone === zoneName);
+
+    // Cargar cuentas activas desde localStorage
+    let openTabs = [];
+    try {
+      const saved = localStorage.getItem("bodega_open_tabs_v1");
+      openTabs = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Error al cargar openTabs:", e);
+    }
+
+    // Filtrar cuáles de las mesas de esta zona están activas (tienen cuenta abierta)
+    const activeTables = zoneTables.filter((table) =>
+      openTabs.some(
+        (tab) =>
+          tab.customerInfo?.tableId === table.id ||
+          (tab.name && table.name && tab.name.toLowerCase() === table.name.toLowerCase())
+      )
+    );
+
+    if (activeTables.length > 0) {
+      setActiveTablesWarning({
+        zoneName,
+        activeTables,
+      });
       return;
     }
 
@@ -169,7 +192,13 @@ export default function TablesSettings({ triggerHaptic }) {
 
   const confirmDeleteZone = () => {
     if (!pendingDeleteZone) return;
+    
+    // Eliminar la zona de la lista
     setZones((prev) => prev.filter((z) => z !== pendingDeleteZone));
+    
+    // Eliminar las mesas asociadas a la zona (que sabemos que no están activas)
+    setTables((prev) => prev.filter((t) => t.zone !== pendingDeleteZone));
+
     if (newTableZone === pendingDeleteZone) {
       setNewTableZone(zones.find((z) => z !== pendingDeleteZone) || "");
     }
@@ -489,6 +518,22 @@ export default function TablesSettings({ triggerHaptic }) {
         message="Se borrará permanentemente de la distribución del plano del POS. Esta acción no se puede deshacer."
         confirmText="Sí, eliminar mesa"
         variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={!!activeTablesWarning}
+        onClose={() => setActiveTablesWarning(null)}
+        title="No se puede eliminar la zona"
+        message={
+          activeTablesWarning
+            ? `La zona "${activeTablesWarning.zoneName}" tiene mesas activas que deben cerrarse primero:\n\n` +
+              activeTablesWarning.activeTables.map((t) => `• ${t.name}`).join("\n") +
+              `\n\nPor favor, cierra las cuentas abiertas en el panel de ventas de estas mesas antes de intentar eliminar la zona.`
+            : ""
+        }
+        cancelText="Entendido"
+        showConfirmButton={false}
+        variant="warning"
       />
     </div>
   );

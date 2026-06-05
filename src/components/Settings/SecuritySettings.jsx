@@ -22,8 +22,8 @@ export default function SecuritySettings({ onClose }) {
 
   const handleSavePin = async (e) => {
     e.preventDefault();
-    if ((pinInput.length !== 4 && pinInput.length !== 6) || !/^\d+$/.test(pinInput)) {
-      showToast("El PIN debe tener 4 o 6 números", "error");
+    if (pinInput.length !== 6 || !/^\d+$/.test(pinInput)) {
+      showToast("El PIN del Administrador debe ser de exactamente 6 números", "error");
       return;
     }
     if (pinInput !== confirmPinInput) {
@@ -74,7 +74,7 @@ export default function SecuritySettings({ onClose }) {
         <form onSubmit={handleSavePin} className="space-y-4">
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Nuevo PIN (4 o 6 dígitos)
+              Nuevo PIN (6 dígitos)
             </label>
             <input
               type="password"
@@ -88,7 +88,7 @@ export default function SecuritySettings({ onClose }) {
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Confirmar PIN
+              Confirmar PIN (6 dígitos)
             </label>
             <input
               type="password"

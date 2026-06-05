@@ -20,7 +20,7 @@ export function useAutoLock() {
     }, []);
 
     const getLockMinutes = useCallback(async () => {
-        if (usuarioActivo?.rol === 'CAJERO' || usuarioActivo?.rol === 'MESERO') {
+        if (usuarioActivo?.rol === 'CAJERO' || usuarioActivo?.rol === 'MESERO' || usuarioActivo?.rol === 'COCINERO') {
             return CAJERO_LOCK_MINUTES;
         }
         // Leer el timeout configurado en el sistema

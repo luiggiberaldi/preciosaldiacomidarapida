@@ -68,7 +68,7 @@ export default function DashboardView({
 }) {
   const { notifyCierrePendiente, requestPermission } = useNotifications();
   const { logAction } = useAudit();
-  const { isConnected: printerConnected, printClose } = usePrinter();
+  const { isConnected: printerConnected, printClose, printTicket } = usePrinter();
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -632,6 +632,7 @@ export default function DashboardView({
             onVoidSale={handleVoidSale}
             onShareWhatsApp={handleShareWhatsApp}
             onDownloadPDF={handleDownloadPDF}
+            onPrintSale={(sale) => printTicket(sale, bcvRate)}
             onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
             onRequestClientForTicket={(sale) => {
               triggerHaptic && triggerHaptic();

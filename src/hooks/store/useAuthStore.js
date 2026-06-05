@@ -14,8 +14,10 @@ async function hashPin(pin) {
 }
 
 const DEFAULT_USERS = [
-    { id: 1, nombre: 'Administrador', rol: 'ADMIN', pin: '0000', pinHashed: false },
-    { id: 2, nombre: 'Cajero', rol: 'CAJERO', pin: '0000', pinHashed: false }
+    { id: 1, nombre: 'Administrador', rol: 'ADMIN', pin: '000000', pinHashed: false },
+    { id: 2, nombre: 'Cajero', rol: 'CAJERO', pin: '0000', pinHashed: false },
+    { id: 3, nombre: 'Mesero', rol: 'MESERO', pin: '0000', pinHashed: false },
+    { id: 4, nombre: 'Cocinero', rol: 'COCINERO', pin: '0000', pinHashed: false }
 ];
 
 export const useAuthStore = create(

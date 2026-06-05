@@ -114,6 +114,7 @@ export default function App() {
   const usuarioActivo = useAuthStore((s) => s.usuarioActivo);
   const isLocalCajero = usuarioActivo?.rol === "CAJERO";
   const isLocalMesero = usuarioActivo?.rol === "MESERO";
+  const isLocalCocinero = usuarioActivo?.rol === "COCINERO";
   const { cloudUser, role, isAdmin, isEmployee, isKitchen, loading: authLoading, isRecoveryFlow, setRecoveryFlow } = useCloudAuth();
   const storeConfig = { name: "PreciosAlDía Comida Rápida", whatsappNumber: "" }; // Will be populated from hook later
 
@@ -166,6 +167,8 @@ export default function App() {
     if (isLocalMesero && activeTab !== "mesas") {
       setActiveTab("mesas");
       setSalesViewMode("tables");
+    } else if (isLocalCocinero && activeTab !== "cocina") {
+      setActiveTab("cocina");
     } else if (cloudUser) {
       if (isKitchen && activeTab !== "cocina") {
         setActiveTab("cocina");
@@ -173,7 +176,7 @@ export default function App() {
         setActiveTab("ventas");
       }
     }
-  }, [cloudUser, isKitchen, isEmployee, isLocalCajero, isLocalMesero, activeTab]);
+  }, [cloudUser, isKitchen, isEmployee, isLocalCajero, isLocalMesero, isLocalCocinero, activeTab]);
 
   // Redirección si se deshabilita el módulo de mesas
   useEffect(() => {
@@ -294,6 +297,9 @@ export default function App() {
     if (tab.id === "mesas" && !hasTablesSystem) return false;
     if (isLocalMesero) {
       return tab.id === "mesas"; // El mesero local solo ve la pestaña de mesas
+    }
+    if (isLocalCocinero) {
+      return tab.id === "cocina"; // El cocinero local solo ve la pestaña de cocina
     }
     if (!cloudUser) return true; // Modo local/offline sin roles
     if (isLocalCajero && ["inicio", "ajustes"].includes(tab.id)) return false; // El cajero local no ve dashboard ni ajustes

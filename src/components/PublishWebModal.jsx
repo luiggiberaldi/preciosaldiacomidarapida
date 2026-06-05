@@ -68,6 +68,10 @@ export default function PublishWebModal({
             // Sync the exchange rate continuously to ensure accurate web display
             await webSupabase.from("web_config").update({ exchange_rate: effectiveRate || 1 }).eq("tenant_id", tenantId);
 
+            // Invalidate Cloudflare Worker Cache
+            fetch(`https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/menu/invalidate?tenant_id=${tenantId}`, { method: "POST" })
+              .catch(err => console.warn("Failed cache invalidation:", err));
+
             // Update local state (which triggers storage save)
             onUpdateProductPublish(product.id, newStatus);
         } finally {

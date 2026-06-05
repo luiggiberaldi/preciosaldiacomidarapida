@@ -21,6 +21,8 @@ import {
   Bike,
   Package,
   FileText,
+  AlertCircle,
+  Inbox,
 } from "lucide-react";
 import { showToast } from "../components/Toast";
 import { useSounds } from "../hooks/useSounds";
@@ -126,15 +128,10 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
     let webPending = [];
     try {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const { data, error } = await webSupabase
-        .from("web_orders")
-        .select("*")
-        .eq("tenant_id", getTenantId())
-        .gte("created_at", startOfDay.toISOString())
-        .order("created_at", { ascending: true });
-      if (error) throw error;
+      const tenantId = getTenantId();
+      const res = await fetch(`https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/kitchen/orders?tenant_id=${tenantId}`);
+      if (!res.ok) throw new Error("Worker responded with error status");
+      const data = await res.json();
 
       webPending = (data || [])
         .map((wo, index) => { wo._dailySequence = index + 1; return wo; })
@@ -163,7 +160,7 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
           };
         });
     } catch (error) {
-      console.error("Error fetching web orders for kitchen:", error);
+      console.error("Error fetching web orders for kitchen from Worker:", error);
     }
 
     const allPending = [...localPending, ...webPending];
@@ -188,8 +185,36 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 5000);
+    const interval = setInterval(loadOrders, 30000); // 30s backup polling
     return () => clearInterval(interval);
+  }, []);
+
+  // EventSource SSE real-time orders hook
+  useEffect(() => {
+    const tenantId = getTenantId();
+    if (!tenantId) return;
+
+    let sse;
+    const connectSSE = () => {
+      sse = new EventSource(`https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/stream?tenant_id=${tenantId}`);
+
+      sse.addEventListener("new_order", () => {
+        console.log("[POS] New order SSE event received. Reloading...");
+        loadOrders();
+      });
+
+      sse.onerror = (e) => {
+        console.warn("[POS] SSE stream disconnected, retrying in 5s...", e);
+        sse.close();
+        setTimeout(connectSSE, 5000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (sse) sse.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -570,17 +595,32 @@ export default function KitchenView({ triggerHaptic, onNavigate }) {
         {pendingOrders.length > 0 && (
           <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
             {urgentCount > 0 && (
-              <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-1 whitespace-nowrap animate-pulse">
-                🔴 {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-1.5 whitespace-nowrap animate-pulse">
+                <AlertCircle size={12} className="text-red-500 dark:text-red-400 shrink-0" />
+                <span>{urgentCount} urgente{urgentCount > 1 ? "s" : ""}</span>
               </span>
             )}
             {warningCount > 0 && (
-              <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center gap-1 whitespace-nowrap">
-                🟠 {warningCount} en espera
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center gap-1.5 whitespace-nowrap">
+                <Clock size={12} className="text-orange-500 dark:text-orange-400 shrink-0" />
+                <span>{warningCount} en espera</span>
               </span>
             )}
-            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center gap-1 whitespace-nowrap">
-              🔵 {newOrders.length} nuevos • 🟠 {preparingOrders.length} preparando • 🟢 {readyOrders.length} listos
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center gap-3 whitespace-nowrap">
+              <span className="flex items-center gap-1.5">
+                <Inbox size={12} className="text-blue-500 dark:text-blue-400 shrink-0" />
+                <span>{newOrders.length} nuevos</span>
+              </span>
+              <span className="text-slate-300 dark:text-slate-700 font-normal">•</span>
+              <span className="flex items-center gap-1.5">
+                <Flame size={12} className="text-orange-500 dark:text-orange-400 shrink-0" />
+                <span>{preparingOrders.length} preparando</span>
+              </span>
+              <span className="text-slate-300 dark:text-slate-700 font-normal">•</span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
+                <span>{readyOrders.length} listos</span>
+              </span>
             </span>
           </div>
         )}

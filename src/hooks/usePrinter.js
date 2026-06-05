@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { printerSerialInstance, PrinterSerial } from '../services/PrinterSerial';
+import { useCallback } from 'react';
 import { showToast } from '../components/Toast';
 
 // Helper to copy precuenta to clipboard as formatted text
@@ -42,452 +41,842 @@ async function copyPrecuentaToClipboard(tab, rate) {
   await navigator.clipboard.writeText(textTicket);
 }
 
-export function usePrinter() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSupported] = useState(() => PrinterSerial.isSupported());
-  const [paperWidth, setPaperWidthState] = useState(() => printerSerialInstance.paperWidth);
+function getTicketHeaderAndSubtitle() {
+  return {
+    header: localStorage.getItem("bodega_store_name") || "PRECIOS AL DIA",
+    subtitle: "Comida Rápida"
+  };
+}
 
-  // Intentar auto-conectar al montar el hook
-  useEffect(() => {
-    const tryAutoConnect = async () => {
-      if (isSupported) {
-        const connected = await printerSerialInstance.autoConnect();
-        setIsConnected(connected);
-      }
-    };
-    tryAutoConnect();
-  }, [isSupported]);
+function _printSystemHTML(sale, bcvRate) {
+  const rate = sale.rate || bcvRate || 1;
+  const saleNum = String(sale.saleNumber || 0).padStart(7, '0');
+  const d = new Date(sale.timestamp);
+  const fecha = d.toLocaleDateString('es-VE');
+  const hora = d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  
+  const { header } = getTicketHeaderAndSubtitle();
 
-  // Listener para desconexión física del puerto USB/Serial
-  useEffect(() => {
-    if (!isSupported) return;
+  const currencyMode = localStorage.getItem("pda_ticket_currency_mode") || "mixto";
+  const showBcv = localStorage.getItem("pda_ticket_show_bcv_rate") !== "false";
+  const showEuro = localStorage.getItem("pda_ticket_show_euro") === "true";
 
-    const handleDisconnect = (e) => {
-      console.log('[usePrinter] Dispositivo desconectado fisicamente:', e.target);
-      if (printerSerialInstance.port === e.target) {
-        printerSerialInstance.disconnect();
-        setIsConnected(false);
-        showToast('Impresora desconectada fisicamente.', 'info');
-      }
-    };
-
-    navigator.serial.addEventListener('disconnect', handleDisconnect);
-    return () => {
-      navigator.serial.removeEventListener('disconnect', handleDisconnect);
-    };
-  }, [isSupported]);
-
-  // Conectar solicitando puerto
-  const connect = useCallback(async () => {
+  let euroRate = 0;
+  if (showEuro) {
     try {
-      const ok = await printerSerialInstance.connect();
-      setIsConnected(ok);
-      if (ok) {
-        showToast('Impresora conectada con exito.', 'success');
+      const saved = JSON.parse(localStorage.getItem("monitor_rates_v12") || "{}");
+      euroRate = saved?.euro?.price || 0;
+    } catch (_) {}
+  }
+  
+  const itemsHtml = (sale.items || []).map(item => {
+    const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
+    const unit = item.isWeight ? 'Kg' : 'u';
+    const itemPrice = item.priceUsd || item.priceUsdt || item.price || 0;
+    const sub = itemPrice * item.qty;
+    const subBs = sub * rate;
+    const name = item.name.length > 22 ? item.name.substring(0, 22) + '...' : item.name;
+
+    let rightPart = '';
+    let subtext = '';
+
+    if (currencyMode === 'usd') {
+      rightPart = `$${sub.toFixed(2)}`;
+      subtext = `$${itemPrice.toFixed(2)} c/u`;
+    } else if (currencyMode === 'bs') {
+      rightPart = `Bs ${Number(subBs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      subtext = `Bs ${Number(itemPrice * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u`;
+    } else {
+      rightPart = `$${sub.toFixed(2)}`;
+      subtext = `$${itemPrice.toFixed(2)} c/u - Bs ${Number(subBs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    return `
+      <tr>
+        <td style="text-align:left;font-size:11px;padding:2px 0;">${qty}${unit}</td>
+        <td style="text-align:left;font-size:11px;padding:2px 0;line-height:1.2;">${name}</td>
+        <td style="text-align:right;font-size:11px;font-weight:bold;padding:2px 0;">${rightPart}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan="2" style="font-size:9px;color:#333;padding:0 0 4px;">${subtext}</td>
+      </tr>`;
+  }).join('');
+
+  const paymentsHtml = (sale.payments || []).map(p => {
+    const isBs = p.methodId?.includes('_bs') || p.methodId === 'pago_movil';
+    const val = isBs
+      ? 'Bs ' + Number(p.amountUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '$' + Number(p.amountUsd || 0).toFixed(2);
+    return `
+      <tr>
+        <td style="font-size:11px;padding:2px 0;">${p.methodLabel || 'Pago'}</td>
+        <td style="font-size:11px;font-weight:bold;text-align:right;padding:2px 0;">${val}</td>
+      </tr>`;
+  }).join('');
+
+  let totalHtml = '';
+  if (currencyMode === 'usd') {
+    totalHtml = `<div class="total-usd">$${parseFloat(sale.totalUsd || 0).toFixed(2)}</div>`;
+  } else if (currencyMode === 'bs') {
+    totalHtml = `<div class="total-usd">Bs ${Number(sale.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>`;
+  } else {
+    totalHtml = `
+      <div class="total-usd">$${parseFloat(sale.totalUsd || 0).toFixed(2)}</div>
+      <div class="total-bs">Bs ${Number(sale.totalBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>`;
+  }
+
+  const totalEur = euroRate > 0 ? (sale.totalUsd * rate) / euroRate : 0;
+  if (showEuro && totalEur > 0) {
+    totalHtml += `<div style="font-size: 13px; font-weight: bold; text-align: center; margin-top: 2px;">€ ${totalEur.toFixed(2)} EUR</div>`;
+  }
+
+  let ratesHtml = '';
+  if (showBcv) {
+    ratesHtml += `<div class="center" style="font-size:9px;margin:2px 0;">Tasa BCV: Bs ${Number(rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por $1</div>`;
+  }
+  if (showEuro && euroRate > 0) {
+    ratesHtml += `<div class="center" style="font-size:9px;margin:2px 0;">Tasa Euro BCV: Bs ${Number(euroRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por €1</div>`;
+  }
+  const ratesContainer = ratesHtml ? `<div style="margin:4px 0;">${ratesHtml}</div><hr class="dash">` : '';
+
+  let fiadoHtml = '';
+  if (sale.fiadoUsd > 0) {
+    let fiadoRow = '';
+    if (currencyMode === 'usd') {
+      fiadoRow = `
+        <tr>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;">Deuda pendiente:</td>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;text-align:right;">$${sale.fiadoUsd.toFixed(2)}</td>
+        </tr>`;
+    } else if (currencyMode === 'bs') {
+      fiadoRow = `
+        <tr>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;">Deuda pendiente:</td>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;text-align:right;">Bs ${Number(sale.fiadoUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>`;
+    } else {
+      fiadoRow = `
+        <tr>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;">Deuda pendiente:</td>
+          <td style="color:#dc3545;font-weight:bold;font-size:11px;text-align:right;">$${sale.fiadoUsd.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="color:#dc3545;font-size:9px;text-align:right;">Bs ${Number(sale.fiadoUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
+        </tr>`;
+    }
+    fiadoHtml = `
+      <div style="margin-top:6px;padding:4px 0;border-top:1px dashed #000;">
+        <table style="width:100%">${fiadoRow}</table>
+      </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ticket #${saleNum}</title>
+<style>
+    @page {
+        size: 58mm auto;
+        margin: 0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        width: 48mm;
+        max-width: 48mm;
+        margin: 0 auto;
+        padding: 4mm 2mm;
+        color: #000;
+        background: #fff;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .dash {
+        border: none;
+        border-top: 1px dashed #000;
+        margin: 4px 0;
+    }
+    .total-usd {
+        font-size: 24px;
+        font-weight: bold;
+        color: #000;
+        text-align: center;
+        margin: 2px 0;
+    }
+    .total-bs {
+        font-size: 14px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    @media print {
+        body { width: 48mm; max-width: 48mm; }
+    }
+    @media screen {
+        body {
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="center" style="margin-bottom:6px;line-height:1.2;">
+        <img src="/logoprincipal.png" style="max-width: 100%; height: auto; display: block; margin: 0 auto 8px;" />
+    </div>
+
+    <hr class="dash">
+
+    <table>
+        <tr>
+            <td style="font-size:10px;font-weight:bold;">N: #${saleNum}</td>
+            <td style="font-size:9px;text-align:right;">${fecha} ${hora}</td>
+        </tr>
+    </table>
+    <div style="font-size:10px;margin:3px 0 2px;">
+        <span style="font-weight:bold;">Cliente:</span> ${sale.customerName || 'Consumidor Final'}
+    </div>
+
+    <hr class="dash">
+
+    <table style="margin-bottom:4px;">
+        <tr style="font-size:9px;font-weight:bold;">
+            <td style="text-align:left;">CANT</td>
+            <td style="text-align:left;">DESCRIPCION</td>
+            <td style="text-align:right;">IMPORTE</td>
+        </tr>
+    </table>
+
+    <table>${itemsHtml}</table>
+
+    <hr class="dash">
+
+    ${ratesContainer}
+
+    <div style="margin:8px 0;">
+        <div class="center bold" style="font-size:10px;margin-bottom:4px;">TOTAL A PAGAR</div>
+        ${totalHtml}
+    </div>
+
+    <hr class="dash">
+
+    ${((sale.payments && sale.payments.length > 0) || sale.fiadoUsd > 0) ? `
+    <div style="margin:4px 0;">
+        <div style="font-size:9px;font-weight:bold;margin-bottom:4px;">PAGOS REALIZADOS</div>
+        <table>${paymentsHtml}</table>
+        ${fiadoHtml}
+    </div>
+    <hr class="dash">
+    ` : ''}
+
+    <div class="center bold" style="font-size:11px;margin:8px 0 4px;">¡Gracias por tu compra!</div>
+    <div class="center" style="font-size:7.5px;color:#333;margin-top:4px;line-height:1.4;">Este documento no constituye factura fiscal.<br>Comprobante de control interno sin validez tributaria.</div>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank', 'width=350,height=600');
+  if (!printWindow) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:58mm;height:auto;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 300);
+    };
+    return true;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  let printed = false;
+  printWindow.onload = () => {
+    setTimeout(() => {
+      if (!printed) {
+        printed = true;
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
       }
-    } catch (e) {
-      console.error('[usePrinter] Error al conectar:', e);
-      setIsConnected(false);
-      showToast('No se selecciono ningun puerto de impresion.', 'warning');
+    }, 400);
+  };
+
+  setTimeout(() => {
+    if (!printed) {
+      printed = true;
+      try {
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      } catch(_) {}
     }
-  }, []);
+  }, 1500);
 
-  // Desconectar
-  const disconnect = useCallback(async () => {
-    await printerSerialInstance.disconnect();
-    setIsConnected(false);
-    showToast('Impresora desconectada.', 'info');
-  }, []);
+  return true;
+}
 
-  // Cambiar ancho de papel
-  const changePaperWidth = useCallback((width) => {
-    printerSerialInstance.setPaperWidth(width);
-    setPaperWidthState(width);
-    showToast(`Ancho del papel configurado a ${width}.`, 'success');
-  }, []);
+function _printSystemPrecuentaHTML(tab, bcvRate) {
+  const rate = bcvRate || 1;
+  const d = new Date();
+  const dateStr = d.toLocaleDateString('es-VE');
+  const timeStr = d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  
+  const currencyMode = localStorage.getItem("pda_ticket_currency_mode") || "mixto";
+  const showBcv = localStorage.getItem("pda_ticket_show_bcv_rate") !== "false";
+  const showEuro = localStorage.getItem("pda_ticket_show_euro") === "true";
 
-  // Imprimir un Ticket de Venta
-  const printTicket = useCallback(async (sale, bcvRate) => {
-    if (!isSupported) {
-      showToast('Tu navegador no soporta impresion serial directa (Web Serial).', 'error');
-      return false;
+  let euroRate = 0;
+  if (showEuro) {
+    try {
+      const saved = JSON.parse(localStorage.getItem("monitor_rates_v12") || "{}");
+      euroRate = saved?.euro?.price || 0;
+    } catch (_) {}
+  }
+
+  let totalUsd = 0;
+  const itemsHtml = (tab.items || []).map(item => {
+    const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
+    const unit = item.isWeight ? 'Kg' : 'u';
+    const itemPrice = item.priceUsdt || item.priceUsd || item.price || 0;
+    const sub = itemPrice * item.qty;
+    totalUsd += sub;
+    const subBs = sub * rate;
+    const name = item.name.length > 22 ? item.name.substring(0, 22) + '...' : item.name;
+
+    let rightPart = '';
+    let subtext = '';
+
+    if (currencyMode === 'usd') {
+      rightPart = `$${sub.toFixed(2)}`;
+      subtext = `$${itemPrice.toFixed(2)} c/u`;
+    } else if (currencyMode === 'bs') {
+      rightPart = `Bs ${Number(subBs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      subtext = `Bs ${Number(itemPrice * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u`;
+    } else {
+      rightPart = `$${sub.toFixed(2)}`;
+      subtext = `$${itemPrice.toFixed(2)} c/u - Bs ${Number(subBs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
+
+    return `
+      <tr>
+        <td style="text-align:left;font-size:11px;padding:2px 0;">${qty}${unit}</td>
+        <td style="text-align:left;font-size:11px;padding:2px 0;line-height:1.2;">${name}</td>
+        <td style="text-align:right;font-size:11px;font-weight:bold;padding:2px 0;">${rightPart}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan="2" style="font-size:9px;color:#333;padding:0 0 4px;">${subtext}</td>
+      </tr>`;
+  }).join('');
+
+  let totalHtml = '';
+  if (currencyMode === 'usd') {
+    totalHtml = `<div class="total-usd">$${totalUsd.toFixed(2)}</div>`;
+  } else if (currencyMode === 'bs') {
+    totalHtml = `<div class="total-usd">Bs ${Number(totalUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>`;
+  } else {
+    totalHtml = `
+      <div class="total-usd">$${totalUsd.toFixed(2)}</div>
+      <div class="total-bs">Bs ${Number(totalUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>`;
+  }
+
+  const totalEur = euroRate > 0 ? (totalUsd * rate) / euroRate : 0;
+  if (showEuro && totalEur > 0) {
+    totalHtml += `<div style="font-size: 13px; font-weight: bold; text-align: center; margin-top: 2px;">€ ${totalEur.toFixed(2)} EUR</div>`;
+  }
+
+  let ratesHtml = '';
+  if (showBcv) {
+    ratesHtml += `<div class="center" style="font-size:9px;margin:2px 0;">Tasa BCV: Bs ${Number(rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por $1</div>`;
+  }
+  if (showEuro && euroRate > 0) {
+    ratesHtml += `<div class="center" style="font-size:9px;margin:2px 0;">Tasa Euro BCV: Bs ${Number(euroRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por €1</div>`;
+  }
+  const ratesContainer = ratesHtml ? `<div style="margin:4px 0;">${ratesHtml}</div><hr class="dash">` : '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Precuenta - ${tab.name || 'Sin Nombre'}</title>
+<style>
+    @page {
+        size: 58mm auto;
+        margin: 0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        width: 48mm;
+        max-width: 48mm;
+        margin: 0 auto;
+        padding: 4mm 2mm;
+        color: #000;
+        background: #fff;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .dash {
+        border: none;
+        border-top: 1px dashed #000;
+        margin: 4px 0;
+    }
+    .total-usd {
+        font-size: 20px;
+        font-weight: bold;
+        color: #000;
+        text-align: center;
+        margin: 2px 0;
+    }
+    .total-bs {
+        font-size: 14px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    @media print {
+        body { width: 48mm; max-width: 48mm; }
+    }
+    @media screen {
+        body {
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="center" style="margin-bottom:6px;line-height:1.2;">
+        <img src="/logoprincipal.png" style="max-width: 100%; height: auto; display: block; margin: 0 auto 8px;" />
+        <div class="bold" style="font-size:11px;margin-top:3px;">*** PRE-CUENTA ***</div>
+    </div>
+
+    <hr class="dash">
+
+    <table>
+        <tr>
+            <td style="font-size:10px;font-weight:bold;">Mesa/Cuenta:</td>
+            <td style="font-size:10px;font-weight:bold;text-align:right;">${tab.name || 'Sin Nombre'}</td>
+        </tr>
+        <tr>
+            <td style="font-size:9px;color:#555;">Fecha:</td>
+            <td style="font-size:9px;color:#555;text-align:right;">${dateStr} ${timeStr}</td>
+        </tr>
+    </table>
+
+    <hr class="dash">
+
+    <table style="margin-bottom:4px;">
+        <tr style="font-size:9px;font-weight:bold;">
+            <td style="text-align:left;">CANT</td>
+            <td style="text-align:left;">DESCRIPCION</td>
+            <td style="text-align:right;">IMPORTE</td>
+        </tr>
+    </table>
+
+    <table>${itemsHtml}</table>
+
+    <hr class="dash">
+
+    ${ratesContainer}
+
+    <div style="margin:8px 0;">
+        <div class="center bold" style="font-size:10px;margin-bottom:4px;">TOTAL ESTIMADO</div>
+        ${totalHtml}
+    </div>
+
+    <hr class="dash">
+
+    <div class="center bold" style="font-size:9px;margin:6px 0 2px;">Favor solicitar su factura en caja.</div>
+    <div class="center" style="font-size:7.5px;color:#333;margin-top:2px;line-height:1.4;">Documento informativo de consumo.</div>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank', 'width=350,height=600');
+  if (!printWindow) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:58mm;height:auto;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 300);
+    };
+    return true;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  let printed = false;
+  printWindow.onload = () => {
+    setTimeout(() => {
+      if (!printed) {
+        printed = true;
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      }
+    }, 400);
+  };
+
+  setTimeout(() => {
+    if (!printed) {
+      printed = true;
+      try {
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      } catch(_) {}
+    }
+  }, 1500);
+
+  return true;
+}
+
+function _printSystemKitchenHTML(order) {
+  const orderNum = order.source === 'WEB' ? order.saleNumber : `#${String(order.saleNumber || 0).padStart(2, '0')}`;
+  const typeLabel = order.deliveryType || 'LOCAL';
+  const orderTime = order.timestamp ? new Date(order.timestamp).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '';
+  
+  const itemsHtml = (order.items || []).map(item => {
+    const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
+    return `
+      <div style="font-size:15px;font-weight:black;margin-bottom:6px;line-height:1.2;">
+        ${qty}x ${item.name}
+        ${item.note ? `<div style="font-size:11px;font-weight:bold;margin-top:2px;color:#000;">  Nota: ${item.note}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Comanda - ${orderNum}</title>
+<style>
+    @page { size: 58mm auto; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        width: 48mm;
+        max-width: 48mm;
+        margin: 0 auto;
+        padding: 4mm 2mm;
+        color: #000;
+        background: #fff;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .dash {
+        border: none;
+        border-top: 1px dashed #000;
+        margin: 4px 0;
+    }
+</style>
+</head>
+<body>
+    <div class="center" style="margin-bottom:6px;">
+        <div style="font-size:12px;font-weight:black;text-transform:uppercase;">*** COMANDA DE COCINA ***</div>
+        <div style="font-size:16px;font-weight:black;">ORDEN ${orderNum}</div>
+    </div>
     
-    try {
-      const rate = sale.rate || bcvRate || 1;
-      await printerSerialInstance.init();
-      
-      // Encabezado
-      await printerSerialInstance.printLine('PRECIOS AL DIA', 'center', 'double');
-      await printerSerialInstance.printLine('Comida Rapida', 'center', 'bold');
-      await printerSerialInstance.printSeparator();
+    <hr class="dash">
+    
+    <div style="font-size:10px;line-height:1.4;margin-bottom:4px;">
+        <div><strong>Tipo:</strong> ${typeLabel}</div>
+        ${order.tableNumber ? `<div style="font-size:12px;"><strong>Mesa:</strong> ${order.tableNumber}</div>` : ''}
+        <div><strong>Cliente:</strong> ${order.customerName || 'Consumidor Final'}</div>
+        ${orderTime ? `<div><strong>Hora:</strong> ${orderTime}</div>` : ''}
+    </div>
+    
+    <hr class="dash">
+    
+    <div style="margin:6px 0;">
+        ${itemsHtml}
+    </div>
+    
+    ${order.orderNotes ? `
+    <hr class="dash">
+    <div style="font-size:10px;margin-top:4px;">
+        <strong>NOTAS GENERALES:</strong><br>
+        ${order.orderNotes}
+    </div>
+    ` : ''}
+</body>
+</html>`;
 
-      // Info Ticket
-      const saleNum = String(sale.saleNumber || 0).padStart(7, '0');
-      const d = new Date(sale.timestamp);
-      const dateStr = d.toLocaleDateString('es-VE');
-      const timeStr = d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-      
-      await printerSerialInstance.printLine(`Ticket: #${saleNum}`, 'left', 'bold');
-      await printerSerialInstance.printLine(`Fecha: ${dateStr} ${timeStr}`, 'left', 'normal');
-      await printerSerialInstance.printLine(`Cliente: ${sale.customerName || 'Consumidor Final'}`, 'left', 'normal');
-      await printerSerialInstance.printSeparator();
+  const printWindow = window.open('', '_blank', 'width=350,height=600');
+  if (!printWindow) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:58mm;height:auto;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 300);
+    };
+    return true;
+  }
 
-      // Encabezado items
-      await printerSerialInstance.printLine(
-        printerSerialInstance.formatColumns('CANT  DESCRIPCION', 'IMPORTE'),
-        'left',
-        'bold'
-      );
-      await printerSerialInstance.printSeparator();
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
 
-      // Items
-      if (sale.items && sale.items.length > 0) {
-        for (const item of sale.items) {
-          const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
-          const unit = item.isWeight ? 'Kg' : 'u';
-          const sub = item.priceUsd * item.qty;
-          
-          // Imprimimos el nombre del item
-          await printerSerialInstance.printLine(item.name, 'left', 'bold');
-          
-          // Debajo la cantidad, precio unitario y subtotal
-          const leftDetails = `${qty}${unit} x $${item.priceUsd.toFixed(2)} (Bs ${(item.priceUsd * rate).toFixed(2)})`;
-          const rightDetails = `$${sub.toFixed(2)}`;
-          await printerSerialInstance.printLine(
-            printerSerialInstance.formatColumns(leftDetails, rightDetails),
-            'left',
-            'normal'
-          );
-        }
+  let printed = false;
+  printWindow.onload = () => {
+    setTimeout(() => {
+      if (!printed) {
+        printed = true;
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
       }
-
-      await printerSerialInstance.printSeparator();
-
-      // Tasa cambiaria
-      await printerSerialInstance.printLine(`Tasa BCV: Bs ${rate.toFixed(2)} / $1`, 'center', 'normal');
-      await printerSerialInstance.printSeparator();
-
-      // Totales
-      await printerSerialInstance.printLine('TOTAL A PAGAR', 'center', 'bold');
-      await printerSerialInstance.printLine(`$${parseFloat(sale.totalUsd || 0).toFixed(2)}`, 'center', 'double');
-      await printerSerialInstance.printLine(`Bs ${(sale.totalBs || 0).toFixed(2)}`, 'center', 'bold');
-      await printerSerialInstance.printSeparator();
-
-      // Pagos realizados
-      if ((sale.payments && sale.payments.length > 0) || sale.fiadoUsd > 0) {
-        await printerSerialInstance.printLine('PAGOS REALIZADOS', 'left', 'bold');
-        
-        if (sale.payments && sale.payments.length > 0) {
-          for (const p of sale.payments) {
-            const isBs = p.methodId?.includes('_bs') || p.methodId === 'pago_movil';
-            const val = isBs
-              ? `Bs ${(p.amountUsd * rate).toFixed(2)}`
-              : `$${(p.amountUsd || 0).toFixed(2)}`;
-            await printerSerialInstance.printLine(
-              printerSerialInstance.formatColumns(p.methodLabel || 'Pago', val),
-              'left',
-              'normal'
-            );
-          }
-        }
-
-        if (sale.fiadoUsd > 0) {
-          await printerSerialInstance.printLine(
-            printerSerialInstance.formatColumns('Deuda pendiente:', `$${sale.fiadoUsd.toFixed(2)}`),
-            'left',
-            'bold'
-          );
-          await printerSerialInstance.printLine(
-            printerSerialInstance.formatColumns('', `Bs ${(sale.fiadoUsd * rate).toFixed(2)}`),
-            'left',
-            'normal'
-          );
-        }
-        await printerSerialInstance.printSeparator();
-      }
-
-      // Pie de ticket
-      await printerSerialInstance.printLine('¡Gracias por tu compra!', 'center', 'bold');
-      await printerSerialInstance.printLine('Comprobante sin valor fiscal', 'center', 'normal');
-      
-      await printerSerialInstance.feed(4);
-      await printerSerialInstance.cut();
-      return true;
-    } catch (e) {
-      console.error('[usePrinter] Error al imprimir ticket:', e);
-      showToast('Error de impresion de ticket. Revisa conexion.', 'error');
-      return false;
+    }, 400);
+  };
+  setTimeout(() => {
+    if (!printed) {
+      printed = true;
+      try {
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      } catch(_) {}
     }
-  }, [isSupported]);
+  }, 1500);
+  return true;
+}
 
-  // Imprimir un Ticket de Pre-cuenta de Consumo
+function _printSystemCloseHTML(closeData) {
+  const {
+    sales,
+    bcvRate,
+    paymentBreakdown,
+    topProducts,
+    todayTotalUsd,
+    todayTotalBs,
+    todayProfit,
+    todayItemsSold,
+  } = closeData;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-VE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+  const paymentsHtml = Object.entries(paymentBreakdown).map(([methodId, data]) => {
+    const val = data.currency === 'USD'
+      ? `$${data.total.toFixed(2)}`
+      : data.currency === 'COP'
+      ? `${data.total.toFixed(0)} COP`
+      : `Bs ${data.total.toFixed(2)}`;
+    return `
+      <tr>
+        <td style="font-size:11px;padding:2px 0;">${data.label}</td>
+        <td style="font-size:11px;font-weight:bold;text-align:right;padding:2px 0;">${val}</td>
+      </tr>`;
+  }).join('');
+
+  const topProductsHtml = (topProducts || []).map((p, i) => `
+    <div style="font-size:11px;margin-bottom:4px;">
+      <strong>${i+1}. ${p.name}</strong><br>
+      <span style="color:#555;">${p.qty} vendidos · Bs ${p.revenue.toFixed(2)}</span>
+    </div>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cierre Diario</title>
+<style>
+    @page { size: 58mm auto; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        width: 48mm;
+        max-width: 48mm;
+        margin: 0 auto;
+        padding: 4mm 2mm;
+        color: #000;
+        background: #fff;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .dash {
+        border: none;
+        border-top: 1px dashed #000;
+        margin: 4px 0;
+    }
+    table { width: 100%; border-collapse: collapse; }
+</style>
+</head>
+<body>
+    <div class="center" style="margin-bottom:6px;line-height:1.2;">
+        <img src="/logoprincipal.png" style="max-width: 100%; height: auto; display: block; margin: 0 auto 8px;" />
+        <div style="font-size:11px;font-weight:bold;margin-top:2px;">CIERRE DEL DIA</div>
+        <div style="font-size:9px;color:#555;margin-top:2px;">${dateStr} ${timeStr}</div>
+    </div>
+    
+    <hr class="dash">
+    
+    <div style="font-size:11px;margin:4px 0;">
+        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">RESUMEN GENERAL</div>
+        <table style="width:100%">
+            <tr><td>Ventas:</td><td style="text-align:right;">${sales.length}</td></tr>
+            <tr><td>Artículos:</td><td style="text-align:right;">${todayItemsSold}</td></tr>
+            <tr><td>Ingresos ($):</td><td style="text-align:right;">$${todayTotalUsd.toFixed(2)}</td></tr>
+            <tr><td>Ingresos (Bs):</td><td style="text-align:right;">Bs ${todayTotalBs.toFixed(2)}</td></tr>
+            <tr><td>Ganancia ($):</td><td style="text-align:right;">$${(todayProfit / bcvRate).toFixed(2)}</td></tr>
+            <tr><td>Ganancia (Bs):</td><td style="text-align:right;">Bs ${todayProfit.toFixed(2)}</td></tr>
+            <tr><td>Tasa BCV:</td><td style="text-align:right;">Bs ${bcvRate.toFixed(2)}</td></tr>
+        </table>
+    </div>
+
+    ${paymentsHtml ? `
+    <hr class="dash">
+    <div style="font-size:11px;margin:4px 0;">
+        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">PAGOS POR METODO</div>
+        <table>${paymentsHtml}</table>
+    </div>
+    ` : ''}
+
+    ${topProductsHtml ? `
+    <hr class="dash">
+    <div style="font-size:11px;margin:4px 0;">
+        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">MAS VENDIDOS</div>
+        ${topProductsHtml}
+    </div>
+    ` : ''}
+
+    <hr class="dash">
+    <div class="center bold" style="font-size:11px;margin-top:6px;">Cierre Exitoso</div>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank', 'width=350,height=600');
+  if (!printWindow) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:58mm;height:auto;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 300);
+    };
+    return true;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  let printed = false;
+  printWindow.onload = () => {
+    setTimeout(() => {
+      if (!printed) {
+        printed = true;
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      }
+    }, 400);
+  };
+  setTimeout(() => {
+    if (!printed) {
+      printed = true;
+      try {
+        printWindow.onafterprint = () => printWindow.close();
+        printWindow.print();
+      } catch(_) {}
+    }
+  }, 1500);
+  return true;
+}
+
+export function usePrinter() {
+  const isConnected = false;
+  const isSupported = true;
+  const paperWidth = '58mm';
+  const printerType = 'system';
+
+  const connect = useCallback(async () => {}, []);
+  const disconnect = useCallback(async () => {}, []);
+  const changePaperWidth = useCallback((width) => {}, []);
+  const changePrinterType = useCallback((type) => {}, []);
+
+  const printTicket = useCallback(async (sale, bcvRate) => {
+    return _printSystemHTML(sale, bcvRate);
+  }, []);
+
   const printPrecuenta = useCallback(async (tab, bcvRate) => {
     const rate = bcvRate || 1;
+    return _printSystemPrecuentaHTML(tab, rate);
+  }, []);
 
-    if (!isSupported) {
-      try {
-        await copyPrecuentaToClipboard(tab, rate);
-        showToast('Pre-cuenta copiada al portapapeles (Impresora no soportada).', 'success');
-        return true;
-      } catch (clipErr) {
-        console.error('[usePrinter] Error copying to clipboard:', clipErr);
-        showToast('Tu navegador no soporta impresion ni copiado.', 'error');
-        return false;
-      }
-    }
-    
-    try {
-      await printerSerialInstance.init();
-      
-      // Encabezado
-      await printerSerialInstance.printLine('PRECIOS AL DIA', 'center', 'double');
-      await printerSerialInstance.printLine('Comida Rapida', 'center', 'bold');
-      await printerSerialInstance.printLine('*** PRE-CUENTA ***', 'center', 'bold');
-      await printerSerialInstance.printSeparator();
-      
-      // Info Pre-cuenta
-      const d = new Date();
-      const dateStr = d.toLocaleDateString('es-VE');
-      const timeStr = d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-      
-      await printerSerialInstance.printLine(`Mesa/Cuenta: ${tab.name || 'Sin Nombre'}`, 'left', 'bold');
-      await printerSerialInstance.printLine(`Fecha: ${dateStr} ${timeStr}`, 'left', 'normal');
-      await printerSerialInstance.printSeparator();
-
-      // Encabezado items
-      await printerSerialInstance.printLine(
-        printerSerialInstance.formatColumns('CANT  DESCRIPCION', 'IMPORTE'),
-        'left',
-        'bold'
-      );
-      await printerSerialInstance.printSeparator();
-
-      // Items
-      let totalUsd = 0;
-      if (tab.items && tab.items.length > 0) {
-        for (const item of tab.items) {
-          const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
-          const unit = item.isWeight ? 'Kg' : 'u';
-          const itemPrice = item.priceUsdt || item.priceUsd || item.price || 0;
-          const sub = itemPrice * item.qty;
-          totalUsd += sub;
-          
-          await printerSerialInstance.printLine(item.name, 'left', 'bold');
-          
-          const leftDetails = `${qty}${unit} x $${itemPrice.toFixed(2)} (Bs ${(itemPrice * rate).toFixed(2)})`;
-          const rightDetails = `$${sub.toFixed(2)}`;
-          await printerSerialInstance.printLine(
-            printerSerialInstance.formatColumns(leftDetails, rightDetails),
-            'left',
-            'normal'
-          );
-        }
-      }
-
-      await printerSerialInstance.printSeparator();
-
-      // Tasa cambiaria
-      await printerSerialInstance.printLine(`Tasa BCV: Bs ${rate.toFixed(2)} / $1`, 'center', 'normal');
-      await printerSerialInstance.printSeparator();
-
-      // Totales
-      await printerSerialInstance.printLine('TOTAL ESTIMADO', 'center', 'bold');
-      await printerSerialInstance.printLine(`$${totalUsd.toFixed(2)}`, 'center', 'double');
-      await printerSerialInstance.printLine(`Bs ${(totalUsd * rate).toFixed(2)}`, 'center', 'bold');
-      await printerSerialInstance.printSeparator();
-
-      // Pie
-      await printerSerialInstance.printLine('Favor solicitar su factura en caja.', 'center', 'bold');
-      await printerSerialInstance.printLine('Documento informativo de consumo', 'center', 'normal');
-      
-      await printerSerialInstance.feed(4);
-      await printerSerialInstance.cut();
-      return true;
-    } catch (e) {
-      console.error('[usePrinter] Error al imprimir pre-cuenta:', e);
-      
-      // Intentar copiar al portapapeles como fallback inteligente
-      try {
-        await copyPrecuentaToClipboard(tab, rate);
-        showToast('Impresora no conectada. Pre-cuenta copiada al portapapeles.', 'success');
-        return true;
-      } catch (clipErr) {
-        console.error('[usePrinter] Error copying to clipboard:', clipErr);
-        showToast('Error de impresion de pre-cuenta.', 'error');
-        return false;
-      }
-    }
-  }, [isSupported]);
-
-
-  // Imprimir comanda de cocina
   const printKitchen = useCallback(async (order) => {
-    if (!isSupported) return false;
-    try {
-      await printerSerialInstance.init();
+    return _printSystemKitchenHTML(order);
+  }, []);
 
-      // Encabezado
-      await printerSerialInstance.printLine('COMANDA DE COCINA', 'center', 'double');
-      const orderNum = order.source === 'WEB' ? order.saleNumber : `#${String(order.saleNumber || 0).padStart(2, '0')}`;
-      await printerSerialInstance.printLine(`ORDEN ${orderNum}`, 'center', 'double');
-      await printerSerialInstance.printSeparator();
-
-      // Detalles de orden
-      const typeLabel = order.deliveryType || 'LOCAL';
-      await printerSerialInstance.printLine(`Tipo: ${typeLabel}`, 'left', 'bold');
-      if (order.tableNumber) {
-        await printerSerialInstance.printLine(`Mesa: ${order.tableNumber}`, 'left', 'double');
-      }
-      await printerSerialInstance.printLine(`Cliente: ${order.customerName || 'Consumidor Final'}`, 'left', 'normal');
-      if (order.timestamp) {
-        const orderTime = new Date(order.timestamp).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-        await printerSerialInstance.printLine(`Hora: ${orderTime}`, 'left', 'normal');
-      }
-      await printerSerialInstance.printSeparator();
-
-      // Items en letra doble para visibilidad de los cocineros
-      if (order.items && order.items.length > 0) {
-        for (const item of order.items) {
-          const qty = item.isWeight ? item.qty.toFixed(2) : String(item.qty);
-          await printerSerialInstance.printLine(`${qty}x ${item.name}`, 'left', 'double');
-          if (item.note) {
-            await printerSerialInstance.printLine(`  Nota: ${item.note}`, 'left', 'bold');
-          }
-          await printerSerialInstance.feed(1); // Espacio entre productos
-        }
-      }
-
-      // Notas de la orden general
-      if (order.orderNotes) {
-        await printerSerialInstance.printSeparator();
-        await printerSerialInstance.printLine('NOTAS GENERALES:', 'left', 'bold');
-        await printerSerialInstance.printLine(order.orderNotes, 'left', 'normal');
-      }
-
-      await printerSerialInstance.printSeparator();
-      await printerSerialInstance.feed(4);
-      await printerSerialInstance.cut();
-      return true;
-    } catch (e) {
-      console.error('[usePrinter] Error al imprimir comanda:', e);
-      showToast('Error de impresion de comanda de cocina.', 'error');
-      return false;
-    }
-  }, [isSupported]);
-
-  // Imprimir Cierre Diario de Caja
   const printClose = useCallback(async (closeData) => {
-    if (!isSupported) return false;
-    try {
-      const {
-        sales,
-        bcvRate,
-        paymentBreakdown,
-        topProducts,
-        todayTotalUsd,
-        todayTotalBs,
-        todayProfit,
-        todayItemsSold,
-      } = closeData;
+    return _printSystemCloseHTML(closeData);
+  }, []);
 
-      await printerSerialInstance.init();
-
-      // Encabezado
-      await printerSerialInstance.printLine('PRECIOS AL DIA', 'center', 'double');
-      await printerSerialInstance.printLine('CIERRE DEL DIA', 'center', 'bold');
-      
-      const now = new Date();
-      await printerSerialInstance.printLine(
-        now.toLocaleDateString('es-VE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }),
-        'center',
-        'normal'
-      );
-      await printerSerialInstance.printLine(`Hora: ${now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}`, 'center', 'normal');
-      await printerSerialInstance.printSeparator();
-
-      // Resumen general
-      await printerSerialInstance.printLine('RESUMEN GENERAL', 'left', 'bold');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Ventas realizadas', String(sales.length)), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Articulos vendidos', String(todayItemsSold)), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Ingresos brutos ($)', `$${todayTotalUsd.toFixed(2)}`), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Ingresos brutos (Bs)', `Bs ${todayTotalBs.toFixed(2)}`), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Ganancia est. ($)', `$${(todayProfit / bcvRate).toFixed(2)}`), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Ganancia est. (Bs)', `Bs ${todayProfit.toFixed(2)}`), 'left', 'normal');
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Tasa BCV', `Bs ${bcvRate.toFixed(2)}`), 'left', 'normal');
-      await printerSerialInstance.printSeparator();
-
-      // Pagos por metodo
-      if (Object.keys(paymentBreakdown).length > 0) {
-        await printerSerialInstance.printLine('PAGOS POR METODO', 'left', 'bold');
-        for (const [methodId, data] of Object.entries(paymentBreakdown)) {
-          const val = data.currency === 'USD'
-            ? `$${data.total.toFixed(2)}`
-            : data.currency === 'COP'
-            ? `${data.total.toFixed(0)} COP`
-            : `Bs ${data.total.toFixed(2)}`;
-          await printerSerialInstance.printLine(printerSerialInstance.formatColumns(data.label, val), 'left', 'normal');
-        }
-        await printerSerialInstance.printSeparator();
-      }
-
-      // Top productos
-      if (topProducts && topProducts.length > 0) {
-        await printerSerialInstance.printLine('PRODUCTOS MAS VENDIDOS', 'left', 'bold');
-        for (let i = 0; i < topProducts.length; i++) {
-          const p = topProducts[i];
-          await printerSerialInstance.printLine(`${i+1}. ${p.name}`, 'left', 'bold');
-          await printerSerialInstance.printLine(`   ${p.qty} vendidos · Bs ${p.revenue.toFixed(2)}`, 'left', 'normal');
-        }
-        await printerSerialInstance.printSeparator();
-      }
-
-      // Pie
-      await printerSerialInstance.printLine('Cierre generado exitosamente', 'center', 'bold');
-      await printerSerialInstance.printLine('Control Administrativo', 'center', 'normal');
-
-      await printerSerialInstance.feed(4);
-      await printerSerialInstance.cut();
-      return true;
-    } catch (e) {
-      console.error('[usePrinter] Error al imprimir cierre:', e);
-      showToast('Error de impresion de cierre de caja.', 'error');
-      return false;
-    }
-  }, [isSupported]);
-
-  // Ticket de prueba para validar hardware
   const printTest = useCallback(async () => {
-    if (!isSupported) return false;
-    try {
-      await printerSerialInstance.init();
-      await printerSerialInstance.printLine('TICKET DE PRUEBA', 'center', 'double');
-      await printerSerialInstance.printLine('Precios Al Dia - Comida Rapida', 'center', 'bold');
-      await printerSerialInstance.printSeparator();
-      await printerSerialInstance.printLine('Conexion establecida con exito.', 'center', 'normal');
-      await printerSerialInstance.printLine(`Papel configurado: ${paperWidth}`, 'center', 'bold');
-      await printerSerialInstance.printSeparator();
-      await printerSerialInstance.printLine(printerSerialInstance.formatColumns('Columna A', 'Columna B'), 'left', 'normal');
-      await printerSerialInstance.printLine('Caracteres: abcdefghijklmnNopqrs', 'left', 'normal');
-      await printerSerialInstance.printLine('1234567890!@#$%^&*()_+', 'left', 'normal');
-      await printerSerialInstance.printSeparator();
-      await printerSerialInstance.feed(4);
-      await printerSerialInstance.cut();
-      return true;
-    } catch (e) {
-      console.error('[usePrinter] Error al imprimir test:', e);
-      showToast('Error al imprimir ticket de prueba.', 'error');
-      return false;
-    }
-  }, [isSupported, paperWidth]);
+    const dummySale = {
+      saleNumber: 1,
+      timestamp: Date.now(),
+      customerName: "Cliente de Prueba",
+      items: [
+        { name: "Producto de Prueba", qty: 1, priceUsd: 10 }
+      ],
+      totalUsd: 10,
+      totalBs: 360,
+      rate: 36,
+      payments: [
+        { methodLabel: "Efectivo", amountUsd: 10 }
+      ]
+    };
+    return _printSystemHTML(dummySale, 36);
+  }, []);
 
   return {
     isConnected,
     isSupported,
     paperWidth,
+    printerType,
     connect,
     disconnect,
     changePaperWidth,
+    changePrinterType,
     printTicket,
     printPrecuenta,
     printKitchen,

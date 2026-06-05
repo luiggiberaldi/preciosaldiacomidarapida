@@ -44,28 +44,26 @@ export function useCatalog(slug) {
     const init = async () => {
       setLoading(true);
       try {
-        // 1. Look up tenant by slug
-        const { data: configData, error: configError } = await supabase
-          .from("web_config")
-          .select("*")
-          .eq("slug", slug)
-          .maybeSingle();
-
-        if (configError || !configData) {
+        // Fetch config and catalog in a single call from the Cloudflare Worker
+        const res = await fetch(`https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/menu?slug=${slug}`);
+        if (!res.ok) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        if (!data || !data.config) {
           setNotFound(true);
           setLoading(false);
           return;
         }
 
-        // Ensure exchange_rate always has a safe default
         setConfig({
-          ...configData,
-          exchange_rate: configData.exchange_rate || 1,
+          ...data.config,
+          exchange_rate: data.config.exchange_rate || 1,
         });
-        const tenantId = configData.tenant_id;
-
-        // 2. Fetch catalog filtered by tenant
-        await fetchCatalog(tenantId);
+        setCatalog(data.catalog || []);
+        const tenantId = data.config.tenant_id;
 
         // 3. Subscribe to realtime catalog changes filtered by tenant
         catalogSub = supabase

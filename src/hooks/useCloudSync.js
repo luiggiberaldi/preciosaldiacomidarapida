@@ -41,13 +41,37 @@ export function useCloudSync() {
     let recordsSynced = 0;
 
     try {
+      // Asegurar que el tenant existe en web_config antes de procesar ventas o productos
+      try {
+        const { data: configExists, error: configCheckError } = await webSupabase
+          .from("web_config")
+          .select("tenant_id")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        
+        if (!configExists && !configCheckError) {
+          console.log(`[useCloudSync] Creando configuración de tenant preventivo en web_config para: ${tenantId}`);
+          const tempSlug = `negocio-${tenantId.substring(0, 8)}`;
+          await webSupabase
+            .from("web_config")
+            .insert({
+              tenant_id: tenantId,
+              slug: tempSlug,
+              business_name: "Mi Negocio",
+              exchange_rate: 1.0
+            });
+        }
+      } catch (configErr) {
+        console.warn("[useCloudSync] Error en verificación preventiva de web_config:", configErr);
+      }
+
       // --- 1. PROCESAR COLA OFFLINE (PUSH) ---
       console.log("[useCloudSync] Procesando cola de ventas locales...");
       const actionHandlers = {
         UPLOAD_SALE: async (sale) => {
           const { error } = await webSupabase
             .from("web_orders")
-            .insert({
+            .upsert({
               id: sale.id,
               tenant_id: tenantId,
               customer_name: sale.customerName || "Consumidor Final",
@@ -57,7 +81,7 @@ export function useCloudSync() {
               total_usd: parseFloat(sale.totalUsd) || 0,
               status: "completed", // Venta completada
               created_at: sale.timestamp || new Date().toISOString()
-            });
+            }, { onConflict: "id" });
 
           if (error) {
             console.error("[useCloudSync] Error subiendo venta:", error);
@@ -72,6 +96,7 @@ export function useCloudSync() {
 
       // --- 2. SINCRONIZAR PRODUCTOS (PULL / PUSH CONFLICT RESOLUTION) ---
       console.log("[useCloudSync] Sincronizando catálogo de productos...");
+
       const localProducts = await storageService.getItem("my_products_v1", []);
       
       const { data: cloudProducts, error: cloudError } = await webSupabase
