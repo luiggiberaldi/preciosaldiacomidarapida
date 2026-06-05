@@ -74,13 +74,13 @@ export function useCloudAuth() {
         localStorage.setItem("pda_cloud_role", data.role);
         return data.role;
       } else {
-        setRole("employee");
-        localStorage.setItem("pda_cloud_role", "employee");
-        return "employee";
+        setRole("admin");
+        localStorage.setItem("pda_cloud_role", "admin");
+        return "admin";
       }
     } catch (err) {
       console.error("[useCloudAuth] Error obteniendo rol de usuario (usando fallback):", err);
-      const fallbackRole = localStorage.getItem("pda_cloud_role") || "employee";
+      const fallbackRole = localStorage.getItem("pda_cloud_role") || "admin";
       setRole(fallbackRole);
       return fallbackRole;
     }
@@ -103,9 +103,11 @@ export function useCloudAuth() {
     } else if (hash.includes("type=signup")) {
       // El usuario viene de confirmar su correo electrónico de registro
       // Cerramos sesión para que no entre directo y obligamos a loguearse
-      supabase.auth.signOut().then(() => {
+      supabase.auth.signOut().then(async () => {
         localStorage.setItem("pda_email_confirmed", "true");
         try {
+          const { storageService } = await import("../utils/storageService");
+          await storageService.clearAll();
           window.history.replaceState(null, null, window.location.pathname);
         } catch (e) {}
         window.location.reload();
@@ -273,10 +275,20 @@ export function useCloudAuth() {
       setCloudUser(null);
       setRole(null);
       localStorage.removeItem("pda_cloud_role");
+
+      // Limpiar por completo los datos locales de negocio del tenant anterior
+      try {
+        const { storageService } = await import("../utils/storageService");
+        await storageService.clearAll();
+      } catch (e) {
+        console.error("Error al limpiar datos locales del tenant anterior:", e);
+      }
+
+      // Recargar la página para limpiar los stores locales en memoria (Zustand)
+      window.location.reload();
     } catch (err) {
       console.error("[useCloudAuth] Error al cerrar sesión:", err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };

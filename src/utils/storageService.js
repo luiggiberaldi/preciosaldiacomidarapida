@@ -159,6 +159,39 @@ export const storageService = {
       console.error(`[Storage Error] Borrando ${key}:`, error);
     }
   },
+
+  async clearAll() {
+    try {
+      await localforage.clear();
+      const keysToClear = [
+        "my_products_v1",
+        "bodega_sales_v1",
+        "bodega_open_tabs_v1",
+        "bodega_table_zones_v1",
+        "bodega_tables_v1",
+        "abasto-auth-storage",
+        "abasto-device-session",
+        "pending_cart",
+        "recycled_cart",
+        "pda_cloud_role",
+        "pda_last_sync_time",
+        "has_tables_system",
+        "has_delivery",
+        "requires_prepayment",
+        "street_rate_bs",
+        "catalog_use_auto_usdt",
+        "catalog_custom_usdt_price",
+        "catalog_show_cash_price",
+        "bodega_use_auto_rate",
+        "bodega_custom_rate",
+        "bodega_auto_rate_source",
+        "cierre_notified_date"
+      ];
+      keysToClear.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.error("Error al limpiar datos locales del tenant:", e);
+    }
+  },
 };
 
 /**
