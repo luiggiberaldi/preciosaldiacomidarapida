@@ -188,6 +188,13 @@ export const storageService = {
         "cierre_notified_date"
       ];
       keysToClear.forEach(k => localStorage.removeItem(k));
+
+      // Limpiar cualquier token de autenticación de Supabase de la máquina
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("sb-") && k.endsWith("-auth-token")) {
+          localStorage.removeItem(k);
+        }
+      });
     } catch (e) {
       console.error("Error al limpiar datos locales del tenant:", e);
     }

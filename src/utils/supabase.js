@@ -32,6 +32,18 @@ const PRODUCT_NAMESPACE = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 
 export const getTenantId = () => {
   try {
+    // 1. Intentar obtener el ID de usuario de la sesión de Supabase
+    const keys = Object.keys(localStorage);
+    const authKey = keys.find(key => key.startsWith("sb-") && key.endsWith("-auth-token"));
+    if (authKey) {
+      const data = localStorage.getItem(authKey);
+      if (data) {
+        const parsed = JSON.parse(data);
+        const userId = parsed?.user?.id || parsed?.currentSession?.user?.id;
+        if (userId) return userId;
+      }
+    }
+    // 2. Fallback al deviceId para usuarios locales/offline
     const deviceId = localStorage.getItem("pda_device_id");
     if (!deviceId) return DEFAULT_TENANT;
     return uuidv5(deviceId, PRODUCT_NAMESPACE);

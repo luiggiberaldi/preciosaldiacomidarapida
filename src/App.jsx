@@ -346,9 +346,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Barra superior de estado compacta y premium */}
-      <div className="fixed top-3 right-3 z-[100]">
-        <SystemStatusPill rates={rates} triggerHaptic={triggerHaptic} />
+      {/* Barra superior de estado compacta y premium alineada con el contenedor principal */}
+      <div className="pointer-events-none fixed top-3 left-0 right-0 z-[100] w-full max-w-md md:max-w-5xl lg:max-w-7xl xl:max-w-[1600px] mx-auto px-3 sm:px-6 flex justify-end">
+        <div className="pointer-events-auto">
+          <SystemStatusPill rates={rates} triggerHaptic={triggerHaptic} />
+        </div>
       </div>
 
       {/* Demo Banner (discreto — bottom, above nav) */}
