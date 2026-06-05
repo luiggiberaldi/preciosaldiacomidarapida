@@ -8,11 +8,13 @@ Esta guía te ayuda a migrar toda la base de datos y la configuración del siste
 
 Deberás ejecutar los scripts SQL correspondientes en el editor de consultas (SQL Editor) de cada uno de tus nuevos proyectos de Supabase.
 
-### A. Proyecto Principal (POS / Licencias / Demos)
+### A. Proyecto Principal (POS / Licencias / Demos / Mesas)
 1. Entra a la consola de Supabase de tu **nuevo proyecto principal (POS)**.
 2. Ve a la pestaña **SQL Editor** y crea una nueva consulta.
 3. Copia y pega el contenido del archivo [`pos_backend_schema.sql`](file:///c:/Users/luigg/Desktop/2026/proyectos%20terminados/tasas%20al%20dia/comida%20rapida/supabase_migration/pos_backend_schema.sql) y haz clic en **Run**.
    * *Esto creará las tablas `licenses`, `demos`, habilitará RLS, configurará las políticas públicas de lectura/escritura y registrará las funciones RPC `auto_register_device` y `heartbeat_device` necesarias.*
+4. Crea otra consulta en **SQL Editor**, copia y pega el contenido de [`create_pos_active_tabs.sql`](file:///c:/Users/luigg/Desktop/2026/proyectos%20terminados/tasas%20al%20dia/comida%20rapida/supabase_migration/create_pos_active_tabs.sql) y haz clic en **Run**.
+   * *Esto creará la tabla `pos_active_tabs` para sincronizar las mesas activas de salón en tiempo real y habilitará sus políticas RLS.*
 
 ### B. Proyecto Web de Pedidos (web-cliente)
 1. Entra a la consola de Supabase de tu **nuevo proyecto para la Web de Pedidos**.

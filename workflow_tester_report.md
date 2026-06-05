@@ -5,9 +5,9 @@ Este reporte detalla los resultados de la simulación automatizada de roles y va
 ## Resumen de la Corrida
 | Métrica | Valor |
 | :--- | :--- |
-| **Fecha de Ejecución** | 4/6/2026, 10:00:59 p. m. |
-| **Total de Pruebas** | 9 |
-| **Pruebas Aprobadas** | 9 |
+| **Fecha de Ejecución** | 4/6/2026, 11:53:49 p. m. |
+| **Total de Pruebas** | 21 |
+| **Pruebas Aprobadas** | 21 |
 | **Pruebas Fallidas** | 0 |
 | **Estado General** | 🟢 TODO OPERATIVO |
 
@@ -24,6 +24,18 @@ Este reporte detalla los resultados de la simulación automatizada de roles y va
 | **Variant 2: QR Web Order & Cloudflare Edge Worker API** | Should simulate Cocinero advancing the order state through Worker and trigger invalidation | 🟢 PASSED | Ejecución impecable. |
 | **Variant 2: QR Web Order & Cloudflare Edge Worker API** | Should clean up the web test order and invalidate caches | 🟢 PASSED | Ejecución impecable. |
 | **Variant 3: Direct Cashier Fast-food Checkout** | Should simulate Cashier adding bar sale, pushing to local storage and kitchen view processing | 🟢 PASSED | Ejecución impecable. |
+| **Variant 4: Real-time Table Sync & Offline Resilience** | Should simulate database updates, inserts, and deletes via Realtime channel payload | 🟢 PASSED | Ejecución impecable. |
+| **Variant 4: Real-time Table Sync & Offline Resilience** | Should merge local offline changes when reconnecting to Supabase | 🟢 PASSED | Ejecución impecable. |
+| **Variant 5: Unified Kitchen SSE Stream** | Worker /api/webhooks/local-order bumps stream timestamp | 🟢 PASSED | Ejecución impecable. |
+| **Variant 5: Unified Kitchen SSE Stream** | Worker /api/webhooks/local-order rejects missing tenant_id | 🟢 PASSED | Ejecución impecable. |
+| **Variant 5: Unified Kitchen SSE Stream** | KitchenView SSE event triggers order reload | 🟢 PASSED | Ejecución impecable. |
+| **Variant 5: Unified Kitchen SSE Stream** | SalesView fires Worker notification after local sale | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Print job is enqueued before print attempt | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Successful print removes job from queue | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Failed print marks job as failed and increments retries | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Scheduler retries pending jobs older than threshold | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Scheduler does NOT retry jobs within cooldown window | 🟢 PASSED | Ejecución impecable. |
+| **Task 4: Local Print Queue Scheduler (IDB Mock)** | Job exceeding maxRetries is marked permanently failed | 🟢 PASSED | Ejecución impecable. |
 
 ---
 

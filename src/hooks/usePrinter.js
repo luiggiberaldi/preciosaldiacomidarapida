@@ -1,5 +1,101 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { showToast } from '../components/Toast';
+
+// ─── INDEXEDDB PRINT QUEUE ────────────────────────────────
+// Persiste trabajos de impresión para auto-recovery si el popup
+// es bloqueado o la impresora falla durante la sesión.
+
+const DB_NAME = 'pda_print_queue';
+const DB_VERSION = 1;
+const STORE_NAME = 'jobs';
+
+function openPrintQueueDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('status', 'status', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function enqueueJob(type, payload) {
+  const db = await openPrintQueueDB();
+  return new Promise((resolve, reject) => {
+    const job = {
+      id: crypto.randomUUID(),
+      type,           // 'ticket' | 'kitchen' | 'precuenta' | 'close' | 'test'
+      payload,        // sale, order, tab, closeData, etc.
+      status: 'pending',
+      retries: 0,
+      maxRetries: 3,
+      createdAt: Date.now(),
+      lastAttemptAt: null,
+    };
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(job);
+    tx.oncomplete = () => resolve(job);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dequeueJob(id) {
+  const db = await openPrintQueueDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function markJobFailed(id) {
+  const db = await openPrintQueueDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const job = req.result;
+      if (job) {
+        job.status = 'failed';
+        job.retries = (job.retries || 0) + 1;
+        job.lastAttemptAt = Date.now();
+        store.put(job);
+      }
+    };
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getPendingJobs() {
+  const db = await openPrintQueueDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).index('status').getAll('pending');
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getAllJobs() {
+  const db = await openPrintQueueDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ─── PRINT HTML HELPERS ───────────────────────────────────
 
 // Helper to copy precuenta to clipboard as formatted text
 async function copyPrecuentaToClipboard(tab, rate) {
@@ -822,34 +918,173 @@ function _printSystemCloseHTML(closeData) {
   return true;
 }
 
+// ─── SCHEDULER ────────────────────────────────────────────
+// Retries pending IDB print jobs that are older than 30s.
+// Max 3 retries, then marks as failed.
+
+const RETRY_AFTER_MS = 30_000;   // reintenta jobs pendientes cada 30s
+const SCHEDULER_INTERVAL = 60_000; // comprueba cada 60s
+
+async function _executeJob(job) {
+  switch (job.type) {
+    case 'ticket':
+      return _printSystemHTML(job.payload.sale, job.payload.bcvRate);
+    case 'kitchen':
+      return _printSystemKitchenHTML(job.payload.order);
+    case 'precuenta':
+      return _printSystemPrecuentaHTML(job.payload.tab, job.payload.bcvRate);
+    case 'close':
+      return _printSystemCloseHTML(job.payload.closeData);
+    case 'test':
+      return _printSystemHTML(job.payload.sale, job.payload.bcvRate);
+    default:
+      console.warn('[usePrinter] Unknown job type:', job.type);
+      return false;
+  }
+}
+
+// ─── HOOK ─────────────────────────────────────────────────
+
 export function usePrinter() {
-  const isConnected = false;
+  // El sistema de impresión usa window.open() — siempre está disponible.
+  // Se expone como `true` para que SalesView/KitchenView llamen a printTicket/printKitchen.
+  const isConnected = true;
   const isSupported = true;
   const paperWidth = '58mm';
   const printerType = 'system';
 
+  // Cola visual: número de trabajos pendientes
+  const [printQueueLength, setPrintQueueLength] = useState(0);
+  const [pendingPrintJobs, setPendingPrintJobs] = useState([]);
+  const schedulerRef = useRef(null);
+
+  // Refrescar estado de cola desde IDB
+  const refreshQueueState = useCallback(async () => {
+    try {
+      const jobs = await getAllJobs();
+      const pending = jobs.filter(j => j.status === 'pending');
+      setPrintQueueLength(pending.length);
+      setPendingPrintJobs(jobs);
+    } catch (e) {
+      console.warn('[usePrinter] Could not refresh queue state:', e.message);
+    }
+  }, []);
+
+  // Scheduler: reintenta jobs pendientes que lleven más de 30s sin completarse
+  useEffect(() => {
+    const runScheduler = async () => {
+      try {
+        const jobs = await getPendingJobs();
+        const now = Date.now();
+        for (const job of jobs) {
+          const age = now - (job.lastAttemptAt || job.createdAt);
+          if (age < RETRY_AFTER_MS) continue;
+
+          if (job.retries >= job.maxRetries) {
+            await markJobFailed(job.id);
+            console.warn(`[usePrinter] Job ${job.id} (${job.type}) exceeded max retries. Marked failed.`);
+            continue;
+          }
+
+          console.log(`[usePrinter] Retrying job ${job.id} (${job.type}), attempt ${job.retries + 1}/${job.maxRetries}`);
+          try {
+            const ok = await _executeJob(job);
+            if (ok) {
+              await dequeueJob(job.id);
+            } else {
+              await markJobFailed(job.id);
+            }
+          } catch (e) {
+            await markJobFailed(job.id);
+            console.error(`[usePrinter] Job execution error:`, e.message);
+          }
+        }
+        await refreshQueueState();
+      } catch (e) {
+        console.warn('[usePrinter] Scheduler error:', e.message);
+      }
+    };
+
+    // Correr el scheduler al montar y luego periódicamente
+    runScheduler();
+    schedulerRef.current = setInterval(runScheduler, SCHEDULER_INTERVAL);
+
+    return () => {
+      if (schedulerRef.current) clearInterval(schedulerRef.current);
+    };
+  }, [refreshQueueState]);
+
   const connect = useCallback(async () => {}, []);
   const disconnect = useCallback(async () => {}, []);
-  const changePaperWidth = useCallback((width) => {}, []);
-  const changePrinterType = useCallback((type) => {}, []);
+  const changePaperWidth = useCallback((_width) => {}, []);
+  const changePrinterType = useCallback((_type) => {}, []);
 
+  // ── Ticket de Venta ──────────────────────────────────────
   const printTicket = useCallback(async (sale, bcvRate) => {
-    return _printSystemHTML(sale, bcvRate);
-  }, []);
+    const job = await enqueueJob('ticket', { sale, bcvRate });
+    try {
+      const ok = _printSystemHTML(sale, bcvRate);
+      if (ok) await dequeueJob(job.id);
+      else     await markJobFailed(job.id);
+      await refreshQueueState();
+      return ok;
+    } catch (e) {
+      await markJobFailed(job.id);
+      await refreshQueueState();
+      throw e;
+    }
+  }, [refreshQueueState]);
 
+  // ── Pre-cuenta ───────────────────────────────────────────
   const printPrecuenta = useCallback(async (tab, bcvRate) => {
     const rate = bcvRate || 1;
-    return _printSystemPrecuentaHTML(tab, rate);
-  }, []);
+    const job = await enqueueJob('precuenta', { tab, bcvRate: rate });
+    try {
+      const ok = _printSystemPrecuentaHTML(tab, rate);
+      if (ok) await dequeueJob(job.id);
+      else     await markJobFailed(job.id);
+      await refreshQueueState();
+      return ok;
+    } catch (e) {
+      await markJobFailed(job.id);
+      await refreshQueueState();
+      throw e;
+    }
+  }, [refreshQueueState]);
 
+  // ── Comanda de Cocina ────────────────────────────────────
   const printKitchen = useCallback(async (order) => {
-    return _printSystemKitchenHTML(order);
-  }, []);
+    const job = await enqueueJob('kitchen', { order });
+    try {
+      const ok = _printSystemKitchenHTML(order);
+      if (ok) await dequeueJob(job.id);
+      else     await markJobFailed(job.id);
+      await refreshQueueState();
+      return ok;
+    } catch (e) {
+      await markJobFailed(job.id);
+      await refreshQueueState();
+      throw e;
+    }
+  }, [refreshQueueState]);
 
+  // ── Cierre de Caja ───────────────────────────────────────
   const printClose = useCallback(async (closeData) => {
-    return _printSystemCloseHTML(closeData);
-  }, []);
+    const job = await enqueueJob('close', { closeData });
+    try {
+      const ok = _printSystemCloseHTML(closeData);
+      if (ok) await dequeueJob(job.id);
+      else     await markJobFailed(job.id);
+      await refreshQueueState();
+      return ok;
+    } catch (e) {
+      await markJobFailed(job.id);
+      await refreshQueueState();
+      throw e;
+    }
+  }, [refreshQueueState]);
 
+  // ── Ticket de Prueba ─────────────────────────────────────
   const printTest = useCallback(async () => {
     const dummySale = {
       saleNumber: 1,
@@ -865,14 +1100,61 @@ export function usePrinter() {
         { methodLabel: "Efectivo", amountUsd: 10 }
       ]
     };
-    return _printSystemHTML(dummySale, 36);
-  }, []);
+    const job = await enqueueJob('test', { sale: dummySale, bcvRate: 36 });
+    try {
+      const ok = _printSystemHTML(dummySale, 36);
+      if (ok) await dequeueJob(job.id);
+      else     await markJobFailed(job.id);
+      await refreshQueueState();
+      return ok;
+    } catch (e) {
+      await markJobFailed(job.id);
+      await refreshQueueState();
+      throw e;
+    }
+  }, [refreshQueueState]);
+
+  // ── Reintentar manualmente un job fallido ────────────────
+  const retryJob = useCallback(async (jobId) => {
+    try {
+      const db = await openPrintQueueDB();
+      const job = await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const req = tx.objectStore(STORE_NAME).get(jobId);
+        req.onsuccess = () => {
+          const j = req.result;
+          if (j) {
+            j.status = 'pending';
+            j.retries = 0;
+            j.lastAttemptAt = null;
+            tx.objectStore(STORE_NAME).put(j);
+          }
+          tx.oncomplete = () => resolve(j);
+          tx.onerror = () => reject(tx.error);
+        };
+      });
+      if (job) {
+        const ok = await _executeJob(job);
+        if (ok) await dequeueJob(jobId);
+        await refreshQueueState();
+        showToast(ok ? 'Reimpresión exitosa' : 'Error al reimprimir', ok ? 'success' : 'error');
+      }
+    } catch (e) {
+      console.error('[usePrinter] retryJob error:', e.message);
+      showToast('Error al reimprimir', 'error');
+    }
+  }, [refreshQueueState]);
 
   return {
     isConnected,
     isSupported,
     paperWidth,
     printerType,
+    // Cola de impresión
+    printQueueLength,
+    pendingPrintJobs,
+    retryJob,
+    // Métodos de impresión
     connect,
     disconnect,
     changePaperWidth,

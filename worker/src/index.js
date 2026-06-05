@@ -41,9 +41,15 @@ export default {
         return await handleInvalidateMenu(tenantId, slug, env);
       }
 
-      // 4. Supabase Webhook for New Orders
+      // 4. Supabase Webhook for New Orders (web_orders via Supabase DB Webhook)
       if (url.pathname === "/api/webhooks/order" && request.method === "POST") {
         return await handleOrderWebhook(request, env);
+      }
+
+      // 4b. Local POS Order Webhook — triggered by POS client directly
+      //     Notifies KitchenView via SSE when a local sale goes to kitchen
+      if (url.pathname === "/api/webhooks/local-order" && request.method === "POST") {
+        return await handleLocalOrderWebhook(request, env);
       }
 
       // 5. Kitchen Orders Cache Endpoint
@@ -236,7 +242,7 @@ async function handleInvalidateMenu(tenantId, slug, env) {
   return jsonResponse({ success: true, message: "Cache invalidated successfully" });
 }
 
-// 4. Handle Supabase Webhook for new orders
+// 4. Handle Supabase Webhook for new orders (web_orders)
 async function handleOrderWebhook(request, env) {
   const body = await request.json();
   // Supabase webhooks send details in body.record
@@ -258,6 +264,28 @@ async function handleOrderWebhook(request, env) {
   }
 
   return jsonResponse({ success: true, received: true });
+}
+
+// 4b. Handle Local POS Order Webhook
+//     Called by the POS client when a sale is sent to kitchen.
+//     Only updates the SSE stream timestamp — no DB writes.
+async function handleLocalOrderWebhook(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return errorResponse("Invalid JSON body", 400);
+  }
+
+  const tenantId = body.tenant_id;
+  if (!tenantId) {
+    return errorResponse("Missing tenant_id", 400);
+  }
+
+  // Bump the SSE stream timestamp so KitchenView reloads
+  await env.PRECIOS_AL_DIA_KV.put(`stream_ts_${tenantId}`, String(Date.now()));
+
+  return jsonResponse({ success: true, notified: true });
 }
 
 // 5. Get Kitchen Orders from Cache

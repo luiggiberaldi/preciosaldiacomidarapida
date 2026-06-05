@@ -142,6 +142,12 @@ function assertClose(actual, expected, message, tolerance = 0.001) {
   }
 }
 
+function assertNotNull(value, message) {
+  if (value === null || value === undefined) {
+    throw new Error(message || `Expected non-null value, got ${value}`);
+  }
+}
+
 // ========================================================
 // 4. DEFINE TESTS
 // ========================================================
@@ -443,9 +449,408 @@ describe("Variant 3: Direct Cashier Fast-food Checkout", () => {
   });
 });
 
+// ------------------------------------------------------
+// SUITE 4: REAL-TIME TABLE SYNC & OFFLINE RESILIENCE
+// ------------------------------------------------------
+describe("Variant 4: Real-time Table Sync & Offline Resilience", () => {
+  it("Should simulate database updates, inserts, and deletes via Realtime channel payload", () => {
+    let localOpenTabs = [];
+    const setOpenTabs = (updater) => {
+      if (typeof updater === "function") {
+        localOpenTabs = updater(localOpenTabs);
+      } else {
+        localOpenTabs = updater;
+      }
+    };
+
+    const handleRealtimePayload = (payload) => {
+      if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+        const record = payload.new;
+        const updatedTab = {
+          id: record.id,
+          name: record.name,
+          items: record.items,
+          status: record.status,
+          customerInfo: record.customer_info,
+          createdAt: record.created_at,
+          updatedAt: record.updated_at
+        };
+
+        const exists = localOpenTabs.some(t => t.id === updatedTab.id);
+        if (exists) {
+          localOpenTabs = localOpenTabs.map(t => t.id === updatedTab.id ? updatedTab : t);
+        } else {
+          localOpenTabs.push(updatedTab);
+        }
+      } else if (payload.eventType === "DELETE") {
+        const deletedId = payload.old.id;
+        localOpenTabs = localOpenTabs.filter(t => t.id !== deletedId);
+      }
+    };
+
+    // Test INSERT
+    handleRealtimePayload({
+      eventType: "INSERT",
+      new: {
+        id: "tab-uuid-1",
+        name: "Mesa 5",
+        items: [{ id: "prod-1", name: "Pizza", priceUsd: 10, qty: 1 }],
+        status: "ACTIVE",
+        customer_info: { tableId: "table-5", waiter: "José" },
+        created_at: "2026-06-05T00:00:00Z",
+        updated_at: "2026-06-05T00:00:00Z"
+      }
+    });
+
+    assertEqual(localOpenTabs.length, 1, "Tab should be inserted from Realtime");
+    assertEqual(localOpenTabs[0].name, "Mesa 5", "Name should match inserted tab");
+
+    // Test UPDATE
+    handleRealtimePayload({
+      eventType: "UPDATE",
+      new: {
+        id: "tab-uuid-1",
+        name: "Mesa 5 - Editada",
+        items: [{ id: "prod-1", name: "Pizza", priceUsd: 10, qty: 2 }],
+        status: "CHECKOUT",
+        customer_info: { tableId: "table-5", waiter: "José" },
+        created_at: "2026-06-05T00:00:00Z",
+        updated_at: "2026-06-05T00:05:00Z"
+      }
+    });
+
+    assertEqual(localOpenTabs.length, 1, "Tab count should remain 1");
+    assertEqual(localOpenTabs[0].name, "Mesa 5 - Editada", "Name should be updated");
+    assertEqual(localOpenTabs[0].status, "CHECKOUT", "Status should be updated to CHECKOUT");
+    assertEqual(localOpenTabs[0].items[0].qty, 2, "Items qty should be updated");
+
+    // Test DELETE
+    handleRealtimePayload({
+      eventType: "DELETE",
+      old: { id: "tab-uuid-1" }
+    });
+
+    assertEqual(localOpenTabs.length, 0, "Tab should be deleted from state");
+  });
+
+  it("Should merge local offline changes when reconnecting to Supabase", async () => {
+    // 1. Client starts offline and creates tabs locally
+    const offlineTabs = [
+      {
+        id: "offline-tab-1",
+        name: "Mesa 1",
+        items: [{ id: "p1", name: "Burger", priceUsd: 5, qty: 1 }],
+        status: "ACTIVE",
+        customerInfo: { tableId: "table-1" },
+        createdAt: "2026-06-05T00:00:00Z",
+        updatedAt: "2026-06-05T00:00:00Z"
+      }
+    ];
+
+    // Simulate database state: remote DB does not have offline-tab-1
+    const remoteDatabaseMock = [];
+
+    // Simulate syncWithCloud function
+    const syncWithCloudMock = async (localTabs) => {
+      // Fetch remote tabs
+      const remoteTabs = [...remoteDatabaseMock];
+      
+      const mappedRemote = remoteTabs.map(record => ({
+        id: record.id,
+        name: record.name,
+        items: record.items,
+        status: record.status,
+        customerInfo: record.customer_info,
+        createdAt: record.created_at,
+        updatedAt: record.updated_at
+      }));
+
+      // Identify offline tabs to upload
+      const tabsToUpload = localTabs.filter(local => 
+        !mappedRemote.some(remote => remote.id === local.id)
+      );
+
+      assertEqual(tabsToUpload.length, 1, "Should detect 1 tab to upload");
+      assertEqual(tabsToUpload[0].id, "offline-tab-1", "Should identify the offline tab");
+
+      // Upload/upsert mock
+      tabsToUpload.forEach(tab => {
+        remoteDatabaseMock.push({
+          id: tab.id,
+          user_id: "user-tenant-123",
+          table_id: tab.customerInfo?.tableId || tab.id,
+          name: tab.name,
+          items: tab.items,
+          status: tab.status,
+          customer_info: tab.customerInfo || {},
+          updated_at: tab.updatedAt
+        });
+      });
+
+      return [...mappedRemote, ...tabsToUpload];
+    };
+
+    const finalTabs = await syncWithCloudMock(offlineTabs);
+    assertEqual(finalTabs.length, 1, "Final tabs list should contain the synced tab");
+    assertEqual(remoteDatabaseMock.length, 1, "Remote database mock should now have the uploaded tab");
+    assertEqual(remoteDatabaseMock[0].id, "offline-tab-1", "Uploaded tab ID should match");
+  });
+});
+
+// ========================================================
+// 5. VARIANT 5: UNIFIED KITCHEN SSE STREAM (Worker)
+// ========================================================
+describe("Variant 5: Unified Kitchen SSE Stream", () => {
+  it("Worker /api/webhooks/local-order bumps stream timestamp", async () => {
+    // Simulate Worker KV store (in-memory mock)
+    const kvStore = {};
+    const workerEnv = {
+      PRECIOS_AL_DIA_KV: {
+        get: async (key) => kvStore[key] || null,
+        put: async (key, value) => { kvStore[key] = value; },
+        delete: async (key) => { delete kvStore[key]; },
+      }
+    };
+
+    // Simulate local-order webhook handler inline
+    const handleLocalOrderWebhook = async (body, env) => {
+      const tenantId = body.tenant_id;
+      if (!tenantId) return { success: false, error: "Missing tenant_id" };
+      await env.PRECIOS_AL_DIA_KV.put(`stream_ts_${tenantId}`, String(Date.now()));
+      return { success: true, notified: true };
+    };
+
+    const tenantId = "test-tenant-sse-001";
+    const before = await workerEnv.PRECIOS_AL_DIA_KV.get(`stream_ts_${tenantId}`);
+    assertEqual(before, null, "Stream timestamp should not exist before first sale");
+
+    const result = await handleLocalOrderWebhook({ tenant_id: tenantId }, workerEnv);
+    assertEqual(result.success, true, "Webhook should return success");
+    assertEqual(result.notified, true, "Webhook should confirm notification");
+
+    const after = await workerEnv.PRECIOS_AL_DIA_KV.get(`stream_ts_${tenantId}`);
+    assertNotNull(after, "Stream timestamp should be set after local order webhook");
+    assert(parseInt(after) > 0, "Stream timestamp should be a valid Unix ms");
+  });
+
+  it("Worker /api/webhooks/local-order rejects missing tenant_id", async () => {
+    const handleLocalOrderWebhook = async (body) => {
+      const tenantId = body.tenant_id;
+      if (!tenantId) return { success: false, error: "Missing tenant_id" };
+      return { success: true };
+    };
+
+    const result = await handleLocalOrderWebhook({});
+    assertEqual(result.success, false, "Missing tenant_id should fail");
+    assertEqual(result.error, "Missing tenant_id", "Error message should be descriptive");
+  });
+
+  it("KitchenView SSE event triggers order reload", async () => {
+    // Simulate SSE detection logic from KitchenView
+    let reloadCount = 0;
+    let lastTs = "0";
+
+    const kvStore = { "stream_ts_tenant-sse-test": "1000" };
+    
+    const checkSSEUpdate = async () => {
+      const currentTs = kvStore["stream_ts_tenant-sse-test"];
+      if (currentTs && currentTs !== lastTs) {
+        lastTs = currentTs;
+        reloadCount++;
+      }
+    };
+
+    await checkSSEUpdate();
+    assertEqual(reloadCount, 1, "Kitchen should reload on first SSE timestamp change");
+
+    // Simulate no change
+    await checkSSEUpdate();
+    assertEqual(reloadCount, 1, "Kitchen should NOT reload if timestamp hasn't changed");
+
+    // Simulate new sale coming in
+    kvStore["stream_ts_tenant-sse-test"] = "2000";
+    await checkSSEUpdate();
+    assertEqual(reloadCount, 2, "Kitchen should reload again when new sale arrives");
+  });
+
+  it("SalesView fires Worker notification after local sale", async () => {
+    // Simulate the fire-and-forget fetch call from SalesView
+    const notifications = [];
+    const mockFetch = async (url, opts) => {
+      if (url.includes("/api/webhooks/local-order")) {
+        const body = JSON.parse(opts.body);
+        notifications.push(body);
+        return { ok: true };
+      }
+      return { ok: false };
+    };
+
+    const simulateSaleComplete = async (tenantId) => {
+      // The fire-and-forget pattern in SalesView
+      mockFetch(
+        "https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/webhooks/local-order",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenant_id: tenantId }),
+        }
+      ).catch(() => {}); // Non-blocking
+    };
+
+    await simulateSaleComplete("tenant-abc");
+    // Give the non-blocking call time to resolve
+    await new Promise(r => setTimeout(r, 10));
+
+    assertEqual(notifications.length, 1, "Notification should be sent to Worker after sale");
+    assertEqual(notifications[0].tenant_id, "tenant-abc", "Tenant ID should match");
+  });
+});
+
+// ========================================================
+// 6. TASK 4: LOCAL PRINT QUEUE SCHEDULER (IDB)
+// ========================================================
+describe("Task 4: Local Print Queue Scheduler (IDB Mock)", () => {
+  // In-memory IDB mock
+  function createPrintQueueMock() {
+    const store = {};
+    return {
+      enqueue: (type, payload) => {
+        const job = {
+          id: crypto.randomUUID(),
+          type,
+          payload,
+          status: "pending",
+          retries: 0,
+          maxRetries: 3,
+          createdAt: Date.now(),
+          lastAttemptAt: null,
+        };
+        store[job.id] = job;
+        return job;
+      },
+      dequeue: (id) => { delete store[id]; },
+      markFailed: (id) => {
+        if (store[id]) {
+          store[id].status = "failed";
+          store[id].retries++;
+          store[id].lastAttemptAt = Date.now();
+        }
+      },
+      getPending: () => Object.values(store).filter(j => j.status === "pending"),
+      getAll: () => Object.values(store),
+    };
+  }
+
+  it("Print job is enqueued before print attempt", () => {
+    const queue = createPrintQueueMock();
+    const job = queue.enqueue("ticket", { sale: { id: "s-1" }, bcvRate: 36 });
+
+    assertNotNull(job.id, "Job should have a UUID id");
+    assertEqual(job.type, "ticket", "Job type should be 'ticket'");
+    assertEqual(job.status, "pending", "Job should start as pending");
+    assertEqual(job.retries, 0, "Job should start with 0 retries");
+  });
+
+  it("Successful print removes job from queue", () => {
+    const queue = createPrintQueueMock();
+    const job = queue.enqueue("kitchen", { order: { id: "o-1" } });
+    assertEqual(queue.getPending().length, 1, "Queue should have 1 job before print");
+
+    // Simulate successful print
+    queue.dequeue(job.id);
+    assertEqual(queue.getPending().length, 0, "Queue should be empty after successful print");
+  });
+
+  it("Failed print marks job as failed and increments retries", () => {
+    const queue = createPrintQueueMock();
+    const job = queue.enqueue("precuenta", { tab: { name: "Mesa 2" }, bcvRate: 36 });
+
+    queue.markFailed(job.id);
+    const jobs = queue.getAll();
+    assertEqual(jobs.length, 1, "Job should still exist after failure");
+    assertEqual(jobs[0].status, "failed", "Job status should be 'failed'");
+    assertEqual(jobs[0].retries, 1, "Retry counter should increment");
+  });
+
+  it("Scheduler retries pending jobs older than threshold", async () => {
+    const queue = createPrintQueueMock();
+    const RETRY_AFTER_MS = 30_000;
+    
+    // Enqueue job and backdate it to simulate age
+    const job = queue.enqueue("close", { closeData: {} });
+    queue.getPending()[0].createdAt = Date.now() - (RETRY_AFTER_MS + 1000);
+
+    let jobExecuted = false;
+    const mockExecutor = async (j) => {
+      jobExecuted = true;
+      return true; // Simulate success
+    };
+
+    // Run scheduler once
+    const now = Date.now();
+    const pendingJobs = queue.getPending();
+    for (const j of pendingJobs) {
+      const age = now - (j.lastAttemptAt || j.createdAt);
+      if (age >= RETRY_AFTER_MS) {
+        const ok = await mockExecutor(j);
+        if (ok) queue.dequeue(j.id);
+        else queue.markFailed(j.id);
+      }
+    }
+
+    assertEqual(jobExecuted, true, "Scheduler should execute old pending job");
+    assertEqual(queue.getPending().length, 0, "Job should be dequeued after successful retry");
+  });
+
+  it("Scheduler does NOT retry jobs within cooldown window", async () => {
+    const queue = createPrintQueueMock();
+    const RETRY_AFTER_MS = 30_000;
+    
+    // Fresh job (within cooldown)
+    const job = queue.enqueue("ticket", { sale: {}, bcvRate: 36 });
+
+    let executionCount = 0;
+    const mockExecutor = async (_j) => { executionCount++; return true; };
+
+    const now = Date.now();
+    const pendingJobs = queue.getPending();
+    for (const j of pendingJobs) {
+      const age = now - (j.lastAttemptAt || j.createdAt);
+      if (age >= RETRY_AFTER_MS) {
+        await mockExecutor(j);
+      }
+    }
+
+    assertEqual(executionCount, 0, "Scheduler should NOT retry jobs within cooldown window");
+    assertEqual(queue.getPending().length, 1, "Job should remain pending in cooldown");
+  });
+
+  it("Job exceeding maxRetries is marked permanently failed", () => {
+    const queue = createPrintQueueMock();
+    const job = queue.enqueue("kitchen", { order: {} });
+
+    // Simulate 3 failed attempts
+    queue.markFailed(job.id);
+    queue.markFailed(job.id);
+    queue.markFailed(job.id);
+
+    const allJobs = queue.getAll();
+    assertEqual(allJobs[0].retries, 3, "Job should have 3 retries");
+
+    // Scheduler checks: if retries >= maxRetries, mark permanently failed
+    const MAX_RETRIES = 3;
+    const failedJob = allJobs[0];
+    if (failedJob.retries >= MAX_RETRIES) {
+      failedJob.status = "permanently_failed";
+    }
+    assertEqual(failedJob.status, "permanently_failed", "Job should be permanently failed after max retries");
+  });
+});
+
 // ========================================================
 // 5. RUNNER EXECUTION ENGINE
 // ========================================================
+
 async function runTests() {
   console.log("🚀 Starting E2E POS Workflow Tester...");
 

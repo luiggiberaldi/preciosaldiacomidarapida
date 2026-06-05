@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ShoppingCart, X } from "lucide-react";
 import { storageService } from "../utils/storageService";
-import { webSupabase } from "../utils/supabase";
+import { webSupabase, getTenantId } from "../utils/supabase";
 import { useSounds } from "../hooks/useSounds";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { useNotifications } from "../hooks/useNotifications";
@@ -733,7 +733,17 @@ export default function SalesView({ rates, triggerHaptic, onNavigate, salesViewM
     addToQueue("UPLOAD_SALE", sale);
     logAction('VENTA', 'SALE_CREATED', `Venta realizada #${sale.saleNumber} por $${sale.totalUsd.toFixed(2)} (${sale.customerName})`, { saleId: sale.id, totalUsd: sale.totalUsd });
 
-
+    // Notificar a la Cocina vía Worker SSE (fire-and-forget)
+    // No bloqueamos el flujo de caja — el error se logea silenciosamente
+    const _tenantId = getTenantId();
+    fetch(
+      `https://preciosaldia-edge-api.excusas-infalibles.workers.dev/api/webhooks/local-order`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: _tenantId }),
+      }
+    ).catch((e) => console.warn("[POS] Worker SSE notify failed (non-critical):", e.message));
 
     // Deduct stock
     const updatedProducts = products.map((p) => {
