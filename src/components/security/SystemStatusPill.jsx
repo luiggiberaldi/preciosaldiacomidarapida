@@ -51,24 +51,24 @@ export default function SystemStatusPill({ rates, triggerHaptic }) {
 
   return (
     <>
-      <div className="h-9 flex items-center bg-slate-900/90 dark:bg-slate-950/95 border border-white/10 rounded-full shadow-lg backdrop-blur-md pointer-events-auto overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div className="h-9 flex items-center bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-full shadow-md backdrop-blur-md pointer-events-auto overflow-hidden animate-in fade-in zoom-in duration-300 transition-colors">
         {/* Botón Sincronizar */}
         <button
           onClick={syncStatus !== "syncing" ? handleSyncClick : undefined}
-          className="h-full px-3.5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
+          className="h-full px-3.5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors"
           title={getSyncTextShort()}
         >
           {getSyncIcon()}
         </button>
 
         {/* Separador */}
-        {usuarioActivo && <div className="w-[1px] h-4 bg-white/15" />}
+        {usuarioActivo && <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/15" />}
 
         {/* Botón Bloqueo / Cerrar Sesión Local */}
         {usuarioActivo && (
           <button
             onClick={handleLocalLogout}
-            className="h-full px-3.5 text-slate-300 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center justify-center gap-2"
+            className="h-full px-3.5 text-slate-600 dark:text-slate-300 hover:bg-brand/10 hover:text-brand transition-colors flex items-center justify-center gap-2"
             title={`Bloquear pantalla (${usuarioActivo.nombre})`}
           >
             <Lock size={12} strokeWidth={2.5} />
